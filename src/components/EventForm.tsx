@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import {
   Form,
   FormControl,
@@ -11,24 +10,14 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getTimeOptions, parseTimeOption } from '@/lib/date-utils';
 import { Event, RecurrenceRule } from '@/types';
-import ColorPicker from './ColorPicker';
 import RecurrenceOptions from './RecurrenceOptions';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import EventFormFields from './EventFormFields';
+import { isAfter } from 'date-fns';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -37,6 +26,8 @@ interface EventFormProps {
 }
 
 const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
+  console.log('Rendering EventForm with initialValues:', initialValues);
+  
   const [startDate, setStartDate] = useState<Date>(initialValues?.start || new Date());
   const [endDate, setEndDate] = useState<Date>(initialValues?.end || new Date());
   const [isAllDay, setIsAllDay] = useState<boolean>(initialValues?.allDay || false);
@@ -46,7 +37,6 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   const defaultValues = {
     title: initialValues?.title || '',
     description: initialValues?.description || '',
-    location: initialValues?.location || '',
     allDay: initialValues?.allDay || false,
     color: initialValues?.color || '#8B5CF6',
     start: initialValues?.start || new Date(),
@@ -61,12 +51,20 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   
   const form = useForm({ defaultValues });
   
+  function format(date: Date, formatStr: string) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  
   const handleStartDateChange = (date: Date | undefined) => {
     if (date) {
+      console.log('Start date changed to:', date);
       setStartDate(date);
       
       // Adjust end date if it's now before start date
       if (endDate < date) {
+        console.log('End date is before start date, adjusting to:', date);
         setEndDate(date);
         form.setValue('end', date);
       }
@@ -74,10 +72,36 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   };
   
   const handleAllDayToggle = (checked: boolean) => {
+    console.log('All day toggled to:', checked);
     setIsAllDay(checked);
   };
   
+  const validateTimeRange = (formData: any) => {
+    const startDateTime = parseTimeOption(formData.startTime, formData.start);
+    const endDateTime = parseTimeOption(formData.endTime, formData.end);
+    
+    console.log('Validating time range:', startDateTime, endDateTime);
+    
+    if (isAfter(startDateTime, endDateTime)) {
+      console.error('Start time is after end time');
+      form.setError('endTime', { 
+        type: 'manual', 
+        message: 'End time must be after start time' 
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
   const handleFormSubmit = (data: any) => {
+    console.log('Form submitted with data:', data);
+    
+    // Validate time range when not an all-day event
+    if (!data.allDay && !validateTimeRange(data)) {
+      return;
+    }
+    
     // Create start and end dates with combined date and time
     const processedData = { ...data };
     
@@ -95,6 +119,15 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
       // Combine date and time for non-all-day events
       processedData.start = parseTimeOption(data.startTime, startDate);
       processedData.end = parseTimeOption(data.endTime, endDate);
+      
+      // Final validation check
+      if (processedData.start > processedData.end) {
+        form.setError('endTime', { 
+          type: 'manual', 
+          message: 'End time must be after start time' 
+        });
+        return;
+      }
     }
     
     // Remove the separate time fields before submitting
@@ -110,24 +143,9 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   };
   
   return (
-    <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
+    <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="title"
-            rules={{ required: 'Title is required' }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Event title</FormLabel>
-                <FormControl>
-                  <Input placeholder="Add title" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
           <FormField
             control={form.control}
             name="allDay"
@@ -152,215 +170,24 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
             )}
           />
           
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="start"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Start date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(date) => {
-                          field.onChange(date);
-                          handleStartDateChange(date);
-                        }}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {!isAllDay && (
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start time</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a time" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
-            <FormField
-              control={form.control}
-              name="end"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>End date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={(date) => {
-                          if (date && date < startDate) {
-                            return;
-                          }
-                          field.onChange(date);
-                          setEndDate(date || new Date());
-                        }}
-                        disabled={(date) => date < startDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {!isAllDay && (
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End time</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a time" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-          
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                  <Input placeholder="Add location" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Add description" 
-                    className="resize-none" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <EventFormFields 
+            form={form}
+            isAllDay={isAllDay}
+            startDate={startDate}
+            endDate={endDate}
+            timeOptions={timeOptions}
+            handleStartDateChange={handleStartDateChange}
+            setEndDate={setEndDate}
           />
           
           <div className="border p-4 rounded-md">
-            <FormLabel className="mb-2 block">Recurrence</FormLabel>
+            <FormLabel className="mb-2 block">Repeat</FormLabel>
             <RecurrenceOptions 
               value={recurrence} 
               onChange={setRecurrence} 
               startDate={startDate} 
             />
           </div>
-          
-          <FormField
-            control={form.control}
-            name="color"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Color</FormLabel>
-                <FormControl>
-                  <ColorPicker 
-                    selectedColor={field.value} 
-                    onColorChange={field.onChange} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onCancel}>
