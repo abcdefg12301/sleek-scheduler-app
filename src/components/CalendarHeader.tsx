@@ -8,6 +8,7 @@ interface CalendarHeaderProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
+  viewMode?: 'day' | 'week' | 'month';
 }
 
 const CalendarHeader = ({
@@ -15,6 +16,7 @@ const CalendarHeader = ({
   onPrevMonth,
   onNextMonth,
   onToday,
+  viewMode = 'month',
 }: CalendarHeaderProps) => {
   return (
     <div className="flex items-center justify-between mb-6">
