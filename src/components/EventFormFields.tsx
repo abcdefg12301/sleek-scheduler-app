@@ -5,7 +5,6 @@ import DateTimeFields from './event-form/DateTimeFields';
 import EventDetailsFields from './event-form/EventDetailsFields';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import RecurrenceOptions from './RecurrenceOptions';
 
 interface EventFormFieldsProps {
   form: UseFormReturn<any>;
@@ -44,7 +43,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   }, []);
 
   return (
-    <ScrollArea className="h-[calc(100vh-200px)]">
+    <ScrollArea className="h-[calc(100vh-400px)]">
       <div className="p-1">
         <EventDetailsFields form={form} />
         
@@ -66,15 +65,6 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
           handleStartDateChange={handleStartDateChange}
           setEndDate={setEndDate}
         />
-        
-        <div className="mt-6 border-t pt-4">
-          <h3 className="text-md font-medium mb-2">Recurrence</h3>
-          <RecurrenceOptions 
-            value={form.watch('recurrence')}
-            onChange={(recurrence) => form.setValue('recurrence', recurrence)}
-            startDate={startDate}
-          />
-        </div>
       </div>
     </ScrollArea>
   );

@@ -58,7 +58,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                     )}
                   >
                     {field.value ? (
-                      format(field.value, "PPP")
+                      format(new Date(field.value), "PPP")
                     ) : (
                       <span>Pick a date</span>
                     )}
@@ -69,13 +69,12 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={startDate}
+                  selected={new Date(field.value)}
                   onSelect={(date) => {
                     field.onChange(date);
                     handleStartDateChange(date);
                   }}
                   initialFocus
-                  className="p-3"
                 />
               </PopoverContent>
             </Popover>
@@ -94,6 +93,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
+                value={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -131,7 +131,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                     )}
                   >
                     {field.value ? (
-                      format(field.value, "PPP")
+                      format(new Date(field.value), "PPP")
                     ) : (
                       <span>Pick a date</span>
                     )}
@@ -142,7 +142,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={endDate}
+                  selected={new Date(field.value)}
                   onSelect={(date) => {
                     if (date && date < startDate) {
                       return;
@@ -152,7 +152,6 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                   }}
                   disabled={(date) => date < startDate}
                   initialFocus
-                  className="p-3"
                 />
               </PopoverContent>
             </Popover>
@@ -171,6 +170,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
+                value={field.value}
               >
                 <FormControl>
                   <SelectTrigger>

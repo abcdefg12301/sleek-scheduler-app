@@ -3,7 +3,6 @@ import React from 'react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RecurrenceRule } from '@/types';
 import { format } from 'date-fns';
 
@@ -91,7 +90,6 @@ const RecurrenceOptions = ({ value, onChange, startDate }: RecurrenceOptionsProp
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm font-medium mb-2">Repeat</p>
         <RadioGroup 
           value={value ? value.frequency : "none"} 
           onValueChange={handleFrequencyChange}
@@ -120,7 +118,7 @@ const RecurrenceOptions = ({ value, onChange, startDate }: RecurrenceOptionsProp
         </RadioGroup>
       </div>
 
-      {value && (
+      {value && value.frequency !== "none" && (
         <>
           <div>
             <div className="flex items-center space-x-2">

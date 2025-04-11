@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -14,10 +13,11 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { getTimeOptions, parseTimeOption } from '@/lib/date-utils';
 import { Event, RecurrenceRule } from '@/types';
-import RecurrenceOptions from './RecurrenceOptions';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import EventFormFields from './EventFormFields';
+import EventDetailsFields from './event-form/EventDetailsFields';
+import DateTimeFields from './event-form/DateTimeFields';
 import { isAfter, format as formatDate } from 'date-fns';
+import RecurrenceOptions from './RecurrenceOptions';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -47,6 +47,7 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   const defaultValues = {
     title: initialValues?.title || '',
     description: initialValues?.description || '',
+    location: initialValues?.location || '',
     allDay: initialValues?.allDay || false,
     color: initialValues?.color || '#8B5CF6',
     start: initialValues?.start || defaultStart,
@@ -185,7 +186,9 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
             )}
           />
           
-          <EventFormFields 
+          <EventDetailsFields form={form} />
+          
+          <DateTimeFields 
             form={form}
             isAllDay={isAllDay}
             startDate={startDate}

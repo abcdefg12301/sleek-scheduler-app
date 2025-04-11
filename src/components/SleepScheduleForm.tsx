@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SleepSchedule } from '@/types';
 import {
@@ -21,36 +21,53 @@ interface SleepScheduleFormProps {
   onCancel: () => void;
 }
 
-const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleFormProps) => {
-  const form = useForm<SleepSchedule>({
-    defaultValues: initialValues
-  });
-  
-  const timeOptions = generateTimeOptions();
-  
-  function generateTimeOptions() {
-    const options = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let min = 0; min < 60; min += 30) {
-        const h = hour.toString().padStart(2, '0');
-        const m = min.toString().padStart(2, '0');
-        options.push({ value: `${h}:${m}`, label: formatTimeDisplay(`${h}:${m}`) });
-      }
+function generateTimeOptions() {
+  const options = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let min = 0; min < 60; min += 30) {
+      const h = hour.toString().padStart(2, '0');
+      const m = min.toString().padStart(2, '0');
+      options.push({ value: `${h}:${m}`, label: formatTimeDisplay(`${h}:${m}`) });
     }
-    return options;
   }
+  return options;
+}
+
+function formatTimeDisplay(time: string) {
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours, 10);
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour = h % 12 || 12;
+  return `${hour}:${minutes} ${period}`;
+}
+
+const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleFormProps) => {
+  const [timeOptions] = useState(generateTimeOptions);
   
-  function formatTimeDisplay(time: string) {
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours, 10);
-    const period = h < 12 ? 'AM' : 'PM';
-    const hour = h % 12 || 12;
-    return `${hour}:${minutes} ${period}`;
-  }
+  const form = useForm<SleepSchedule>({
+    defaultValues: {
+      enabled: initialValues?.enabled || false,
+      startTime: initialValues?.startTime || '22:00',
+      endTime: initialValues?.endTime || '06:00'
+    }
+  });
+
+  useEffect(() => {
+    // Initialize form with provided values
+    form.reset({
+      enabled: initialValues?.enabled || false,
+      startTime: initialValues?.startTime || '22:00',
+      endTime: initialValues?.endTime || '06:00' 
+    });
+  }, [initialValues, form]);
+  
+  const handleSubmit = (data: SleepSchedule) => {
+    onSubmit(data);
+  };
   
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="enabled"
@@ -76,63 +93,61 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
         />
         
         {form.watch('enabled') && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sleep Time</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select time" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wake Time</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select time" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-            </div>
-          </>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="startTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sleep Time</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {timeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="endTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wake Time</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {timeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
         )}
         
         <div className="flex justify-end space-x-2 pt-4">

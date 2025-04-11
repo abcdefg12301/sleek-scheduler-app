@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { format, addMonths, subMonths, addDays, subDays } from 'date-fns';
+import { format, addMonths, subMonths, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import { Event, SleepSchedule } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 type CalendarViewType = 'day' | 'month';
 
 const CalendarView = () => {
-  console.log('Rendering CalendarView');
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { 
@@ -25,7 +24,10 @@ const CalendarView = () => {
     updateEvent, 
     deleteEvent, 
     updateCalendar, 
-    updateSleepSchedule 
+    updateSleepSchedule, 
+    getExpandedEvents,
+    getEventsForDateRange,
+    getEventsForDate
   } = useCalendarStore();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -36,11 +38,31 @@ const CalendarView = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [viewMode, setViewMode] = useState<CalendarViewType>('month');
   const [isSleepScheduleDialogOpen, setIsSleepScheduleDialogOpen] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
   
   const calendar = calendars.find(cal => cal.id === id);
   
+  // Fetch calendar events including sleep schedule and holidays
   useEffect(() => {
-    console.log('Calendar view loaded with ID:', id);
+    if (!calendar || !id) return;
+    
+    // Get the appropriate date range based on view mode
+    const start = viewMode === 'day' 
+      ? startOfDay(currentDate)
+      : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+    
+    const end = viewMode === 'day'
+      ? endOfDay(currentDate)
+      : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
+    
+    // Get all events for the date range
+    const allEvents = getEventsForDateRange(start, end);
+    setEvents(allEvents);
+    
+    console.log(`Loaded ${allEvents.length} events for ${viewMode} view:`, start, end);
+  }, [calendar, id, currentDate, viewMode, calendars]);
+  
+  useEffect(() => {
     if (!calendar && id) {
       console.error('Calendar not found with ID:', id);
       navigate('/');
@@ -52,7 +74,6 @@ const CalendarView = () => {
   }
   
   const handlePrevPeriod = () => {
-    console.log('Navigating to previous period in', viewMode, 'view');
     if (viewMode === 'day') {
       setCurrentDate(subDays(currentDate, 1));
       setSelectedDate(subDays(selectedDate, 1));
@@ -62,7 +83,6 @@ const CalendarView = () => {
   };
   
   const handleNextPeriod = () => {
-    console.log('Navigating to next period in', viewMode, 'view');
     if (viewMode === 'day') {
       setCurrentDate(addDays(currentDate, 1));
       setSelectedDate(addDays(selectedDate, 1));
@@ -72,7 +92,6 @@ const CalendarView = () => {
   };
   
   const handleDateSelect = (date: Date) => {
-    console.log('Date selected:', date);
     setSelectedDate(date);
     
     // Switch to day view when clicking a day in month view
@@ -83,83 +102,152 @@ const CalendarView = () => {
   };
   
   const handleTodayClick = () => {
-    console.log('Navigating to today');
     const today = new Date();
     setCurrentDate(today);
     setSelectedDate(today);
   };
   
   const handleNewEvent = () => {
-    console.log('Opening new event dialog');
     setIsNewEventDialogOpen(true);
   };
   
   const handleCreateEvent = (eventData: Omit<Event, 'id' | 'calendarId'>) => {
-    console.log('Creating new event with data:', eventData);
-    if (id) {
-      addEvent(id, eventData);
+    try {
+      const newEvent = addEvent(id, eventData);
+      
+      // Refresh events list
+      const dayEvents = getEventsForDate(selectedDate);
+      setEvents(prev => [...prev.filter(e => !isSameDay(e.start, selectedDate)), ...dayEvents]);
+      
       setIsNewEventDialogOpen(false);
       toast.success('Event created successfully');
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      toast.error('Failed to create event');
     }
   };
   
   const handleUpdateEvent = (eventData: Omit<Event, 'id' | 'calendarId'>) => {
-    console.log('Updating event with data:', eventData);
-    if (id && selectedEvent) {
+    if (!selectedEvent) return;
+    
+    try {
       updateEvent(id, selectedEvent.id, eventData);
+      
+      // Refresh events list
+      const start = viewMode === 'day' 
+        ? startOfDay(currentDate)
+        : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+      
+      const end = viewMode === 'day'
+        ? endOfDay(currentDate)
+        : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
+      
+      const updatedEvents = getEventsForDateRange(start, end);
+      setEvents(updatedEvents);
+      
       setIsViewEventDialogOpen(false);
       setIsEditMode(false);
       setSelectedEvent(null);
       toast.success('Event updated successfully');
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      toast.error('Failed to update event');
     }
   };
   
   const handleDeleteEvent = () => {
-    console.log('Deleting event:', selectedEvent?.id);
-    if (id && selectedEvent) {
+    if (!selectedEvent) return;
+    
+    try {
       deleteEvent(id, selectedEvent.id);
+      
+      // Refresh events list
+      const updatedEvents = events.filter(event => 
+        event.id !== selectedEvent.id && event.originalEventId !== selectedEvent.id
+      );
+      setEvents(updatedEvents);
+      
       setIsViewEventDialogOpen(false);
       setSelectedEvent(null);
       toast.success('Event deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      toast.error('Failed to delete event');
     }
   };
   
   const handleEventClick = (event: Event) => {
-    console.log('Event clicked:', event);
     setSelectedEvent(event);
     setIsViewEventDialogOpen(true);
+    setIsEditMode(false);
   };
   
   const handleHolidaysToggle = (enabled: boolean) => {
-    console.log('Holidays toggle:', enabled);
-    if (id) {
+    try {
       updateCalendar(id, { showHolidays: enabled });
+      
+      // Refresh events list to include/exclude holidays
+      const start = viewMode === 'day' 
+        ? startOfDay(currentDate)
+        : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+      
+      const end = viewMode === 'day'
+        ? endOfDay(currentDate)
+        : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
+      
+      const updatedEvents = getEventsForDateRange(start, end);
+      setEvents(updatedEvents);
+      
       toast.success(enabled ? 'Holidays enabled' : 'Holidays disabled');
+    } catch (error) {
+      console.error('Failed to update holiday settings:', error);
+      toast.error('Failed to update settings');
     }
   };
   
   const handleSleepScheduleUpdate = (sleepSchedule: SleepSchedule) => {
-    console.log('Updating sleep schedule:', sleepSchedule);
-    if (id) {
+    try {
       updateSleepSchedule(id, sleepSchedule);
+      
+      // Refresh events list to include updated sleep schedule
+      const start = viewMode === 'day' 
+        ? startOfDay(currentDate)
+        : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+      
+      const end = viewMode === 'day'
+        ? endOfDay(currentDate)
+        : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
+      
+      const updatedEvents = getEventsForDateRange(start, end);
+      setEvents(updatedEvents);
+      
       setIsSleepScheduleDialogOpen(false);
       toast.success('Sleep schedule updated');
+    } catch (error) {
+      console.error('Failed to update sleep schedule:', error);
+      toast.error('Failed to update sleep schedule');
     }
   };
   
-  const events = calendar.events;
+  // Helper function to check if two dates are the same day
+  const isSameDay = (date1: Date, date2: Date) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
   
+  // Get events for the selected date for the sidebar
   const selectedDateEvents = events.filter(event => {
     const eventStart = new Date(event.start);
     const eventEnd = new Date(event.end);
-    const compareDate = new Date(selectedDate);
     
-    // Reset time components to compare dates only
-    eventStart.setHours(0, 0, 0, 0);
-    eventEnd.setHours(0, 0, 0, 0);
-    compareDate.setHours(0, 0, 0, 0);
-    
-    return compareDate >= eventStart && compareDate <= eventEnd;
+    return (
+      isSameDay(selectedDate, eventStart) || 
+      isSameDay(selectedDate, eventEnd) ||
+      (eventStart < selectedDate && eventEnd > selectedDate)
+    );
   }).sort((a, b) => {
     // Sort all-day events first
     if (a.allDay && !b.allDay) return -1;
@@ -168,6 +256,12 @@ const CalendarView = () => {
     // Sort by start time
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
+  
+  // Filter out recurrence instances for event count display
+  const uniqueEventCount = (() => {
+    const baseEvents = calendar.events.filter(e => !e.isRecurrenceInstance);
+    return baseEvents.length;
+  })();
   
   return (
     <div className="container py-8 animate-fade-in">

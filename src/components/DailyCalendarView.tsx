@@ -1,11 +1,15 @@
 
 import React, { useMemo } from 'react';
-import { format, isSameDay, differenceInMinutes, addMinutes, isWithinInterval, isBefore, isAfter, startOfDay, endOfDay } from 'date-fns';
+import { 
+  format, isSameDay, differenceInMinutes, 
+  isWithinInterval, isBefore, isAfter, 
+  startOfDay, endOfDay, isEqual, addDays
+} from 'date-fns';
 import { Event } from '@/types';
-import { cn } from '@/lib/utils';
-import EventDisplay from './EventDisplay';
-import DayPreviewBar from './calendar/DayPreviewBar';
 import { ScrollArea } from './ui/scroll-area';
+import AllDayEvents from './calendar-view/AllDayEvents';
+import HourLabels from './calendar-view/HourLabels';
+import DailyCalendarGrid from './calendar-view/DailyCalendarGrid';
 
 interface DailyCalendarViewProps {
   selectedDate: Date;
@@ -17,26 +21,30 @@ const DailyCalendarView = ({ selectedDate, events, onEventClick }: DailyCalendar
   // Get the events for the selected day
   const dailyEvents = useMemo(() => {
     // Filter events for the selected day including those that overlap with midnight
-    return events
-      .filter(event => {
-        const eventStart = new Date(event.start);
-        const eventEnd = new Date(event.end);
-        const dayStart = startOfDay(selectedDate);
-        const dayEnd = endOfDay(selectedDate);
-        
-        // Check if the event overlaps with the selected day
-        return isWithinInterval(dayStart, { start: eventStart, end: eventEnd }) || 
-               isWithinInterval(dayEnd, { start: eventStart, end: eventEnd }) ||
-               (isBefore(eventStart, dayStart) && isAfter(eventEnd, dayEnd)) ||
-               isSameDay(selectedDate, eventStart) || 
-               isSameDay(selectedDate, eventEnd);
-      })
-      .sort((a, b) => {
-        // Sort by all-day first, then by start time
-        if (a.allDay && !b.allDay) return -1;
-        if (!a.allDay && b.allDay) return 1;
-        return new Date(a.start).getTime() - new Date(b.start).getTime();
-      });
+    return events.filter(event => {
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
+      const dayStart = startOfDay(selectedDate);
+      const dayEnd = endOfDay(selectedDate);
+      
+      // Check if the event overlaps with the selected day
+      return (
+        // Event starts within the day
+        isWithinInterval(eventStart, { start: dayStart, end: dayEnd }) ||
+        // Event ends within the day
+        isWithinInterval(eventEnd, { start: dayStart, end: dayEnd }) ||
+        // Event spans over the entire day
+        (isBefore(eventStart, dayStart) && isAfter(eventEnd, dayEnd)) ||
+        // Exact day matches
+        isSameDay(eventStart, selectedDate) || 
+        isSameDay(eventEnd, selectedDate)
+      );
+    }).sort((a, b) => {
+      // Sort by all-day first, then by start time
+      if (a.allDay && !b.allDay) return -1;
+      if (!a.allDay && b.allDay) return 1;
+      return new Date(a.start).getTime() - new Date(b.start).getTime();
+    });
   }, [events, selectedDate]);
   
   // Group all-day events separately
@@ -54,92 +62,174 @@ const DailyCalendarView = ({ selectedDate, events, onEventClick }: DailyCalendar
 
   // Calculate event layout data for positioning
   const eventLayouts = useMemo(() => {
-    // Group events by time slots to handle overlapping
-    const slots: {[key: string]: Event[]} = {};
+    // Final layouts object to return
+    const layouts: {
+      [id: string]: {
+        top: number;
+        height: number;
+        left: number;
+        width: number;
+        overlappingEvents: number;
+      }
+    } = {};
+    
+    if (timedEvents.length === 0) return layouts;
+    
+    // First pass: determine time boundaries and create event time slots
+    const eventTimeSlots: {
+      event: Event;
+      adjustedStart: Date;
+      adjustedEnd: Date;
+    }[] = [];
     
     timedEvents.forEach(event => {
       const eventStart = new Date(event.start);
-      const eventStartHour = eventStart.getHours();
+      const eventEnd = new Date(event.end);
+      const dayStart = startOfDay(selectedDate);
+      const dayEnd = endOfDay(selectedDate);
       
-      // Use the hour as a key
-      const key = eventStartHour.toString();
-      if (!slots[key]) slots[key] = [];
-      slots[key].push(event);
+      // Adjust event times to day boundaries if needed
+      const adjustedStart = isBefore(eventStart, dayStart) ? dayStart : eventStart;
+      const adjustedEnd = isAfter(eventEnd, dayEnd) ? dayEnd : eventEnd;
+      
+      eventTimeSlots.push({
+        event,
+        adjustedStart,
+        adjustedEnd
+      });
     });
     
-    // Calculate layout for each event
-    const layouts: {[id: string]: {
-      top: number, 
-      height: number, 
-      left: number, 
-      width: number,
-      overlappingEvents: number
-    }} = {};
-    
-    // Process each time slot
-    Object.keys(slots).forEach(hourKey => {
-      const eventsInSlot = slots[hourKey];
+    // Sort events by start time and then by duration (longer events first)
+    eventTimeSlots.sort((a, b) => {
+      const startDiff = a.adjustedStart.getTime() - b.adjustedStart.getTime();
+      if (startDiff !== 0) return startDiff;
       
-      // Find overlapping events in this time slot
-      if (eventsInSlot.length > 0) {
-        // Sort by start time
-        eventsInSlot.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      const aDuration = differenceInMinutes(a.adjustedEnd, a.adjustedStart);
+      const bDuration = differenceInMinutes(b.adjustedEnd, b.adjustedStart);
+      return bDuration - aDuration; // Longer events first
+    });
+    
+    // Group overlapping events
+    const findOverlappingEvents = (timeSlot: typeof eventTimeSlots[0], allSlots: typeof eventTimeSlots) => {
+      return allSlots.filter(other => {
+        if (other.event.id === timeSlot.event.id) return false;
         
-        // Create groups of overlapping events
-        const overlappingGroups: Event[][] = [];
-        let currentGroup: Event[] = [eventsInSlot[0]];
+        return (
+          (isAfter(other.adjustedStart, timeSlot.adjustedStart) && isBefore(other.adjustedStart, timeSlot.adjustedEnd)) ||
+          (isAfter(other.adjustedEnd, timeSlot.adjustedStart) && isBefore(other.adjustedEnd, timeSlot.adjustedEnd)) ||
+          (isBefore(other.adjustedStart, timeSlot.adjustedStart) && isAfter(other.adjustedEnd, timeSlot.adjustedEnd)) ||
+          isEqual(other.adjustedStart, timeSlot.adjustedStart) ||
+          isEqual(other.adjustedEnd, timeSlot.adjustedEnd)
+        );
+      });
+    };
+    
+    // Track columns already assigned to events
+    const eventColumns: { [id: string]: number } = {};
+    const eventGroups: { [groupId: string]: string[] } = {};
+    let groupCounter = 0;
+    
+    // First, group overlapping events
+    eventTimeSlots.forEach((timeSlot, index) => {
+      const eventId = timeSlot.event.id;
+      
+      // Skip if already assigned to a group
+      if (Object.values(eventGroups).some(group => group.includes(eventId))) {
+        return;
+      }
+      
+      // Find all events that overlap with this one
+      const overlapping = findOverlappingEvents(timeSlot, eventTimeSlots);
+      
+      if (overlapping.length > 0) {
+        // Create a new group with this event and overlapping events
+        const groupId = `group_${groupCounter++}`;
+        eventGroups[groupId] = [eventId, ...overlapping.map(o => o.event.id)];
+      } else {
+        // No overlaps, create a single-event group
+        const groupId = `group_${groupCounter++}`;
+        eventGroups[groupId] = [eventId];
+      }
+    });
+    
+    // Process each group to assign columns
+    Object.values(eventGroups).forEach(group => {
+      const groupSize = group.length;
+      
+      // Sort events in the group by start time
+      const sortedGroupEvents = group
+        .map(id => eventTimeSlots.find(slot => slot.event.id === id)!)
+        .sort((a, b) => a.adjustedStart.getTime() - b.adjustedStart.getTime());
+      
+      // Track which columns are used at specific times
+      const usedColumnsAtTimes: { 
+        [time: number]: { [column: number]: boolean } 
+      } = {};
+      
+      // Assign columns to events in this group
+      sortedGroupEvents.forEach(timeSlot => {
+        const eventId = timeSlot.event.id;
+        const eventStart = timeSlot.adjustedStart.getTime();
         
-        for (let i = 1; i < eventsInSlot.length; i++) {
-          const currentEvent = eventsInSlot[i];
-          const previousEvent = eventsInSlot[i-1];
+        // Find a free column for this event
+        let column = 0;
+        while (true) {
+          // Check if this column is free at this time
+          const isColumnFree = !Object.keys(usedColumnsAtTimes).some(timeKey => {
+            const time = parseInt(timeKey);
+            // Check if event overlaps with this time
+            if (time >= eventStart && time <= timeSlot.adjustedEnd.getTime()) {
+              return usedColumnsAtTimes[time]?.[column];
+            }
+            return false;
+          });
           
-          const currentStart = new Date(currentEvent.start);
-          const previousEnd = new Date(previousEvent.end);
-          
-          // Check if events overlap
-          if (currentStart < previousEnd) {
-            currentGroup.push(currentEvent);
-          } else {
-            overlappingGroups.push([...currentGroup]);
-            currentGroup = [currentEvent];
+          if (isColumnFree || column >= groupSize - 1) {
+            break;
           }
+          
+          column++;
         }
         
-        overlappingGroups.push(currentGroup);
+        // Mark this column as used for the duration of the event
+        for (let t = eventStart; t <= timeSlot.adjustedEnd.getTime(); t += 15 * 60 * 1000) { // 15-min increments
+          if (!usedColumnsAtTimes[t]) {
+            usedColumnsAtTimes[t] = {};
+          }
+          usedColumnsAtTimes[t][column] = true;
+        }
         
-        // Process each group to calculate layout
-        overlappingGroups.forEach(group => {
-          const groupSize = group.length;
-          
-          group.forEach((event, index) => {
-            const eventStart = new Date(event.start);
-            const eventEnd = new Date(event.end);
-            
-            // Calculate day-relative positions (for events crossing midnight)
-            const dayStart = startOfDay(selectedDate);
-            const dayEnd = endOfDay(selectedDate);
-            
-            // Adjust event times to day boundaries if needed
-            const adjustedStart = isBefore(eventStart, dayStart) ? dayStart : eventStart;
-            const adjustedEnd = isAfter(eventEnd, dayEnd) ? dayEnd : eventEnd;
-            
-            // Calculate top position based on minutes from start of day
-            const startMinutes = (adjustedStart.getHours() * 60) + adjustedStart.getMinutes();
-            const top = (startMinutes / (24 * 60)) * 100;
-            
-            // Calculate height based on event duration within this day
-            const durationMinutes = differenceInMinutes(adjustedEnd, adjustedStart);
-            const height = (durationMinutes / (24 * 60)) * 100;
-            
-            // Calculate width and left offset for overlapping events
-            const width = 100 / groupSize;
-            const left = width * index;
-            
-            // Store layout data
-            layouts[event.id] = { top, height, left, width, overlappingEvents: groupSize };
-          });
-        });
-      }
+        eventColumns[eventId] = column;
+      });
+      
+      // Calculate layout for each event in the group
+      sortedGroupEvents.forEach(timeSlot => {
+        const eventId = timeSlot.event.id;
+        const column = eventColumns[eventId];
+        
+        // Calculate day-relative positions
+        const dayStart = startOfDay(selectedDate);
+        const dayEnd = endOfDay(selectedDate);
+        
+        // Calculate height and top position
+        const startMinutes = (timeSlot.adjustedStart.getHours() * 60) + timeSlot.adjustedStart.getMinutes();
+        const endMinutes = (timeSlot.adjustedEnd.getHours() * 60) + timeSlot.adjustedEnd.getMinutes();
+        
+        const top = (startMinutes / (24 * 60)) * 100;
+        const height = ((endMinutes - startMinutes) / (24 * 60)) * 100;
+        
+        // Width calculation based on the number of events in this group
+        const width = 100 / groupSize;
+        const left = column * width;
+        
+        layouts[eventId] = {
+          top,
+          height,
+          left,
+          width,
+          overlappingEvents: groupSize
+        };
+      });
     });
     
     return layouts;
@@ -152,69 +242,22 @@ const DailyCalendarView = ({ selectedDate, events, onEventClick }: DailyCalendar
       </div>
       
       {/* All-day events section */}
-      {allDayEvents.length > 0 && (
-        <div className="border-b py-2 mb-2">
-          <div className="font-medium text-sm mb-1 pl-2">All-day events</div>
-          <div className="flex flex-wrap gap-2 pl-2">
-            {allDayEvents.map(event => (
-              <div key={event.id} className="max-w-xs">
-                <EventDisplay event={event} onClick={() => onEventClick(event)} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <AllDayEvents events={allDayEvents} onEventClick={onEventClick} />
       
       {/* Time-based events section */}
       <div className="flex-grow h-[calc(100vh-240px)]">
         <ScrollArea className="h-full">
           <div className="grid grid-cols-[60px_1fr] min-h-full">
             {/* Hour labels */}
-            <div className="border-r">
-              {hours.map(hour => (
-                <div key={hour} className="h-16 flex items-start justify-end pr-2 text-xs text-muted-foreground">
-                  {format(new Date().setHours(hour, 0, 0, 0), 'h a')}
-                </div>
-              ))}
-            </div>
+            <HourLabels hours={hours} />
             
             {/* Event slots */}
-            <div className="relative">
-              {/* Hour divisions */}
-              {hours.map(hour => (
-                <div key={hour} className="h-16 border-b relative">
-                  {/* Optional: Add half-hour line */}
-                  <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-gray-200"></div>
-                </div>
-              ))}
-              
-              {/* Events */}
-              {timedEvents.map(event => {
-                const layout = eventLayouts[event.id];
-                
-                if (!layout) return null;
-                
-                return (
-                  <div 
-                    key={event.id} 
-                    className="absolute z-10" 
-                    style={{ 
-                      top: `${layout.top}%`,
-                      left: `${layout.left}%`,
-                      width: `${layout.width}%`,
-                      height: `${layout.height}%`,
-                    }}
-                  >
-                    <div className="pr-1 h-full">
-                      <EventDisplay 
-                        event={event} 
-                        onClick={() => onEventClick(event)} 
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <DailyCalendarGrid
+              hours={hours}
+              timedEvents={timedEvents}
+              eventLayouts={eventLayouts}
+              onEventClick={onEventClick}
+            />
           </div>
         </ScrollArea>
       </div>

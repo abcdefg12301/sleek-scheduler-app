@@ -7,7 +7,8 @@ import {
   addDays, addWeeks, addMonths, addYears, 
   format, isSameDay, startOfDay, endOfDay, 
   isWithinInterval, isBefore, isAfter, 
-  differenceInDays, getYear, getMonth, getDate 
+  differenceInDays, getYear, getMonth, getDate,
+  setHours, setMinutes, isValid 
 } from 'date-fns';
 
 interface CalendarState {
@@ -59,16 +60,22 @@ const HOLIDAYS: Holiday[] = [
 const generateRecurringEvents = (event: Event, startDate: Date, endDate: Date): Event[] => {
   if (!event.recurrence) return [event];
   
+  // Make sure we're working with valid dates
+  if (!isValid(new Date(event.start)) || !isValid(new Date(event.end))) {
+    console.error('Invalid date in recurring event:', event);
+    return [event];
+  }
+  
   const events: Event[] = [];
   const { frequency, interval = 1, count, endDate: recurrenceEndDate } = event.recurrence;
   
-  let currentDate = new Date(event.start);
   const originalStart = new Date(event.start);
   const originalEnd = new Date(event.end);
   const duration = differenceInDays(originalEnd, originalStart);
+  const eventDurationMs = originalEnd.getTime() - originalStart.getTime();
 
   // Determine the actual end date for the recurrence
-  let maxDate = recurrenceEndDate ? new Date(recurrenceEndDate) : endDate;
+  let maxDate = recurrenceEndDate ? new Date(recurrenceEndDate) : addYears(endDate, 5); // Use a reasonable limit for infinite recurrences
   if (count) {
     const lastDate = getLastRecurrenceDate(originalStart, frequency, interval, count);
     if (isBefore(lastDate, maxDate)) {
@@ -76,19 +83,31 @@ const generateRecurringEvents = (event: Event, startDate: Date, endDate: Date): 
     }
   }
 
+  // Include the original event if it's within range
+  if ((isWithinInterval(originalStart, { start: startDate, end: maxDate }) || 
+       isWithinInterval(originalEnd, { start: startDate, end: maxDate }) ||
+       isSameDay(originalStart, startDate) ||
+       (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate)))) {
+    events.push(event);
+  }
+
   // Loop and generate recurring events
-  let recurrenceCount = 0;
-  while (isBefore(currentDate, maxDate) && (!count || recurrenceCount < count)) {
-    // Add the event if it's within the requested range
-    if (isAfter(currentDate, startDate) || isSameDay(currentDate, startDate)) {
-      const eventEnd = addDays(currentDate, duration);
+  let recurrenceCount = 1; // Start from 1 because we already checked the original event
+  let currentStart = getNextOccurrence(originalStart, frequency, interval);
+  
+  while (recurrenceCount < (count || Number.MAX_SAFE_INTEGER) && isBefore(currentStart, maxDate)) {
+    // Skip if the current occurrence is before the requested range
+    if (isAfter(currentStart, startDate) || isSameDay(currentStart, startDate) || 
+        (isBefore(currentStart, startDate) && isAfter(new Date(currentStart.getTime() + eventDurationMs), startDate))) {
+      
+      const currentEnd = new Date(currentStart.getTime() + eventDurationMs);
       
       // Create a new instance of the recurring event
       const newEvent: Event = {
         ...event,
         id: `${event.id}-recurrence-${recurrenceCount}`,
-        start: new Date(currentDate),
-        end: new Date(eventEnd),
+        start: new Date(currentStart),
+        end: new Date(currentEnd),
         isRecurrenceInstance: true,
         originalEventId: event.id
       };
@@ -96,32 +115,28 @@ const generateRecurringEvents = (event: Event, startDate: Date, endDate: Date): 
       events.push(newEvent);
     }
     
-    // Move to next occurrence based on frequency
-    switch (frequency) {
-      case 'daily':
-        currentDate = addDays(currentDate, interval);
-        break;
-      case 'weekly':
-        currentDate = addWeeks(currentDate, interval);
-        break;
-      case 'monthly':
-        currentDate = addMonths(currentDate, interval);
-        break;
-      case 'yearly':
-        currentDate = addYears(currentDate, interval);
-        break;
-    }
-    
+    // Move to next occurrence
     recurrenceCount++;
-  }
-  
-  // Also include the original event if it's within range
-  if (isWithinInterval(originalStart, { start: startDate, end: maxDate }) || 
-      isSameDay(originalStart, startDate)) {
-    events.unshift(event);
+    currentStart = getNextOccurrence(currentStart, frequency, interval);
   }
   
   return events;
+};
+
+// Helper to get the next occurrence based on frequency
+const getNextOccurrence = (date: Date, frequency: string, interval: number): Date => {
+  switch (frequency) {
+    case 'daily':
+      return addDays(date, interval);
+    case 'weekly':
+      return addWeeks(date, interval);
+    case 'monthly':
+      return addMonths(date, interval);
+    case 'yearly':
+      return addYears(date, interval);
+    default:
+      return addDays(date, interval);
+  }
 };
 
 // Helper to calculate the last date in a recurrence pattern
@@ -129,20 +144,7 @@ const getLastRecurrenceDate = (startDate: Date, frequency: string, interval = 1,
   let lastDate = new Date(startDate);
   
   for (let i = 1; i < count; i++) {
-    switch (frequency) {
-      case 'daily':
-        lastDate = addDays(lastDate, interval);
-        break;
-      case 'weekly':
-        lastDate = addWeeks(lastDate, interval);
-        break;
-      case 'monthly':
-        lastDate = addMonths(lastDate, interval);
-        break;
-      case 'yearly':
-        lastDate = addYears(lastDate, interval);
-        break;
-    }
+    lastDate = getNextOccurrence(lastDate, frequency, interval);
   }
   
   return lastDate;
@@ -155,28 +157,40 @@ const generateSleepEvents = (
   startDate: Date, 
   endDate: Date
 ): Event[] => {
-  if (!sleepSchedule.enabled) return [];
+  if (!sleepSchedule || !sleepSchedule.enabled) return [];
   
   const events: Event[] = [];
   const [sleepHour, sleepMinute] = sleepSchedule.startTime.split(':').map(Number);
   const [wakeHour, wakeMinute] = sleepSchedule.endTime.split(':').map(Number);
   
+  // Determine if sleep crosses midnight
+  const sleepCrossesMidnight = 
+    (wakeHour < sleepHour) || 
+    (wakeHour === sleepHour && wakeMinute <= sleepMinute);
+  
   // Generate sleep events for each day in the date range
-  let currentDate = new Date(startDate);
-  currentDate.setHours(0, 0, 0, 0); // Start from beginning of day
+  let currentDate = startOfDay(new Date(startDate));
+  const rangeEndDate = endOfDay(new Date(endDate));
   
-  const rangeEndDate = new Date(endDate);
+  // Calculate how many days to process - limit to a reasonable number for very large ranges
+  const daysToProcess = Math.min(
+    differenceInDays(rangeEndDate, currentDate) + 1,
+    365 // Cap at 1 year - this is a reasonable limit for UI display
+  );
   
-  while (currentDate <= rangeEndDate) {
-    const sleepStart = new Date(currentDate);
-    sleepStart.setHours(sleepHour, sleepMinute, 0, 0);
+  for (let i = 0; i < daysToProcess; i++) {
+    // Create sleep event start time (today's date + sleep time)
+    const sleepStart = setMinutes(setHours(new Date(currentDate), sleepHour), sleepMinute);
     
-    let sleepEnd = new Date(currentDate);
-    // If end time is earlier than start time, it means sleep ends next day
-    if (wakeHour < sleepHour || (wakeHour === sleepHour && wakeMinute <= sleepMinute)) {
-      sleepEnd = addDays(sleepEnd, 1);
+    // Create sleep event end time
+    let sleepEnd;
+    if (sleepCrossesMidnight) {
+      // If crossing midnight, end time is next day
+      sleepEnd = setMinutes(setHours(addDays(new Date(currentDate), 1), wakeHour), wakeMinute);
+    } else {
+      // Same day
+      sleepEnd = setMinutes(setHours(new Date(currentDate), wakeHour), wakeMinute);
     }
-    sleepEnd.setHours(wakeHour, wakeMinute, 0, 0);
     
     // Create sleep event for this day
     const sleepEvent: Event = {
@@ -187,7 +201,7 @@ const generateSleepEvents = (
       start: sleepStart,
       end: sleepEnd,
       allDay: false,
-      color: '#3730a3'
+      color: '#3730a3' // Deep purple for sleep
     };
     
     events.push(sleepEvent);
@@ -197,6 +211,26 @@ const generateSleepEvents = (
   }
   
   return events;
+};
+
+// Helper to convert holiday to event
+const holidayToEvent = (holiday: Holiday, calendarId: string): Event => {
+  const start = new Date(holiday.date);
+  start.setHours(0, 0, 0, 0);
+  
+  const end = new Date(holiday.date);
+  end.setHours(23, 59, 59, 999);
+  
+  return {
+    id: `holiday-${holiday.id}-${calendarId}`,
+    calendarId,
+    title: holiday.name,
+    description: `${holiday.type} holiday`,
+    start,
+    end,
+    allDay: true,
+    color: '#f59e0b' // Amber color for holidays
+  };
 };
 
 export const useCalendarStore = create<CalendarState>()(
@@ -330,7 +364,12 @@ export const useCalendarStore = create<CalendarState>()(
             calendar.id === calendarId 
               ? {
                   ...calendar,
-                  events: calendar.events.filter((event) => event.id !== eventId)
+                  events: calendar.events.filter((event) => {
+                    // Remove the base event and all its recurrences
+                    if (event.id === eventId) return false;
+                    if (event.originalEventId === eventId) return false;
+                    return true;
+                  })
                 } 
               : calendar
           )
@@ -360,15 +399,7 @@ export const useCalendarStore = create<CalendarState>()(
           if (calendar.showHolidays) {
             const holidaysForDate = get().holidays
               .filter(h => isSameDay(h.date, date))
-              .map(holiday => ({
-                id: `holiday-${holiday.id}-${calendar.id}`,
-                calendarId: calendar.id,
-                title: holiday.name,
-                start: new Date(date),
-                end: new Date(date),
-                allDay: true,
-                color: '#f59e0b'
-              }));
+              .map(holiday => holidayToEvent(holiday, calendar.id));
             
             allEvents.push(...holidaysForDate);
           }
@@ -395,6 +426,20 @@ export const useCalendarStore = create<CalendarState>()(
           if (calendar.sleepSchedule?.enabled) {
             const sleepEvents = get().getSleepEventsForDateRange(calendar.id, startDate, endDate);
             allEvents.push(...sleepEvents);
+          }
+          
+          // Add holiday events if enabled
+          if (calendar.showHolidays) {
+            // For each day in the range, check for holidays
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+              const holidaysForDate = get().holidays
+                .filter(h => isSameDay(h.date, currentDate))
+                .map(holiday => holidayToEvent(holiday, calendar.id));
+              
+              allEvents.push(...holidaysForDate);
+              currentDate = addDays(currentDate, 1);
+            }
           }
         });
         
