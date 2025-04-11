@@ -1,71 +1,45 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { CalendarClock, Calendar as CalendarIcon, LayoutGrid } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { CalendarClock, CalendarDays } from "lucide-react";
 
-type CalendarViewType = 'day' | 'week' | 'month';
+type ViewType = "day" | "week" | "month";
 
 interface CalendarViewSelectorProps {
-  currentView: CalendarViewType;
-  onChange: (view: CalendarViewType) => void;
+  currentView: ViewType;
+  onChange: (view: ViewType) => void;
+  availableViews?: ViewType[];
 }
 
-const CalendarViewSelector = ({ currentView, onChange }: CalendarViewSelectorProps) => {
+const CalendarViewSelector = ({ 
+  currentView, 
+  onChange,
+  availableViews = ["day", "month"]
+}: CalendarViewSelectorProps) => {
   return (
-    <div className="flex items-center space-x-2">
-      <div className="hidden sm:flex space-x-1">
+    <div className="flex bg-muted/20 rounded-lg p-1">
+      {availableViews.includes("day") && (
         <Button
-          variant={currentView === 'day' ? 'default' : 'outline'}
+          variant={currentView === "day" ? "default" : "ghost"}
           size="sm"
-          onClick={() => onChange('day')}
-          className="hidden sm:flex"
+          className="flex items-center"
+          onClick={() => onChange("day")}
         >
-          <CalendarClock className="w-4 h-4 mr-1" />
-          Day
+          <CalendarClock className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Day</span>
         </Button>
-        <Button
-          variant={currentView === 'week' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => onChange('week')}
-          className="hidden sm:flex"
-        >
-          <CalendarIcon className="w-4 h-4 mr-1" />
-          Week
-        </Button>
-        <Button
-          variant={currentView === 'month' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => onChange('month')}
-          className="hidden sm:flex"
-        >
-          <LayoutGrid className="w-4 h-4 mr-1" />
-          Month
-        </Button>
-      </div>
+      )}
       
-      {/* Mobile selector */}
-      <div className="sm:hidden">
-        <Select
-          value={currentView}
-          onValueChange={(value) => onChange(value as CalendarViewType)}
+      {availableViews.includes("month") && (
+        <Button
+          variant={currentView === "month" ? "default" : "ghost"}
+          size="sm"
+          className="flex items-center"
+          onClick={() => onChange("month")}
         >
-          <SelectTrigger className="w-[110px]">
-            <SelectValue placeholder="View" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="day">Day</SelectItem>
-            <SelectItem value="week">Week</SelectItem>
-            <SelectItem value="month">Month</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <CalendarDays className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Month</span>
+        </Button>
+      )}
     </div>
   );
 };

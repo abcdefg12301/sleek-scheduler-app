@@ -3,25 +3,13 @@ import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Flag, Moon } from 'lucide-react';
+import { Form } from '@/components/ui/form';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
-import ColorPicker from '@/components/ColorPicker';
 import { SleepSchedule } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
+import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 
 interface FormData {
   name: string;
@@ -116,171 +104,8 @@ const EditCalendar = () => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <FormField
-                control={form.control}
-                name="name"
-                rules={{ required: 'Calendar name is required' }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Calendar Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        className="resize-none" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Add details about what this calendar is for.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel>Calendar Color</FormLabel>
-                    <FormControl>
-                      <ColorPicker 
-                        selectedColor={field.value} 
-                        onColorChange={field.onChange} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <FormField
-                control={form.control}
-                name="showHolidays"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center">
-                        <Flag className="w-4 h-4 mr-2" />
-                        <FormLabel className="text-base">Show Holidays</FormLabel>
-                      </div>
-                      <FormDescription>
-                        Display common holidays in your calendar
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="sleepSchedule.enabled"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mt-4">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center">
-                        <Moon className="w-4 h-4 mr-2" />
-                        <FormLabel className="text-base">Sleep Schedule</FormLabel>
-                      </div>
-                      <FormDescription>
-                        Track your sleep times in calendar
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {form.watch('sleepSchedule.enabled') && (
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="sleepSchedule.startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sleep Time</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select time" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {timeOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="sleepSchedule.endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Wake Time</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select time" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {timeOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CalendarBasicDetails form={form} />
+          <CalendarFeatures form={form} timeOptions={timeOptions} />
 
           <div className="flex justify-end">
             <Button type="submit">Save Changes</Button>

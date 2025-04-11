@@ -1,35 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { format, addMonths, subMonths, addDays, subDays, addWeeks, subWeeks } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Settings, Calendar as CalendarIcon, Flag } from 'lucide-react';
-import { useCalendarStore } from '@/store/calendar-store';
+import { format, addMonths, subMonths, addDays, subDays } from 'date-fns';
 import { Event, SleepSchedule } from '@/types';
-import CalendarHeader from '@/components/CalendarHeader';
+import { useCalendarStore } from '@/store/calendar-store';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
 import DailyCalendarView from '@/components/DailyCalendarView';
-import WeeklyCalendarView from '@/components/WeeklyCalendarView';
-import CalendarViewSelector from '@/components/CalendarViewSelector';
-import EventDisplay from '@/components/EventDisplay';
-import EventForm from '@/components/EventForm';
-import SleepScheduleForm from '@/components/SleepScheduleForm';
+import CalendarNavigation from '@/components/calendar/CalendarNavigation';
+import CalendarSettings from '@/components/calendar/CalendarSettings';
+import EventSidebar from '@/components/calendar/EventSidebar';
+import EventDialogs from '@/components/calendar/EventDialogs';
+import DayPreviewBar from '@/components/calendar/DayPreviewBar';
 import { toast } from 'sonner';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
-type CalendarViewType = 'day' | 'week' | 'month';
+type CalendarViewType = 'day' | 'month';
 
 const CalendarView = () => {
   console.log('Rendering CalendarView');
@@ -69,43 +53,40 @@ const CalendarView = () => {
   
   const handlePrevPeriod = () => {
     console.log('Navigating to previous period in', viewMode, 'view');
-    switch (viewMode) {
-      case 'day':
-        setCurrentDate(subDays(currentDate, 1));
-        break;
-      case 'week':
-        setCurrentDate(subWeeks(currentDate, 1));
-        break;
-      case 'month':
-        setCurrentDate(subMonths(currentDate, 1));
-        break;
+    if (viewMode === 'day') {
+      setCurrentDate(subDays(currentDate, 1));
+      setSelectedDate(subDays(selectedDate, 1));
+    } else if (viewMode === 'month') {
+      setCurrentDate(subMonths(currentDate, 1));
     }
   };
   
   const handleNextPeriod = () => {
     console.log('Navigating to next period in', viewMode, 'view');
-    switch (viewMode) {
-      case 'day':
-        setCurrentDate(addDays(currentDate, 1));
-        break;
-      case 'week':
-        setCurrentDate(addWeeks(currentDate, 1));
-        break;
-      case 'month':
-        setCurrentDate(addMonths(currentDate, 1));
-        break;
+    if (viewMode === 'day') {
+      setCurrentDate(addDays(currentDate, 1));
+      setSelectedDate(addDays(selectedDate, 1));
+    } else if (viewMode === 'month') {
+      setCurrentDate(addMonths(currentDate, 1));
     }
   };
   
   const handleDateSelect = (date: Date) => {
     console.log('Date selected:', date);
     setSelectedDate(date);
+    
+    // Switch to day view when clicking a day in month view
+    if (viewMode === 'month') {
+      setViewMode('day');
+      setCurrentDate(date);
+    }
   };
   
   const handleTodayClick = () => {
     console.log('Navigating to today');
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
   };
   
   const handleNewEvent = () => {
@@ -188,231 +169,81 @@ const CalendarView = () => {
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
   
-  const renderCalendarView = () => {
-    console.log('Rendering calendar view in', viewMode, 'mode');
-    switch (viewMode) {
-      case 'day':
-        return (
-          <DailyCalendarView
-            selectedDate={currentDate}
-            events={events}
-            onEventClick={handleEventClick}
-          />
-        );
-      case 'week':
-        return (
-          <WeeklyCalendarView
-            currentDate={currentDate}
-            events={events}
-            onEventClick={handleEventClick}
-            onDateSelect={handleDateSelect}
-          />
-        );
-      case 'month':
-      default:
-        return (
-          <MonthlyCalendar
-            currentDate={currentDate}
-            events={events}
-            onDateSelect={handleDateSelect}
-            onEventClick={handleEventClick}
-          />
-        );
-    }
-  };
-  
   return (
     <div className="container py-8 animate-fade-in">
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="lg:w-3/4">
           <div className="flex flex-wrap items-center justify-between mb-6 gap-2">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/')}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-            </div>
-            
-            <h1 className="text-xl md:text-2xl font-bold flex-grow text-center">
-              <span 
-                className="inline-block w-3 h-3 md:w-4 md:h-4 rounded-full mr-2"
-                style={{ backgroundColor: calendar.color }}
-              />
-              {calendar.name}
-            </h1>
-            
-            <div className="flex items-center space-x-2">
-              <ThemeToggle />
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>Calendar Settings</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => navigate(`/edit-calendar/${id}`)}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span>Edit Calendar</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsSleepScheduleDialogOpen(true)}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span>Sleep Schedule</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center">
-                          <Flag className="mr-2 h-4 w-4" />
-                          <span>Show Holidays</span>
-                        </div>
-                        <Switch 
-                          checked={calendar.showHolidays || false} 
-                          onCheckedChange={handleHolidaysToggle}
-                        />
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button onClick={handleNewEvent}>
-                <Plus className="mr-2 h-4 w-4" /> Event
-              </Button>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-2 mb-6">
-            <CalendarHeader
+            <CalendarNavigation
+              calendarName={calendar.name}
+              calendarColor={calendar.color}
               currentDate={currentDate}
-              onPrevMonth={handlePrevPeriod}
-              onNextMonth={handleNextPeriod}
-              onToday={handleTodayClick}
               viewMode={viewMode}
+              setViewMode={setViewMode}
+              handlePrevPeriod={handlePrevPeriod}
+              handleNextPeriod={handleNextPeriod}
+              handleTodayClick={handleTodayClick}
             />
-            
-            <CalendarViewSelector 
-              currentView={viewMode}
-              onChange={setViewMode}
+            <CalendarSettings 
+              calendarId={id}
+              showHolidays={calendar.showHolidays || false}
+              handleHolidaysToggle={handleHolidaysToggle}
+              handleNewEvent={handleNewEvent}
+              openSleepScheduleDialog={() => setIsSleepScheduleDialogOpen(true)}
             />
           </div>
           
-          {renderCalendarView()}
-        </div>
-        
-        <div className="lg:w-1/4 bg-muted/20 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-medium">
-              {format(selectedDate, 'MMMM d, yyyy')}
-            </h2>
-            <Button size="sm" variant="outline" onClick={handleNewEvent}>
-              <Plus className="h-3 w-3 mr-1" /> Add
-            </Button>
-          </div>
+          {viewMode === 'day' && (
+            <DayPreviewBar 
+              selectedDate={currentDate}
+              onSelectDate={(date) => {
+                setCurrentDate(date);
+                setSelectedDate(date);
+              }}
+            />
+          )}
           
-          {selectedDateEvents.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No events for this day
-            </div>
+          {viewMode === 'month' ? (
+            <MonthlyCalendar
+              currentDate={currentDate}
+              events={events}
+              onDateSelect={handleDateSelect}
+              onEventClick={handleEventClick}
+            />
           ) : (
-            <div>
-              {selectedDateEvents.map((event) => (
-                <EventDisplay
-                  key={event.id}
-                  event={event}
-                  onClick={() => handleEventClick(event)}
-                />
-              ))}
-            </div>
+            <DailyCalendarView
+              selectedDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+            />
           )}
         </div>
+        
+        <EventSidebar 
+          selectedDate={selectedDate}
+          selectedDateEvents={selectedDateEvents}
+          handleNewEvent={handleNewEvent}
+          handleEventClick={handleEventClick}
+        />
       </div>
       
-      <Dialog open={isNewEventDialogOpen} onOpenChange={setIsNewEventDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Event</DialogTitle>
-          </DialogHeader>
-          <EventForm 
-            initialValues={{ start: selectedDate, end: selectedDate }}
-            onSubmit={handleCreateEvent}
-            onCancel={() => setIsNewEventDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isViewEventDialogOpen} onOpenChange={setIsViewEventDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditMode ? 'Edit Event' : 'Event Details'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedEvent && isEditMode ? (
-            <EventForm 
-              initialValues={selectedEvent}
-              onSubmit={handleUpdateEvent}
-              onCancel={() => setIsEditMode(false)}
-            />
-          ) : selectedEvent ? (
-            <div>
-              <h3 className="text-xl font-medium mb-2">{selectedEvent.title}</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
-                  <p>
-                    {format(new Date(selectedEvent.start), selectedEvent.allDay ? 'PPP' : 'PPP p')}
-                    {' '} - {' '}
-                    {format(new Date(selectedEvent.end), selectedEvent.allDay ? 'PPP' : 'PPP p')}
-                  </p>
-                </div>
-                
-                {selectedEvent.description && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Description</p>
-                    <p>{selectedEvent.description}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-end space-x-2 mt-6">
-                <Button variant="outline" onClick={() => setIsViewEventDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button variant="outline" className="text-destructive" onClick={handleDeleteEvent}>
-                  Delete
-                </Button>
-                <Button onClick={() => setIsEditMode(true)}>
-                  Edit
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isSleepScheduleDialogOpen} onOpenChange={setIsSleepScheduleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sleep Schedule</DialogTitle>
-            <DialogDescription>
-              Set your sleep schedule to automatically add sleep events to your calendar.
-            </DialogDescription>
-          </DialogHeader>
-          <SleepScheduleForm
-            initialValues={calendar.sleepSchedule || { enabled: false, startTime: '22:00', endTime: '06:00' }}
-            onSubmit={handleSleepScheduleUpdate}
-            onCancel={() => setIsSleepScheduleDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      <EventDialogs
+        isNewEventDialogOpen={isNewEventDialogOpen}
+        setIsNewEventDialogOpen={setIsNewEventDialogOpen}
+        isViewEventDialogOpen={isViewEventDialogOpen}
+        setIsViewEventDialogOpen={setIsViewEventDialogOpen}
+        selectedEvent={selectedEvent}
+        isEditMode={isEditMode}
+        setIsEditMode={setIsEditMode}
+        selectedDate={selectedDate}
+        handleCreateEvent={handleCreateEvent}
+        handleUpdateEvent={handleUpdateEvent}
+        handleDeleteEvent={handleDeleteEvent}
+        isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}
+        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
+        sleepSchedule={calendar.sleepSchedule}
+        handleSleepScheduleUpdate={handleSleepScheduleUpdate}
+      />
     </div>
   );
 };

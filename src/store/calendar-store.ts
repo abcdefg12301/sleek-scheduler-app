@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Calendar, Event, SleepSchedule, Holiday } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, addMonths } from 'date-fns';
 
 interface CalendarState {
   calendars: Calendar[];
@@ -29,6 +29,7 @@ interface CalendarState {
   
   // Sleep schedule
   updateSleepSchedule: (calendarId: string, sleepSchedule: SleepSchedule) => void;
+  generateSleepEvents: (calendarId: string, startDate: Date, sleepSchedule: SleepSchedule) => void;
 }
 
 const HOLIDAYS: Holiday[] = [
@@ -71,17 +72,91 @@ export const useCalendarStore = create<CalendarState>()(
       
       updateSleepSchedule: (calendarId, sleepSchedule) => {
         console.log("Updating sleep schedule for calendar", calendarId, sleepSchedule);
+        
+        // First, remove all existing sleep events
         set((state) => ({
           calendars: state.calendars.map((calendar) => 
             calendar.id === calendarId 
-              ? { ...calendar, sleepSchedule } 
+              ? { 
+                  ...calendar, 
+                  sleepSchedule,
+                  events: calendar.events.filter(event => event.title !== 'Sleep')
+                } 
               : calendar
           )
         }));
+        
+        // Then generate new sleep events if enabled
+        if (sleepSchedule.enabled) {
+          const today = new Date();
+          get().generateSleepEvents(calendarId, today, sleepSchedule);
+        }
+      },
+      
+      generateSleepEvents: (calendarId, startDate, sleepSchedule) => {
+        console.log("Generating sleep events for calendar", calendarId);
+        
+        if (!sleepSchedule.enabled) return;
+        
+        // Generate sleep events for the next 12 months
+        const calendar = get().calendars.find(cal => cal.id === calendarId);
+        if (!calendar) return;
+        
+        // Clear existing sleep events first
+        set((state) => ({
+          calendars: state.calendars.map((cal) => 
+            cal.id === calendarId 
+              ? { 
+                  ...cal, 
+                  events: cal.events.filter(event => event.title !== 'Sleep')
+                } 
+              : cal
+          )
+        }));
+        
+        const endDate = addMonths(startDate, 12); // Create events for the next 12 months
+        const [startHour, startMinute] = sleepSchedule.startTime.split(':').map(Number);
+        const [endHour, endMinute] = sleepSchedule.endTime.split(':').map(Number);
+        
+        // Generate one event for each day
+        let currentDate = new Date(startDate);
+        currentDate.setHours(0, 0, 0, 0); // Start from beginning of day
+        
+        while (currentDate <= endDate) {
+          const sleepStart = new Date(currentDate);
+          sleepStart.setHours(startHour, startMinute, 0, 0);
+          
+          // Sleep end is the next day if end time is earlier than start time
+          let sleepEnd = new Date(currentDate);
+          if (endHour < startHour || (endHour === startHour && endMinute <= startMinute)) {
+            sleepEnd = addDays(sleepEnd, 1); // Sleep ends next day
+          }
+          sleepEnd.setHours(endHour, endMinute, 0, 0);
+          
+          const sleepEvent: Omit<Event, 'id' | 'calendarId'> = {
+            title: 'Sleep',
+            description: 'Sleep time',
+            start: sleepStart,
+            end: sleepEnd,
+            allDay: false,
+            color: '#3730a3'
+          };
+          
+          get().addEvent(calendarId, sleepEvent);
+          
+          // Move to next day
+          currentDate = addDays(currentDate, 1);
+        }
       },
       
       addCalendar: (name, description, color, showHolidays = true, sleepSchedule) => {
         console.log("Adding new calendar:", name, description, color, showHolidays, sleepSchedule);
+        const defaultSleepSchedule = { 
+          enabled: false, 
+          startTime: '22:00', 
+          endTime: '06:00' 
+        };
+        
         const newCalendar: Calendar = {
           id: uuidv4(),
           name,
@@ -89,11 +164,7 @@ export const useCalendarStore = create<CalendarState>()(
           color,
           events: [],
           showHolidays,
-          sleepSchedule: sleepSchedule || { 
-            enabled: false, 
-            startTime: '22:00', 
-            endTime: '06:00' 
-          }
+          sleepSchedule: sleepSchedule || defaultSleepSchedule
         };
         
         set((state) => ({
@@ -105,18 +176,7 @@ export const useCalendarStore = create<CalendarState>()(
         if (sleepSchedule?.enabled) {
           console.log("Generating sleep events for new calendar");
           const today = new Date();
-          for (let i = 0; i < 30; i++) {
-            const day = addDays(today, i);
-            const sleepEvent: Omit<Event, 'id' | 'calendarId'> = {
-              title: 'Sleep',
-              description: 'Sleep time',
-              start: new Date(`${format(day, 'yyyy-MM-dd')}T${sleepSchedule.startTime}`),
-              end: new Date(`${format(addDays(day, 1), 'yyyy-MM-dd')}T${sleepSchedule.endTime}`),
-              allDay: false,
-              color: '#3730a3'
-            };
-            get().addEvent(newCalendar.id, sleepEvent);
-          }
+          get().generateSleepEvents(newCalendar.id, today, sleepSchedule);
         }
         
         return newCalendar;

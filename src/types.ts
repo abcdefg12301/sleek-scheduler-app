@@ -27,7 +27,7 @@ export interface Event {
   calendarId: string;
   title: string;
   description?: string;
-  location?: string;
+  location?: string; // Keep for backward compatibility
   start: Date;
   end: Date;
   allDay: boolean;

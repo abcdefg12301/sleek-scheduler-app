@@ -17,7 +17,7 @@ import { Event, RecurrenceRule } from '@/types';
 import RecurrenceOptions from './RecurrenceOptions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import EventFormFields from './EventFormFields';
-import { isAfter } from 'date-fns';
+import { isAfter, format as formatDate } from 'date-fns';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -28,34 +28,49 @@ interface EventFormProps {
 const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   console.log('Rendering EventForm with initialValues:', initialValues);
   
-  const [startDate, setStartDate] = useState<Date>(initialValues?.start || new Date());
-  const [endDate, setEndDate] = useState<Date>(initialValues?.end || new Date());
+  // Use current time for new events
+  const now = new Date();
+  const defaultStart = initialValues?.start || now;
+  const defaultEnd = initialValues?.end || new Date(now.getTime() + 60 * 60 * 1000); // 1 hour later
+  
+  const [startDate, setStartDate] = useState<Date>(defaultStart);
+  const [endDate, setEndDate] = useState<Date>(defaultEnd);
   const [isAllDay, setIsAllDay] = useState<boolean>(initialValues?.allDay || false);
   const [timeOptions] = useState(getTimeOptions());
   const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(initialValues?.recurrence);
+  
+  // Format times for the form
+  function formatTime(date: Date): string {
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  }
   
   const defaultValues = {
     title: initialValues?.title || '',
     description: initialValues?.description || '',
     allDay: initialValues?.allDay || false,
     color: initialValues?.color || '#8B5CF6',
-    start: initialValues?.start || new Date(),
-    end: initialValues?.end || new Date(),
-    startTime: initialValues?.start ? 
-      format(initialValues.start, 'HH:mm') : 
-      format(new Date(), 'HH:mm'),
-    endTime: initialValues?.end ? 
-      format(initialValues.end, 'HH:mm') : 
-      format(new Date(new Date().getTime() + 60 * 60 * 1000), 'HH:mm'),
+    start: initialValues?.start || defaultStart,
+    end: initialValues?.end || defaultEnd,
+    startTime: initialValues?.start ? formatTime(new Date(initialValues.start)) : formatTime(defaultStart),
+    endTime: initialValues?.end ? formatTime(new Date(initialValues.end)) : formatTime(defaultEnd),
   };
   
   const form = useForm({ defaultValues });
   
-  function format(date: Date, formatStr: string) {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
+  // Update end time when start time changes to ensure end is always after start
+  useEffect(() => {
+    if (!isAllDay) {
+      const startDateTime = parseTimeOption(form.getValues('startTime'), startDate);
+      const endDateTime = parseTimeOption(form.getValues('endTime'), endDate);
+      
+      if (!isAfter(endDateTime, startDateTime)) {
+        // Set end time to 1 hour after start time
+        const newEnd = new Date(startDateTime);
+        newEnd.setHours(newEnd.getHours() + 1);
+        form.setValue('endTime', formatTime(newEnd));
+      }
+    }
+  }, [form.getValues('startTime'), startDate, isAllDay]);
   
   const handleStartDateChange = (date: Date | undefined) => {
     if (date) {
