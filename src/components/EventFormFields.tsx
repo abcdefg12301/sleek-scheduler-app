@@ -1,8 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import DateTimeFields from './event-form/DateTimeFields';
 import EventDetailsFields from './event-form/EventDetailsFields';
+import { Calendar } from '@/components/ui/calendar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import RecurrenceOptions from './RecurrenceOptions';
 
 interface EventFormFieldsProps {
   form: UseFormReturn<any>;
@@ -23,19 +26,57 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   handleStartDateChange,
   setEndDate,
 }) => {
+  // Initialize with current time when the component mounts
+  useEffect(() => {
+    // If the form is being used for creating a new event,
+    // initialize with current time
+    const isNewEvent = !form.getValues('id');
+    
+    if (isNewEvent) {
+      const now = new Date();
+      handleStartDateChange(now);
+      
+      // Set end time one hour later
+      const oneHourLater = new Date(now);
+      oneHourLater.setHours(now.getHours() + 1);
+      setEndDate(oneHourLater);
+    }
+  }, []);
+
   return (
-    <>
-      <EventDetailsFields form={form} />
-      <DateTimeFields 
-        form={form}
-        isAllDay={isAllDay}
-        startDate={startDate}
-        endDate={endDate}
-        timeOptions={timeOptions}
-        handleStartDateChange={handleStartDateChange}
-        setEndDate={setEndDate}
-      />
-    </>
+    <ScrollArea className="h-[calc(100vh-200px)]">
+      <div className="p-1">
+        <EventDetailsFields form={form} />
+        
+        <div className="mb-4">
+          <Calendar
+            mode="single"
+            selected={startDate}
+            onSelect={handleStartDateChange}
+            className="mx-auto"
+          />
+        </div>
+        
+        <DateTimeFields 
+          form={form}
+          isAllDay={isAllDay}
+          startDate={startDate}
+          endDate={endDate}
+          timeOptions={timeOptions}
+          handleStartDateChange={handleStartDateChange}
+          setEndDate={setEndDate}
+        />
+        
+        <div className="mt-6 border-t pt-4">
+          <h3 className="text-md font-medium mb-2">Recurrence</h3>
+          <RecurrenceOptions 
+            value={form.watch('recurrence')}
+            onChange={(recurrence) => form.setValue('recurrence', recurrence)}
+            startDate={startDate}
+          />
+        </div>
+      </div>
+    </ScrollArea>
   );
 };
 

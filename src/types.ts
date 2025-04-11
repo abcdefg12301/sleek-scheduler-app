@@ -27,12 +27,14 @@ export interface Event {
   calendarId: string;
   title: string;
   description?: string;
-  location?: string; // Keep for backward compatibility
+  location?: string;
   start: Date;
   end: Date;
   allDay: boolean;
   color?: string;
   recurrence?: RecurrenceRule;
+  isRecurrenceInstance?: boolean;
+  originalEventId?: string;
 }
 
 export interface RecurrenceRule {
