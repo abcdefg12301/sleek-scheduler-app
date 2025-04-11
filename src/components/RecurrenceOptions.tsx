@@ -118,7 +118,7 @@ const RecurrenceOptions = ({ value, onChange, startDate }: RecurrenceOptionsProp
         </RadioGroup>
       </div>
 
-      {value && value.frequency !== "none" && (
+      {value && (
         <>
           <div>
             <div className="flex items-center space-x-2">
