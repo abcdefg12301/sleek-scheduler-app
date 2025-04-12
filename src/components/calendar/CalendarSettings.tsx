@@ -1,20 +1,18 @@
 
 import React from 'react';
-import { Settings, CalendarIcon, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Settings, Moon, Info } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { Plus } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CalendarSettingsProps {
   calendarId: string;
@@ -29,51 +27,60 @@ const CalendarSettings = ({
   showHolidays,
   handleHolidaysToggle,
   handleNewEvent,
-  openSleepScheduleDialog
+  openSleepScheduleDialog,
 }: CalendarSettingsProps) => {
-  const navigate = useNavigate();
-
   return (
     <div className="flex items-center space-x-2">
-      <ThemeToggle />
-      
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button onClick={handleNewEvent} size="sm" className="bg-primary text-primary-foreground">
+              <Plus className="h-4 w-4 mr-1" />
+              Event
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Add a new calendar event</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon">
             <Settings className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end">
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel>Calendar Settings</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => navigate(`/edit-calendar/${calendarId}`)}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span>Edit Calendar</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={openSleepScheduleDialog}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span>Sleep Schedule</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center">
-                  <Flag className="mr-2 h-4 w-4" />
-                  <span>Show Holidays</span>
-                </div>
-                <Switch 
-                  checked={showHolidays} 
-                  onCheckedChange={handleHolidaysToggle}
-                />
+          
+          <DropdownMenuItem onSelect={(e) => {
+            e.preventDefault();
+            handleHolidaysToggle(!showHolidays);
+          }}>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                <span>Show Holidays</span>
               </div>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+              <Switch 
+                checked={showHolidays} 
+                onCheckedChange={handleHolidaysToggle}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem onSelect={(e) => {
+            e.preventDefault();
+            openSleepScheduleDialog();
+          }}>
+            <Moon className="h-4 w-4 mr-2" />
+            <span>Sleep Schedule</span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      
-      <Button onClick={handleNewEvent}>
-        <Plus className="mr-2 h-4 w-4" /> Event
-      </Button>
     </div>
   );
 };

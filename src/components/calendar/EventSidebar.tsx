@@ -20,6 +20,24 @@ const EventSidebar = ({
   handleNewEvent,
   handleEventClick 
 }: EventSidebarProps) => {
+  // Deduplicate sleep events to prevent showing multiple sleep events
+  const filteredEvents = selectedDateEvents.reduce((acc: Event[], current) => {
+    // For sleep events, only add if we don't have another sleep event with the same time
+    if (current.title === 'Sleep') {
+      const existingSleepEvent = acc.find(e => 
+        e.title === 'Sleep' && 
+        e.start.getTime() === current.start.getTime() && 
+        e.end.getTime() === current.end.getTime()
+      );
+      if (!existingSleepEvent) {
+        acc.push(current);
+      }
+    } else {
+      acc.push(current);
+    }
+    return acc;
+  }, []);
+
   return (
     <div className="lg:w-1/4 bg-muted/20 rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
@@ -44,7 +62,7 @@ const EventSidebar = ({
         </Button>
       </div>
       
-      {selectedDateEvents.length === 0 ? (
+      {filteredEvents.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
           <p>No events for this day</p>
@@ -52,7 +70,7 @@ const EventSidebar = ({
         </div>
       ) : (
         <div>
-          {selectedDateEvents.map((event) => (
+          {filteredEvents.map((event) => (
             <EventDisplay
               key={event.id}
               event={event}

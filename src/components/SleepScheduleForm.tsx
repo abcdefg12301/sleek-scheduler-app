@@ -11,9 +11,14 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Bed } from 'lucide-react';
+import { Bed, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface SleepScheduleFormProps {
   initialValues: SleepSchedule;
@@ -61,6 +66,28 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
     });
   }, [initialValues, form]);
   
+  // Function to validate and format time input
+  const handleTimeChange = (value: string, field: any) => {
+    // If it's already in HH:MM format, use it directly
+    if (/^\d{2}:\d{2}$/.test(value)) {
+      field.onChange(value);
+      return;
+    }
+    
+    // Try to parse and format the input
+    const match = value.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      let minutes = match[2] ? parseInt(match[2], 10) : 0;
+      
+      // Validate hours and minutes
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        field.onChange(formattedTime);
+      }
+    }
+  };
+  
   const handleSubmit = (data: SleepSchedule) => {
     onSubmit(data);
   };
@@ -100,23 +127,41 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sleep Time</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-10 px-3 flex-shrink-0"
+                          type="button" // Important to prevent form submission
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <div className="h-[300px] overflow-auto p-2">
+                          {timeOptions.map((option) => (
+                            <div
+                              key={option.value}
+                              className="cursor-pointer p-2 hover:bg-muted rounded-md"
+                              onClick={() => field.onChange(option.value)}
+                            >
+                              {option.label}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="HH:MM"
+                        value={field.value}
+                        onChange={(e) => handleTimeChange(e.target.value, field)}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {timeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  </div>
                 </FormItem>
               )}
             />
@@ -127,23 +172,41 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wake Time</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-10 px-3 flex-shrink-0"
+                          type="button" // Important to prevent form submission
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <div className="h-[300px] overflow-auto p-2">
+                          {timeOptions.map((option) => (
+                            <div
+                              key={option.value}
+                              className="cursor-pointer p-2 hover:bg-muted rounded-md"
+                              onClick={() => field.onChange(option.value)}
+                            >
+                              {option.label}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="HH:MM"
+                        value={field.value}
+                        onChange={(e) => handleTimeChange(e.target.value, field)}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {timeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  </div>
                 </FormItem>
               )}
             />

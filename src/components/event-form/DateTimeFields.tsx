@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface DateTimeFieldsProps {
   form: UseFormReturn<any>;
@@ -39,6 +39,29 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
   handleStartDateChange,
   setEndDate,
 }) => {
+  // Function to parse time string (HH:MM) and set it to a date
+  const handleTimeInputChange = (timeStr: string, dateField: Date, setter: (date: Date) => void) => {
+    if (!timeStr) return;
+    
+    // Match format like "13:45" or "9:30"
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      
+      // Validate hours and minutes
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        const newDate = new Date(dateField);
+        newDate.setHours(hours, minutes, 0, 0);
+        setter(newDate);
+        return newDate;
+      }
+    }
+    
+    // If invalid format, return the original date
+    return dateField;
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <FormField
@@ -66,15 +89,18 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                   </Button>
                 </FormControl>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                 <Calendar
                   mode="single"
                   selected={new Date(field.value)}
                   onSelect={(date) => {
-                    field.onChange(date);
-                    handleStartDateChange(date);
+                    if (date) {
+                      field.onChange(date);
+                      handleStartDateChange(date);
+                    }
                   }}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -90,24 +116,54 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Start time</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                value={field.value}
-              >
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-3 flex-shrink-0"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="h-[300px] overflow-auto p-2">
+                      {timeOptions.map((option) => (
+                        <div
+                          key={option.value}
+                          className="cursor-pointer p-2 hover:bg-muted rounded-md"
+                          onClick={() => {
+                            field.onChange(option.value);
+                            const [hours, minutes] = option.value.split(':');
+                            const newDate = new Date(startDate);
+                            newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                            handleStartDateChange(newDate);
+                          }}
+                        >
+                          {option.label}
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a time" />
-                  </SelectTrigger>
+                  <Input
+                    placeholder="HH:MM"
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      handleTimeInputChange(e.target.value, startDate, (date) => {
+                        handleStartDateChange(date);
+                      });
+                    }}
+                    className="flex-grow"
+                  />
                 </FormControl>
-                <SelectContent>
-                  {timeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -139,7 +195,7 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                   </Button>
                 </FormControl>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                 <Calendar
                   mode="single"
                   selected={new Date(field.value)}
@@ -148,10 +204,13 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
                       return;
                     }
                     field.onChange(date);
-                    setEndDate(date || new Date());
+                    if (date) {
+                      setEndDate(date);
+                    }
                   }}
                   disabled={(date) => date < startDate}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -167,24 +226,52 @@ const DateTimeFields: React.FC<DateTimeFieldsProps> = ({
           render={({ field }) => (
             <FormItem>
               <FormLabel>End time</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                value={field.value}
-              >
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-3 flex-shrink-0"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="h-[300px] overflow-auto p-2">
+                      {timeOptions.map((option) => (
+                        <div
+                          key={option.value}
+                          className="cursor-pointer p-2 hover:bg-muted rounded-md"
+                          onClick={() => {
+                            field.onChange(option.value);
+                            const [hours, minutes] = option.value.split(':');
+                            const newDate = new Date(endDate);
+                            newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                            setEndDate(newDate);
+                          }}
+                        >
+                          {option.label}
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a time" />
-                  </SelectTrigger>
+                  <Input
+                    placeholder="HH:MM"
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      handleTimeInputChange(e.target.value, endDate, setEndDate);
+                    }}
+                    className="flex-grow"
+                  />
                 </FormControl>
-                <SelectContent>
-                  {timeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              </div>
               <FormMessage />
             </FormItem>
           )}

@@ -1,19 +1,16 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import CalendarHeader from '@/components/CalendarHeader';
-import CalendarViewSelector from '@/components/CalendarViewSelector';
-
-type CalendarViewType = 'day' | 'month';
+import { format } from 'date-fns';
+import { ChevronLeft, ChevronRight, CalendarDays, Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CalendarNavigationProps {
   calendarName: string;
   calendarColor: string;
   currentDate: Date;
-  viewMode: CalendarViewType;
-  setViewMode: (mode: CalendarViewType) => void;
+  viewMode: 'day' | 'month';
+  setViewMode: (mode: 'day' | 'month') => void;
   handlePrevPeriod: () => void;
   handleNextPeriod: () => void;
   handleTodayClick: () => void;
@@ -29,50 +26,69 @@ const CalendarNavigation = ({
   handleNextPeriod,
   handleTodayClick,
 }: CalendarNavigationProps) => {
-  const navigate = useNavigate();
-
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between mb-6 gap-2">
-        <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-3">
+        <div
+          className="h-4 w-4 rounded-full"
+          style={{ backgroundColor: calendarColor }}
+        />
+        <h1 className="text-2xl font-bold">{calendarName}</h1>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={handleTodayClick}>
+          Today
+        </Button>
+        
+        <div className="flex items-center border rounded-md overflow-hidden">
+          <Button variant="ghost" size="sm" onClick={handlePrevPeriod} className="px-2 h-9 rounded-none border-r">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <div className="px-3 flex items-center justify-center min-w-[150px]">
+            <span className="font-medium">
+              {viewMode === 'month' ? (
+                format(currentDate, 'MMMM yyyy')
+              ) : (
+                format(currentDate, 'MMMM d, yyyy')
+              )}
+            </span>
+          </div>
+          
+          <Button variant="ghost" size="sm" onClick={handleNextPeriod} className="px-2 h-9 rounded-none border-l">
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
         
-        <h1 className="text-xl md:text-2xl font-bold flex-grow text-center">
-          <span 
-            className="inline-block w-3 h-3 md:w-4 md:h-4 rounded-full mr-2"
-            style={{ backgroundColor: calendarColor }}
-          />
-          {calendarName}
-        </h1>
-        
-        <div className="flex items-center space-x-2">
-          {/* Header buttons will be added by parent component */}
+        <div className="border rounded-md flex overflow-hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewMode('day')}
+            className={cn(
+              "px-3 h-9 rounded-none",
+              viewMode === 'day' && "bg-primary text-primary-foreground"
+            )}
+          >
+            <CalendarIcon className="h-4 w-4 mr-1" />
+            Day
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm" 
+            onClick={() => setViewMode('month')}
+            className={cn(
+              "px-3 h-9 rounded-none border-l",
+              viewMode === 'month' && "bg-primary text-primary-foreground"
+            )}
+          >
+            <CalendarDays className="h-4 w-4 mr-1" />
+            Month
+          </Button>
         </div>
       </div>
-      
-      <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-2 mb-6">
-        <CalendarHeader
-          currentDate={currentDate}
-          onPrevMonth={handlePrevPeriod}
-          onNextMonth={handleNextPeriod}
-          onToday={handleTodayClick}
-          viewMode={viewMode}
-        />
-        
-        <CalendarViewSelector 
-          currentView={viewMode}
-          onChange={setViewMode}
-          availableViews={['day', 'month']}
-        />
-      </div>
-    </>
+    </div>
   );
 };
 
