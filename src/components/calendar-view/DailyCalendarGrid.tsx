@@ -2,6 +2,7 @@
 import React from 'react';
 import { Event } from '@/types';
 import TimeGrid from './TimeGrid';
+import HourLabels from './HourLabels';
 
 interface DailyCalendarGridProps {
   hours: number[];
@@ -25,12 +26,18 @@ const DailyCalendarGrid = ({
   onEventClick 
 }: DailyCalendarGridProps) => {
   return (
-    <TimeGrid
-      hours={hours}
-      timedEvents={timedEvents}
-      eventLayouts={eventLayouts}
-      onEventClick={onEventClick}
-    />
+    <>
+      {/* Hour labels */}
+      <HourLabels hours={hours} />
+      
+      {/* Event slots */}
+      <TimeGrid
+        hours={hours}
+        timedEvents={timedEvents}
+        eventLayouts={eventLayouts}
+        onEventClick={onEventClick}
+      />
+    </>
   );
 };
 

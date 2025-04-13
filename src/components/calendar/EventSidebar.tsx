@@ -21,22 +21,25 @@ const EventSidebar = ({
   handleEventClick 
 }: EventSidebarProps) => {
   // Deduplicate sleep events to prevent showing multiple sleep events
-  const filteredEvents = selectedDateEvents.reduce((acc: Event[], current) => {
-    // For sleep events, only add if we don't have another sleep event with the same time
-    if (current.title === 'Sleep') {
-      const existingSleepEvent = acc.find(e => 
-        e.title === 'Sleep' && 
-        e.start.getTime() === current.start.getTime() && 
-        e.end.getTime() === current.end.getTime()
-      );
-      if (!existingSleepEvent) {
-        acc.push(current);
+  const filteredEvents = React.useMemo(() => {
+    // Use a Map with composite keys to deduplicate sleep events by their start/end times
+    const uniqueEvents = new Map<string, Event>();
+    
+    selectedDateEvents.forEach(event => {
+      // Special handling for sleep events
+      if (event.title === 'Sleep') {
+        const key = `sleep-${event.start.getTime()}-${event.end.getTime()}`;
+        if (!uniqueEvents.has(key)) {
+          uniqueEvents.set(key, event);
+        }
+      } else {
+        // For non-sleep events, use the event ID as the key
+        uniqueEvents.set(event.id, event);
       }
-    } else {
-      acc.push(current);
-    }
-    return acc;
-  }, []);
+    });
+    
+    return Array.from(uniqueEvents.values());
+  }, [selectedDateEvents]);
 
   return (
     <div className="lg:w-1/4 bg-muted/20 rounded-lg p-4">
