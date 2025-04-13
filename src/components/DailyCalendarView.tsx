@@ -1,13 +1,12 @@
 
 import React, { useMemo } from 'react';
-import { format } from 'date-fns';
 import { Event } from '@/types';
 import { ScrollArea } from './ui/scroll-area';
 import AllDayEvents from './calendar-view/AllDayEvents';
 import DailyCalendarHeader from './calendar-view/DailyCalendarHeader';
 import DailyCalendarGrid from './calendar-view/DailyCalendarGrid';
 import { useDailyEventLayout } from '@/hooks/useDailyEventLayout';
-import { filterEventsForDate } from '@/lib/event-utils';
+import { filterEventsForDate, splitMultiDayEvents } from '@/lib/event-utils';
 
 interface DailyCalendarViewProps {
   selectedDate: Date;
@@ -21,14 +20,19 @@ const DailyCalendarView = ({ selectedDate, events, onEventClick }: DailyCalendar
     filterEventsForDate(events, selectedDate), [events, selectedDate]
   );
   
+  // Process multi-day events for proper visualization
+  const processedEvents = useMemo(() => 
+    splitMultiDayEvents(dailyEvents, selectedDate), [dailyEvents, selectedDate]
+  );
+  
   // Group all-day events separately
   const allDayEvents = useMemo(() => 
-    dailyEvents.filter(event => event.allDay), [dailyEvents]
+    processedEvents.filter(event => event.allDay), [processedEvents]
   );
   
   // Get timed events
   const timedEvents = useMemo(() => 
-    dailyEvents.filter(event => !event.allDay), [dailyEvents]
+    processedEvents.filter(event => !event.allDay), [processedEvents]
   );
   
   // Process the events by hour for visualization

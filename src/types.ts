@@ -37,6 +37,8 @@ export interface Event {
   originalEventId?: string;
   isHoliday?: boolean;
   isSleep?: boolean;
+  isSegment?: boolean;
+  segmentType?: 'start' | 'middle' | 'end';
 }
 
 export interface RecurrenceRule {

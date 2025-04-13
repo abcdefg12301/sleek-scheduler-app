@@ -2,6 +2,7 @@
 import React from 'react';
 import { Event } from '@/types';
 import EventLayout from './EventLayout';
+import { cn } from '@/lib/utils';
 
 interface TimeGridProps {
   hours: number[];
@@ -42,6 +43,39 @@ const TimeGrid = ({ hours, timedEvents, eventLayouts, onEventClick }: TimeGridPr
           />
         );
       })}
+      
+      {/* Current time indicator */}
+      <CurrentTimeIndicator />
+    </div>
+  );
+};
+
+// Current time indicator component
+const CurrentTimeIndicator = () => {
+  const [now, setNow] = React.useState(new Date());
+  
+  // Update time every minute
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 60000);
+    
+    return () => clearInterval(timer);
+  }, []);
+  
+  const hourHeight = 16 * 4; // 4rem or 16 * 4px
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const percentageOfHour = currentMinute / 60;
+  const topPosition = (currentHour + percentageOfHour) * hourHeight;
+  
+  return (
+    <div 
+      className="absolute z-20 w-full pointer-events-none flex items-center"
+      style={{ top: `${topPosition}px` }}
+    >
+      <div className="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
+      <div className="h-[2px] flex-grow bg-red-500"></div>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Plus, Calendar, Info } from 'lucide-react';
 import { Event } from '@/types';
 import EventDisplay from '@/components/EventDisplay';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { filterDuplicateSleepEvents } from '@/lib/event-utils';
 
 interface EventSidebarProps {
   selectedDate: Date;
@@ -20,26 +21,11 @@ const EventSidebar = ({
   handleNewEvent,
   handleEventClick 
 }: EventSidebarProps) => {
-  // Deduplicate sleep events to prevent showing multiple sleep events
-  const filteredEvents = React.useMemo(() => {
-    // Use a Map with composite keys to deduplicate sleep events by their start/end times
-    const uniqueEvents = new Map<string, Event>();
-    
-    selectedDateEvents.forEach(event => {
-      // Special handling for sleep events
-      if (event.title === 'Sleep') {
-        const key = `sleep-${event.start.getTime()}-${event.end.getTime()}`;
-        if (!uniqueEvents.has(key)) {
-          uniqueEvents.set(key, event);
-        }
-      } else {
-        // For non-sleep events, use the event ID as the key
-        uniqueEvents.set(event.id, event);
-      }
-    });
-    
-    return Array.from(uniqueEvents.values());
-  }, [selectedDateEvents]);
+  // Deduplicate sleep events using our utility function
+  const filteredEvents = React.useMemo(() =>
+    filterDuplicateSleepEvents(selectedDateEvents),
+    [selectedDateEvents]
+  );
 
   return (
     <div className="lg:w-1/4 bg-muted/20 rounded-lg p-4">
