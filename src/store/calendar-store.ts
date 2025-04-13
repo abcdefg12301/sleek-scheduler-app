@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Calendar, Event, SleepSchedule } from '../types';
+import { Calendar, Event, SleepSchedule, Holiday } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { addDays } from 'date-fns';
 

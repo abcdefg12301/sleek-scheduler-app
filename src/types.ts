@@ -35,6 +35,8 @@ export interface Event {
   recurrence?: RecurrenceRule;
   isRecurrenceInstance?: boolean;
   originalEventId?: string;
+  isHoliday?: boolean;
+  isSleep?: boolean;
 }
 
 export interface RecurrenceRule {

@@ -2,8 +2,33 @@
 import { Holiday, Event } from '@/types';
 import { isSameMonth, isSameDay } from 'date-fns';
 
-// Re-export the HOLIDAYS constant from the original file
-export { HOLIDAYS } from './holiday-service';
+// Define holidays directly here to avoid circular imports
+export const HOLIDAYS: Holiday[] = [
+  {
+    id: "new-years-day",
+    name: "New Year's Day",
+    date: new Date(new Date().getFullYear(), 0, 1),
+    type: "public"
+  },
+  {
+    id: "independence-day",
+    name: "Independence Day",
+    date: new Date(new Date().getFullYear(), 6, 4),
+    type: "public"
+  },
+  {
+    id: "thanksgiving",
+    name: "Thanksgiving Day",
+    date: new Date(new Date().getFullYear(), 10, (new Date().getFullYear() === 2023 ? 23 : 28)), // 4th Thursday of November
+    type: "public"
+  },
+  {
+    id: "christmas",
+    name: "Christmas Day",
+    date: new Date(new Date().getFullYear(), 11, 25),
+    type: "public"
+  }
+];
 
 /**
  * Service to handle holiday-related operations
