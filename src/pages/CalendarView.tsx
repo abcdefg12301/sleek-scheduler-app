@@ -160,6 +160,7 @@ const CalendarView = () => {
         isViewEventDialogOpen={isViewEventDialogOpen}
         setIsViewEventDialogOpen={setIsViewEventDialogOpen}
         selectedEvent={selectedEvent}
+        setSelectedEvent={setSelectedEvent} // Added the missing prop
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
         isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}

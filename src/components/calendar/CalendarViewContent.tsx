@@ -26,6 +26,7 @@ interface CalendarViewContentProps {
   isViewEventDialogOpen: boolean;
   setIsViewEventDialogOpen: (open: boolean) => void;
   selectedEvent: Event | null;
+  setSelectedEvent: (event: Event | null) => void; // Added missing prop
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
   isSleepScheduleDialogOpen: boolean;
@@ -47,6 +48,7 @@ const CalendarViewContent = ({
   isViewEventDialogOpen,
   setIsViewEventDialogOpen,
   selectedEvent,
+  setSelectedEvent, // Added missing prop
   isEditMode,
   setIsEditMode,
   isSleepScheduleDialogOpen,
@@ -80,7 +82,7 @@ const CalendarViewContent = ({
       updateEvent(calendar.id, selectedEvent.id, eventData);
       setIsViewEventDialogOpen(false);
       setIsEditMode(false);
-      setSelectedEvent(null);
+      setSelectedEvent(null); // Now properly defined
       toast.success('Event updated successfully');
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -94,7 +96,7 @@ const CalendarViewContent = ({
     try {
       deleteEvent(calendar.id, selectedEvent.id);
       setIsViewEventDialogOpen(false);
-      setSelectedEvent(null);
+      setSelectedEvent(null); // Now properly defined
       toast.success('Event deleted successfully');
     } catch (error) {
       console.error('Failed to delete event:', error);

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ColorPicker } from '@/components/ColorPicker';
+import ColorPicker from '@/components/ColorPicker';
 
 interface EventBasicDetailsProps {
   form: UseFormReturn<EventFormValues>;
@@ -56,20 +56,8 @@ const EventBasicDetails = ({ form }: EventBasicDetailsProps) => {
             <FormLabel>Event Color (optional)</FormLabel>
             <FormControl>
               <ColorPicker
-                value={field.value || ''}
-                onChange={field.onChange}
-                colors={[
-                  '#ef4444', // red
-                  '#f97316', // orange
-                  '#eab308', // yellow
-                  '#22c55e', // green
-                  '#06b6d4', // cyan
-                  '#3b82f6', // blue
-                  '#8b5cf6', // violet
-                  '#d946ef', // pink
-                  '#020617', // black
-                  '#6b7280', // gray
-                ]}
+                selectedColor={field.value || ''}
+                onColorChange={field.onChange}
               />
             </FormControl>
             <FormMessage />
