@@ -8,7 +8,6 @@ import { Event } from '@/types';
 import EventAllDayToggle from './event-form/EventAllDayToggle';
 import EventBasicDetails from './event-form/EventBasicDetails';
 import EventDateTime from './event-form/EventDateTime';
-import EventLocation from './event-form/EventLocation';
 import EventRecurrence from './event-form/EventRecurrence';
 import { parseTimeToDate } from '@/lib/date-utils';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,7 +36,6 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   const defaultValues = {
     title: initialValues?.title || '',
     description: initialValues?.description || '',
-    location: initialValues?.location || '',
     allDay: initialValues?.allDay || false,
     color: initialValues?.color || '#8B5CF6',
     start: initialValues?.start || defaultStart,
@@ -81,7 +79,6 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
     const newEvent: Omit<Event, 'id' | 'calendarId'> = {
       title: data.title,
       description: data.description || undefined,
-      location: data.location || undefined,
       start: processedStartDate,
       end: processedEndDate,
       allDay: data.allDay,
@@ -113,8 +110,6 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
               endDate={endDate}
               setEndDate={setEndDate}
             />
-            
-            <EventLocation form={form} />
             
             <EventRecurrence form={form} startDate={startDate} />
             

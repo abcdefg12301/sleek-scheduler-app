@@ -26,7 +26,7 @@ export const sleepService = {
       (wakeHour < sleepHour) || 
       (wakeHour === sleepHour && wakeMinute <= sleepMinute);
     
-    // Generate sleep events for each day in the date range
+    // Generate one sleep event per day in the date range
     let currentDate = startOfDay(new Date(startDate));
     const rangeEndDate = endOfDay(new Date(endDate));
     
@@ -36,37 +36,46 @@ export const sleepService = {
       365 // Cap at 1 year - this is a reasonable limit for UI display
     );
     
+    // Track days we've already created sleep events for to avoid duplicates
+    const processedDays = new Set<string>();
+    
     for (let i = 0; i < daysToProcess; i++) {
-      // Create sleep event start time (today's date + sleep time)
-      const sleepStart = setMinutes(setHours(new Date(currentDate), sleepHour), sleepMinute);
+      const dateKey = format(currentDate, 'yyyy-MM-dd');
       
-      // Create sleep event end time
-      let sleepEnd;
-      if (sleepCrossesMidnight) {
-        // If crossing midnight, end time is next day
-        sleepEnd = setMinutes(setHours(addDays(new Date(currentDate), 1), wakeHour), wakeMinute);
-      } else {
-        // Same day
-        sleepEnd = setMinutes(setHours(new Date(currentDate), wakeHour), wakeMinute);
+      // Skip if we already created a sleep event for this day
+      if (!processedDays.has(dateKey)) {
+        // Create sleep event start time (today's date + sleep time)
+        const sleepStart = setMinutes(setHours(new Date(currentDate), sleepHour), sleepMinute);
+        
+        // Create sleep event end time
+        let sleepEnd;
+        if (sleepCrossesMidnight) {
+          // If crossing midnight, end time is next day
+          sleepEnd = setMinutes(setHours(addDays(new Date(currentDate), 1), wakeHour), wakeMinute);
+        } else {
+          // Same day
+          sleepEnd = setMinutes(setHours(new Date(currentDate), wakeHour), wakeMinute);
+        }
+        
+        // Create a unique ID based on the day to help with deduplication
+        const uniqueId = `sleep-${calendarId}-${dateKey}`;
+        
+        // Create sleep event for this day
+        const sleepEvent: Event = {
+          id: uniqueId,
+          calendarId,
+          title: 'Sleep',
+          description: 'Sleep time',
+          start: sleepStart,
+          end: sleepEnd,
+          allDay: false,
+          color: '#3730a3', // Deep purple for sleep
+          isSleep: true // Mark as sleep event
+        };
+        
+        events.push(sleepEvent);
+        processedDays.add(dateKey);
       }
-      
-      // Create a unique ID to help with deduplication
-      const uniqueId = `sleep-${calendarId}-${format(currentDate, 'yyyy-MM-dd')}`;
-      
-      // Create sleep event for this day
-      const sleepEvent: Event = {
-        id: uniqueId,
-        calendarId,
-        title: 'Sleep',
-        description: 'Sleep time',
-        start: sleepStart,
-        end: sleepEnd,
-        allDay: false,
-        color: '#3730a3', // Deep purple for sleep
-        isSleep: true // Mark as sleep event
-      };
-      
-      events.push(sleepEvent);
       
       // Move to next day
       currentDate = addDays(currentDate, 1);

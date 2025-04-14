@@ -2,10 +2,9 @@
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import {
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,11 +16,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import ImprovedTimePicker from './ImprovedTimePicker';
 
-// Using generic type for form to allow flexibility
 interface EventDateTimeProps {
   form: UseFormReturn<any>;
   startDate: Date;
@@ -34,186 +31,161 @@ const EventDateTime = ({ form, startDate, setStartDate, endDate, setEndDate }: E
   const isAllDay = form.watch('allDay');
 
   return (
-    <>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <FormField
         control={form.control}
-        name="allDay"
+        name="start"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <FormLabel className="text-base">All day event</FormLabel>
-              <FormDescription>
-                Set as an all-day event with no specific time
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
+          <FormItem className="flex flex-col">
+            <FormLabel>Start date</FormLabel>
+            <Popover>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "pl-3 text-left font-normal",
+                      !field.value && "text-muted-foreground"
+                    )}
+                  >
+                    {field.value ? (
+                      format(field.value, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                <Calendar
+                  mode="single"
+                  selected={field.value}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date);
+                      setStartDate(date);
+
+                      // Ensure end date isn't before start date
+                      if (endDate < date) {
+                        const newEndDate = new Date(date);
+                        form.setValue("end", newEndDate);
+                        setEndDate(newEndDate);
+                      }
+                    }
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </FormItem>
         )}
       />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      
+      {!isAllDay && (
         <FormField
           control={form.control}
-          name="start"
+          name="startTime"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Start date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={(date) => {
-                      if (date) {
-                        field.onChange(date);
-                        setStartDate(date);
-
-                        // Ensure end date isn't before start date
-                        if (endDate < date) {
-                          const newEndDate = new Date(date);
-                          form.setValue("end", newEndDate);
-                          setEndDate(newEndDate);
-                        }
-                      }
-                    }}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </FormItem>
-          )}
-        />
-        
-        {!isAllDay && (
-          <FormField
-            control={form.control}
-            name="startTime"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Start time</FormLabel>
-                <ImprovedTimePicker
-                  value={field.value}
-                  onChange={(time) => {
-                    field.onChange(time);
+            <FormItem>
+              <FormLabel>Start time</FormLabel>
+              <div className="flex items-center border rounded-md focus-within:ring-1 focus-within:ring-ring focus-within:border-input">
+                <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  {...field}
+                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="HH:MM"
+                  type="time"
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
                     // Update startDate with time
-                    const [hours, minutes] = time.split(':').map(Number);
-                    const newStartDate = new Date(startDate);
-                    newStartDate.setHours(hours, minutes);
-                    setStartDate(newStartDate);
-                  }}
-                  onTimeSelected={(time) => {
-                    field.onChange(time);
-                    const [hours, minutes] = time.split(':').map(Number);
+                    const [hours, minutes] = e.target.value.split(':').map(Number);
                     const newStartDate = new Date(startDate);
                     newStartDate.setHours(hours, minutes);
                     setStartDate(newStartDate);
                   }}
                 />
-              </FormItem>
-            )}
-          />
-        )}
-        
-        <FormField
-          control={form.control}
-          name="end"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>End date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={(date) => {
-                      if (date) {
-                        field.onChange(date);
-                        setEndDate(date);
-                      }
-                    }}
-                    disabled={(date) => date < startDate}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              </div>
             </FormItem>
           )}
         />
-        
-        {!isAllDay && (
-          <FormField
-            control={form.control}
-            name="endTime"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>End time</FormLabel>
-                <ImprovedTimePicker
-                  value={field.value}
-                  onChange={(time) => {
-                    field.onChange(time);
-                    // Update endDate with time
-                    const [hours, minutes] = time.split(':').map(Number);
-                    const newEndDate = new Date(endDate);
-                    newEndDate.setHours(hours, minutes);
-                    setEndDate(newEndDate);
+      )}
+      
+      <FormField
+        control={form.control}
+        name="end"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>End date</FormLabel>
+            <Popover>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "pl-3 text-left font-normal",
+                      !field.value && "text-muted-foreground"
+                    )}
+                  >
+                    {field.value ? (
+                      format(field.value, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                <Calendar
+                  mode="single"
+                  selected={field.value}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date);
+                      setEndDate(date);
+                    }
                   }}
-                  onTimeSelected={(time) => {
-                    field.onChange(time);
-                    const [hours, minutes] = time.split(':').map(Number);
+                  disabled={(date) => date < startDate}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </FormItem>
+        )}
+      />
+      
+      {!isAllDay && (
+        <FormField
+          control={form.control}
+          name="endTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>End time</FormLabel>
+              <div className="flex items-center border rounded-md focus-within:ring-1 focus-within:ring-ring focus-within:border-input">
+                <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  {...field}
+                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="HH:MM"
+                  type="time"
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
+                    // Update endDate with time
+                    const [hours, minutes] = e.target.value.split(':').map(Number);
                     const newEndDate = new Date(endDate);
                     newEndDate.setHours(hours, minutes);
                     setEndDate(newEndDate);
                   }}
                 />
-              </FormItem>
-            )}
-          />
-        )}
-      </div>
-    </>
+              </div>
+            </FormItem>
+          )}
+        />
+      )}
+    </div>
   );
 };
 

@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Bed } from 'lucide-react';
-import ImprovedTimePicker from './event-form/ImprovedTimePicker';
+import { Bed, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface SleepScheduleFormProps {
   initialValues: SleepSchedule;
@@ -78,12 +78,15 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sleep Time</FormLabel>
-                  <ImprovedTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    onTimeSelected={field.onChange}
-                    label="When you go to sleep"
-                  />
+                  <div className="flex items-center border rounded-md focus-within:ring-1 focus-within:ring-ring focus-within:border-input">
+                    <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      {...field}
+                      className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      placeholder="HH:MM"
+                      type="time"
+                    />
+                  </div>
                 </FormItem>
               )}
             />
@@ -94,12 +97,15 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wake Time</FormLabel>
-                  <ImprovedTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    onTimeSelected={field.onChange}
-                    label="When you wake up"
-                  />
+                  <div className="flex items-center border rounded-md focus-within:ring-1 focus-within:ring-ring focus-within:border-input">
+                    <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      {...field}
+                      className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      placeholder="HH:MM"
+                      type="time"
+                    />
+                  </div>
                 </FormItem>
               )}
             />

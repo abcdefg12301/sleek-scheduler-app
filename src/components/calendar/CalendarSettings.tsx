@@ -1,18 +1,18 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings, Moon, Info } from 'lucide-react';
+import { Moon, CalendarPlus, CalendarCheck, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNavigate } from 'react-router-dom';
 
 interface CalendarSettingsProps {
   calendarId: string;
@@ -27,58 +27,50 @@ const CalendarSettings = ({
   showHolidays,
   handleHolidaysToggle,
   handleNewEvent,
-  openSleepScheduleDialog,
+  openSleepScheduleDialog
 }: CalendarSettingsProps) => {
-  return (
-    <div className="flex items-center space-x-2">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button onClick={handleNewEvent} size="sm" className="bg-primary text-primary-foreground">
-              <Plus className="h-4 w-4 mr-1" />
-              Event
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Add a new calendar event</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+  const navigate = useNavigate();
 
+  return (
+    <div className="flex items-center gap-2">
+      <Button onClick={handleNewEvent} size="sm" variant="default">
+        <CalendarPlus className="h-4 w-4 mr-1" /> New event
+      </Button>
+      
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon">
             <Settings className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Calendar Settings</DropdownMenuLabel>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={handleNewEvent}>
+              <CalendarPlus className="mr-2 h-4 w-4" />
+              <span>New event</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/edit/${calendarId}`)}>
+              <CalendarCheck className="mr-2 h-4 w-4" />
+              <span>Edit calendar</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openSleepScheduleDialog}>
+              <Moon className="mr-2 h-4 w-4" />
+              <span>Sleep schedule</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          
           <DropdownMenuSeparator />
           
-          <DropdownMenuItem onSelect={(e) => {
-            e.preventDefault();
-            handleHolidaysToggle(!showHolidays);
-          }}>
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                <span>Show Holidays</span>
-              </div>
+          <div className="p-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="show-holidays" className="font-normal">Show holidays</Label>
               <Switch 
-                checked={showHolidays} 
+                id="show-holidays" 
+                checked={showHolidays}
                 onCheckedChange={handleHolidaysToggle}
-                onClick={(e) => e.stopPropagation()}
               />
             </div>
-          </DropdownMenuItem>
-          
-          <DropdownMenuItem onSelect={(e) => {
-            e.preventDefault();
-            openSleepScheduleDialog();
-          }}>
-            <Moon className="h-4 w-4 mr-2" />
-            <span>Sleep Schedule</span>
-          </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, addMonths, subMonths, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -32,11 +31,9 @@ const CalendarView = () => {
   
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Fetch calendar events including sleep schedule and holidays
   useEffect(() => {
     if (!calendar || !id) return;
     
-    // Get the appropriate date range based on view mode
     const start = viewMode === 'day' 
       ? startOfDay(currentDate)
       : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
@@ -45,7 +42,6 @@ const CalendarView = () => {
       ? endOfDay(currentDate)
       : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
     
-    // Get all events for the date range
     const allEvents = getEventsForDateRange(start, end);
     setEvents(allEvents);
     
@@ -84,7 +80,6 @@ const CalendarView = () => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     
-    // Switch to day view when clicking a day in month view
     if (viewMode === 'month') {
       setViewMode('day');
       setCurrentDate(date);
@@ -103,7 +98,6 @@ const CalendarView = () => {
     setIsEditMode(false);
   };
 
-  // Add the missing handleHolidaysToggle function
   const handleHolidaysToggle = (enabled: boolean) => {
     try {
       updateCalendar(calendar.id, { showHolidays: enabled });
@@ -114,7 +108,6 @@ const CalendarView = () => {
     }
   };
 
-  // Helper function to check if two dates are the same day
   const isSameDay = (date1: Date, date2: Date) => {
     return (
       date1.getFullYear() === date2.getFullYear() &&
@@ -123,7 +116,6 @@ const CalendarView = () => {
     );
   };
   
-  // Get events for the selected date for the sidebar
   const selectedDateEvents = events.filter(event => {
     const eventStart = new Date(event.start);
     const eventEnd = new Date(event.end);
@@ -134,11 +126,9 @@ const CalendarView = () => {
       (eventStart < selectedDate && eventEnd > selectedDate)
     );
   }).sort((a, b) => {
-    // Sort all-day events first
     if (a.allDay && !b.allDay) return -1;
     if (b.allDay && !a.allDay) return 1;
     
-    // Sort by start time
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
   
