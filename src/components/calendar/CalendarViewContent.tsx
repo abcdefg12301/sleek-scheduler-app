@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Event, SleepSchedule } from '@/types';
+import { Calendar, Event } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
 import DailyCalendarView from '@/components/DailyCalendarView';
 import DayPreviewBar from '@/components/calendar/DayPreviewBar';
@@ -20,17 +20,16 @@ interface CalendarViewContentProps {
   selectedDateEvents: Event[];
   onDateSelect: (date: Date) => void;
   onEventClick: (event: Event) => void;
+  onDayHover?: (date: Date) => void;
   handleNewEvent: () => void;
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
   isViewEventDialogOpen: boolean;
   setIsViewEventDialogOpen: (open: boolean) => void;
   selectedEvent: Event | null;
-  setSelectedEvent: (event: Event | null) => void; // Added missing prop
+  setSelectedEvent: (event: Event | null) => void;
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
-  isSleepScheduleDialogOpen: boolean;
-  setIsSleepScheduleDialogOpen: (open: boolean) => void;
 }
 
 const CalendarViewContent = ({
@@ -42,26 +41,22 @@ const CalendarViewContent = ({
   selectedDateEvents,
   onDateSelect,
   onEventClick,
+  onDayHover,
   handleNewEvent,
   isNewEventDialogOpen,
   setIsNewEventDialogOpen,
   isViewEventDialogOpen,
   setIsViewEventDialogOpen,
   selectedEvent,
-  setSelectedEvent, // Added missing prop
+  setSelectedEvent,
   isEditMode,
-  setIsEditMode,
-  isSleepScheduleDialogOpen,
-  setIsSleepScheduleDialogOpen
+  setIsEditMode
 }: CalendarViewContentProps) => {
   const { 
     addEvent,
     updateEvent,
     deleteEvent,
     updateCalendar,
-    updateSleepSchedule,
-    getEventsForDate,
-    getEventsForDateRange
   } = useCalendarStore();
 
   const handleCreateEvent = (eventData: Omit<Event, 'id' | 'calendarId'>) => {
@@ -82,7 +77,7 @@ const CalendarViewContent = ({
       updateEvent(calendar.id, selectedEvent.id, eventData);
       setIsViewEventDialogOpen(false);
       setIsEditMode(false);
-      setSelectedEvent(null); // Now properly defined
+      setSelectedEvent(null);
       toast.success('Event updated successfully');
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -96,7 +91,7 @@ const CalendarViewContent = ({
     try {
       deleteEvent(calendar.id, selectedEvent.id);
       setIsViewEventDialogOpen(false);
-      setSelectedEvent(null); // Now properly defined
+      setSelectedEvent(null);
       toast.success('Event deleted successfully');
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -111,17 +106,6 @@ const CalendarViewContent = ({
     } catch (error) {
       console.error('Failed to update holiday settings:', error);
       toast.error('Failed to update settings');
-    }
-  };
-  
-  const handleSleepScheduleUpdate = (sleepSchedule: SleepSchedule) => {
-    try {
-      updateSleepSchedule(calendar.id, sleepSchedule);
-      setIsSleepScheduleDialogOpen(false);
-      toast.success('Sleep schedule updated');
-    } catch (error) {
-      console.error('Failed to update sleep schedule:', error);
-      toast.error('Failed to update sleep schedule');
     }
   };
 
@@ -141,6 +125,7 @@ const CalendarViewContent = ({
             events={events}
             onDateSelect={onDateSelect}
             onEventClick={onEventClick}
+            onDayHover={onDayHover}
           />
         ) : (
           <DailyCalendarView
@@ -170,10 +155,6 @@ const CalendarViewContent = ({
         handleCreateEvent={handleCreateEvent}
         handleUpdateEvent={handleUpdateEvent}
         handleDeleteEvent={handleDeleteEvent}
-        isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}
-        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
-        sleepSchedule={calendar.sleepSchedule}
-        handleSleepScheduleUpdate={handleSleepScheduleUpdate}
       />
     </div>
   );

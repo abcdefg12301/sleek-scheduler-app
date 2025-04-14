@@ -15,6 +15,8 @@ export const eventService = {
    * Creates a new event with a unique ID
    */
   createEvent: (calendarId: string, eventData: Omit<Event, 'id' | 'calendarId'>): Event => {
+    console.log(`Creating new event for calendar ${calendarId}:`, eventData);
+    
     return {
       id: uuidv4(),
       calendarId,
@@ -27,11 +29,13 @@ export const eventService = {
    */
   getExpandedEvents: (events: Event[], startDate: Date, endDate: Date): Event[] => {
     let expandedEvents: Event[] = [];
+    console.log(`Expanding events from ${events.length} base events`);
     
     // Process each event
     events.forEach(event => {
       // For recurring events, generate instances
       if (event.recurrence) {
+        console.log(`Expanding recurring event: ${event.title}`);
         const recurrences = generateRecurringEvents(event, startDate, endDate);
         expandedEvents = [...expandedEvents, ...recurrences];
       } 
@@ -51,35 +55,20 @@ export const eventService = {
       }
     });
     
+    console.log(`Expanded to ${expandedEvents.length} total events`);
     return expandedEvents;
   },
   
   /**
    * Sorts events: all-day first, then by start time
-   * Also filters out duplicate sleep events
    */
   sortEvents: (events: Event[]): Event[] => {
-    // First deduplicate sleep events
-    const uniqueSleepEvents = new Map<string, Event>();
-    const nonSleepEvents: Event[] = [];
-    
-    events.forEach(event => {
-      if (event.title === 'Sleep') {
-        const key = `${event.start.getTime()}-${event.end.getTime()}`;
-        if (!uniqueSleepEvents.has(key)) {
-          uniqueSleepEvents.set(key, event);
-        }
-      } else {
-        nonSleepEvents.push(event);
-      }
-    });
-    
-    // Combine and sort all events
-    const combinedEvents = [...nonSleepEvents, ...uniqueSleepEvents.values()];
-    
-    return combinedEvents.sort((a, b) => {
+    return events.sort((a, b) => {
+      // Sort by all-day first
       if (a.allDay && !b.allDay) return -1;
       if (!a.allDay && b.allDay) return 1;
+      
+      // Then by start time
       return new Date(a.start).getTime() - new Date(b.start).getTime();
     });
   }

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format, isToday, isSameMonth, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getCalendarDays } from '@/lib/date-utils';
@@ -12,9 +12,10 @@ interface DayProps {
   events: Event[];
   onClick: (day: Date) => void;
   onEventClick: (event: Event) => void;
+  onHover?: (day: Date) => void;
 }
 
-const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }: DayProps) => {
+const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick, onHover }: DayProps) => {
   const isCurrentMonth = isSameMonth(day, currentMonth);
   const isSelected = isSameDay(day, selectedDate);
   
@@ -32,14 +33,21 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
     onClick(day);
   };
   
+  const handleDayHover = () => {
+    if (onHover) {
+      onHover(day);
+    }
+  };
+  
   return (
     <div
       className={cn(
-        'calendar-day border border-border',
+        'calendar-day border border-border cursor-pointer',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today'
       )}
       onClick={handleDayClick}
+      onMouseEnter={handleDayHover}
     >
       <div className="flex justify-between mb-1">
         <div
@@ -80,15 +88,25 @@ interface MonthlyCalendarProps {
   events: Event[];
   onDateSelect: (date: Date) => void;
   onEventClick: (event: Event) => void;
+  onDayHover?: (date: Date) => void;
 }
 
 const MonthlyCalendar = ({
   currentDate,
   events,
   onDateSelect,
-  onEventClick
+  onEventClick,
+  onDayHover
 }: MonthlyCalendarProps) => {
   const days = getCalendarDays(currentDate);
+  const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
+  
+  const handleDayHover = (date: Date) => {
+    setHoveredDate(date);
+    if (onDayHover) {
+      onDayHover(date);
+    }
+  };
   
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
@@ -112,6 +130,7 @@ const MonthlyCalendar = ({
             events={events}
             onClick={onDateSelect}
             onEventClick={onEventClick}
+            onHover={handleDayHover}
           />
         ))}
       </div>

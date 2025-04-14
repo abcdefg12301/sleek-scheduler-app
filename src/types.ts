@@ -6,13 +6,6 @@ export interface Calendar {
   color: string;
   events: Event[];
   showHolidays?: boolean;
-  sleepSchedule?: SleepSchedule;
-}
-
-export interface SleepSchedule {
-  enabled: boolean;
-  startTime: string; // HH:MM format
-  endTime: string; // HH:MM format
 }
 
 export interface Holiday {
@@ -36,7 +29,6 @@ export interface Event {
   isRecurrenceInstance?: boolean;
   originalEventId?: string;
   isHoliday?: boolean;
-  isSleep?: boolean;
   isSegment?: boolean;
   segmentType?: 'start' | 'middle' | 'end';
 }

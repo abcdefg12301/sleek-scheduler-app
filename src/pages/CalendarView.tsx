@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, addMonths, subMonths, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
-import { Event, SleepSchedule } from '@/types';
+import { Event } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
 import CalendarViewContent from '@/components/calendar/CalendarViewContent';
@@ -26,10 +27,19 @@ const CalendarView = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [viewMode, setViewMode] = useState<CalendarViewType>('month');
-  const [isSleepScheduleDialogOpen, setIsSleepScheduleDialogOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
+  const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
   
   const calendar = calendars.find(cal => cal.id === id);
+  
+  // Debug output for calendar info
+  useEffect(() => {
+    if (calendar) {
+      console.log(`Current calendar: ${calendar.name} (${calendar.id})`);
+      console.log(`Current view: ${viewMode}, Current date: ${currentDate.toISOString()}`);
+    }
+  }, [calendar, viewMode, currentDate]);
   
   useEffect(() => {
     if (!calendar || !id) return;
@@ -42,11 +52,23 @@ const CalendarView = () => {
       ? endOfDay(currentDate)
       : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
     
-    const allEvents = getEventsForDateRange(start, end);
-    setEvents(allEvents);
-    
-    console.log(`Loaded ${allEvents.length} events for ${viewMode} view:`, start, end);
+    try {
+      console.time('getEventsForDateRange');
+      const allEvents = getEventsForDateRange(start, end);
+      console.timeEnd('getEventsForDateRange');
+      setEvents(allEvents);
+      
+      console.log(`Loaded ${allEvents.length} events for ${viewMode} view`);
+      console.log(`Date range: ${start.toISOString()} to ${end.toISOString()}`);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    }
   }, [calendar, id, currentDate, viewMode, calendars, getEventsForDateRange]);
+  
+  // Effect to update selected date events
+  useEffect(() => {
+    updateSelectedDateEvents(hoveredDate || selectedDate);
+  }, [hoveredDate, selectedDate, events]);
   
   useEffect(() => {
     if (!calendar && id) {
@@ -58,6 +80,40 @@ const CalendarView = () => {
   if (!calendar || !id) {
     return null;
   }
+  
+  const updateSelectedDateEvents = (date: Date) => {
+    // Helper function to check if two dates are the same day
+    const isSameDay = (date1: Date, date2: Date) => {
+      return (
+        date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate()
+      );
+    };
+    
+    const dateEvents = events
+      .filter(event => {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        
+        return (
+          isSameDay(date, eventStart) || 
+          isSameDay(date, eventEnd) ||
+          (eventStart < date && eventEnd > date)
+        );
+      })
+      .sort((a, b) => {
+        // Sort all-day events first
+        if (a.allDay && !b.allDay) return -1;
+        if (b.allDay && !a.allDay) return 1;
+        
+        // Sort by start time
+        return new Date(a.start).getTime() - new Date(b.start).getTime();
+      });
+      
+    console.log(`Found ${dateEvents.length} events for ${date.toISOString()}`);
+    setSelectedDateEvents(dateEvents);
+  };
   
   const handlePrevPeriod = () => {
     if (viewMode === 'day') {
@@ -78,11 +134,24 @@ const CalendarView = () => {
   };
   
   const handleDateSelect = (date: Date) => {
+    console.log(`Date selected: ${date.toISOString()}`);
     setSelectedDate(date);
     
     if (viewMode === 'month') {
       setViewMode('day');
       setCurrentDate(date);
+    } else {
+      setCurrentDate(date);
+    }
+    
+    setHoveredDate(null);
+  };
+  
+  const handleDayHover = (date: Date) => {
+    // Only set hovered date in month view
+    if (viewMode === 'month') {
+      console.log(`Day hover: ${date.toISOString()}`);
+      setHoveredDate(date);
     }
   };
   
@@ -90,9 +159,11 @@ const CalendarView = () => {
     const today = new Date();
     setCurrentDate(today);
     setSelectedDate(today);
+    setHoveredDate(null);
   };
   
   const handleEventClick = (event: Event) => {
+    console.log(`Event clicked: ${event.title}`);
     setSelectedEvent(event);
     setIsViewEventDialogOpen(true);
     setIsEditMode(false);
@@ -107,30 +178,6 @@ const CalendarView = () => {
       toast.error('Failed to update settings');
     }
   };
-
-  const isSameDay = (date1: Date, date2: Date) => {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
-  };
-  
-  const selectedDateEvents = events.filter(event => {
-    const eventStart = new Date(event.start);
-    const eventEnd = new Date(event.end);
-    
-    return (
-      isSameDay(selectedDate, eventStart) || 
-      isSameDay(selectedDate, eventEnd) ||
-      (eventStart < selectedDate && eventEnd > selectedDate)
-    );
-  }).sort((a, b) => {
-    if (a.allDay && !b.allDay) return -1;
-    if (b.allDay && !a.allDay) return 1;
-    
-    return new Date(a.start).getTime() - new Date(b.start).getTime();
-  });
   
   return (
     <div className="container py-8 animate-fade-in">
@@ -144,7 +191,6 @@ const CalendarView = () => {
         handleTodayClick={handleTodayClick}
         handleNewEvent={() => setIsNewEventDialogOpen(true)}
         handleHolidaysToggle={handleHolidaysToggle}
-        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
         navigate={navigate}
       />
       
@@ -152,11 +198,12 @@ const CalendarView = () => {
         calendar={calendar}
         viewMode={viewMode}
         currentDate={currentDate}
-        selectedDate={selectedDate}
+        selectedDate={hoveredDate || selectedDate}
         events={events}
         selectedDateEvents={selectedDateEvents}
         onDateSelect={handleDateSelect}
         onEventClick={handleEventClick}
+        onDayHover={handleDayHover}
         handleNewEvent={() => setIsNewEventDialogOpen(true)}
         isNewEventDialogOpen={isNewEventDialogOpen}
         setIsNewEventDialogOpen={setIsNewEventDialogOpen}
@@ -166,8 +213,6 @@ const CalendarView = () => {
         setSelectedEvent={setSelectedEvent}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
-        isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}
-        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
       />
     </div>
   );

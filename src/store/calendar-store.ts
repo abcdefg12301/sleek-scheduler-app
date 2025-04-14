@@ -1,13 +1,13 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Calendar, Event, SleepSchedule, Holiday } from '../types';
+import { Calendar, Event, Holiday } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { addDays } from 'date-fns';
 
 import { HOLIDAYS } from './holiday-service';
 import { calendarEventService } from './calendar-event-service';
 import { eventService } from './event-service';
-import { sleepService } from './sleep-service';
 import { holidayService } from './holiday-service';
 
 interface CalendarState {
@@ -16,7 +16,7 @@ interface CalendarState {
   holidays: Holiday[];
   
   // Calendar actions
-  addCalendar: (name: string, description: string, color: string, showHolidays?: boolean, sleepSchedule?: SleepSchedule) => Calendar;
+  addCalendar: (name: string, description: string, color: string, showHolidays?: boolean) => Calendar;
   updateCalendar: (id: string, data: Partial<Calendar>) => void;
   deleteCalendar: (id: string) => void;
   selectCalendar: (id: string | null) => void;
@@ -28,9 +28,6 @@ interface CalendarState {
   getEventsForDate: (date: Date) => Event[];
   getEventsForDateRange: (startDate: Date, endDate: Date) => Event[];
   getExpandedEvents: (calendarId: string, startDate: Date, endDate: Date) => Event[];
-  
-  // Sleep schedule
-  updateSleepSchedule: (calendarId: string, sleepSchedule: SleepSchedule) => void;
 }
 
 export const useCalendarStore = create<CalendarState>()(
@@ -40,21 +37,14 @@ export const useCalendarStore = create<CalendarState>()(
       selectedCalendarId: null,
       holidays: HOLIDAYS,
       
-      addCalendar: (name, description, color, showHolidays = true, sleepSchedule) => {
-        const defaultSleepSchedule = { 
-          enabled: false, 
-          startTime: '22:00', 
-          endTime: '06:00' 
-        };
-        
+      addCalendar: (name, description, color, showHolidays = true) => {
         const newCalendar: Calendar = {
           id: uuidv4(),
           name,
           description,
           color,
           events: [],
-          showHolidays,
-          sleepSchedule: sleepSchedule || defaultSleepSchedule
+          showHolidays
         };
         
         set((state) => ({
@@ -66,6 +56,8 @@ export const useCalendarStore = create<CalendarState>()(
       },
       
       updateCalendar: (id, data) => {
+        console.log(`Updating calendar ${id} with data:`, data);
+        
         set((state) => ({
           calendars: state.calendars.map((calendar) => 
             calendar.id === id ? { ...calendar, ...data } : calendar
@@ -85,6 +77,8 @@ export const useCalendarStore = create<CalendarState>()(
       },
       
       addEvent: (calendarId, eventData) => {
+        console.log(`Adding event to calendar ${calendarId}:`, eventData);
+        
         const newEvent = eventService.createEvent(calendarId, eventData);
         
         set((state) => ({
@@ -99,6 +93,8 @@ export const useCalendarStore = create<CalendarState>()(
       },
       
       updateEvent: (calendarId, eventId, data) => {
+        console.log(`Updating event ${eventId} in calendar ${calendarId} with data:`, data);
+        
         set((state) => ({
           calendars: state.calendars.map((calendar) => 
             calendar.id === calendarId 
@@ -114,6 +110,8 @@ export const useCalendarStore = create<CalendarState>()(
       },
       
       deleteEvent: (calendarId, eventId) => {
+        console.log(`Deleting event ${eventId} from calendar ${calendarId}`);
+        
         set((state) => ({
           calendars: state.calendars.map((calendar) => 
             calendar.id === calendarId 
@@ -132,12 +130,18 @@ export const useCalendarStore = create<CalendarState>()(
       
       getEventsForDate: (date) => {
         const { calendars } = get();
-        return calendarEventService.getEventsForDate(calendars, date, HOLIDAYS);
+        console.time('getEventsForDate');
+        const events = calendarEventService.getEventsForDate(calendars, date, HOLIDAYS);
+        console.timeEnd('getEventsForDate');
+        return events;
       },
       
       getEventsForDateRange: (startDate, endDate) => {
         const { calendars } = get();
-        return calendarEventService.getEventsForDateRange(calendars, startDate, endDate, HOLIDAYS);
+        console.time('getEventsForDateRange');
+        const events = calendarEventService.getEventsForDateRange(calendars, startDate, endDate, HOLIDAYS);
+        console.timeEnd('getEventsForDateRange');
+        return events;
       },
       
       getExpandedEvents: (calendarId, startDate, endDate) => {
@@ -146,16 +150,6 @@ export const useCalendarStore = create<CalendarState>()(
         
         return eventService.getExpandedEvents(calendar.events, startDate, endDate);
       },
-      
-      updateSleepSchedule: (calendarId, sleepSchedule) => {
-        set((state) => ({
-          calendars: state.calendars.map((calendar) => 
-            calendar.id === calendarId 
-              ? { ...calendar, sleepSchedule }
-              : calendar
-          )
-        }));
-      }
     }),
     {
       name: 'calendar-storage',

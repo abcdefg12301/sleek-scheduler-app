@@ -2,9 +2,7 @@
 import { Calendar, Event, Holiday } from '../types';
 import { addDays, isSameDay, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { eventService } from './event-service';
-import { sleepService } from './sleep-service';
 import { holidayService } from './holiday-service';
-import { filterDuplicateSleepEvents } from '@/lib/event-utils';
 
 /**
  * Service to consolidate event gathering logic from calendar-store
@@ -24,16 +22,6 @@ export const calendarEventService = {
       allEvents.push(...expandedEvents);
     });
     
-    // Then collect all sleep events from all calendars
-    const sleepEvents: Event[] = [];
-    calendars.forEach(calendar => {
-      // Get sleep events if enabled
-      if (calendar.sleepSchedule?.enabled) {
-        const calendarSleepEvents = sleepService.getSleepEventsForDate(calendar.id, calendar.sleepSchedule, date);
-        sleepEvents.push(...calendarSleepEvents);
-      }
-    });
-    
     // Then collect holiday events (only once per holiday)
     calendars.forEach(calendar => {
       // Add holiday events if enabled
@@ -51,10 +39,6 @@ export const calendarEventService = {
       }
     });
     
-    // Deduplicate sleep events before adding to results
-    const uniqueSleepEvents = filterDuplicateSleepEvents(sleepEvents);
-    allEvents = [...allEvents, ...uniqueSleepEvents];
-    
     // Sort events
     return eventService.sortEvents(allEvents);
   },
@@ -71,16 +55,6 @@ export const calendarEventService = {
       // Get regular events (including recurring)
       const expandedEvents = eventService.getExpandedEvents(calendar.events, startDate, endDate);
       allEvents.push(...expandedEvents);
-    });
-    
-    // Then collect all sleep events from all calendars
-    const sleepEvents: Event[] = [];
-    calendars.forEach(calendar => {
-      // Get sleep events if enabled
-      if (calendar.sleepSchedule?.enabled) {
-        const calendarSleepEvents = sleepService.getSleepEventsForDateRange(calendar.id, calendar.sleepSchedule, startDate, endDate);
-        sleepEvents.push(...calendarSleepEvents);
-      }
     });
     
     // Then collect holiday events (only once per holiday)
@@ -107,10 +81,6 @@ export const calendarEventService = {
         }
       }
     });
-    
-    // Deduplicate sleep events before adding to results
-    const uniqueSleepEvents = filterDuplicateSleepEvents(sleepEvents);
-    allEvents = [...allEvents, ...uniqueSleepEvents];
     
     // Sort events
     return eventService.sortEvents(allEvents);

@@ -1,3 +1,4 @@
+
 import { Event } from '@/types';
 import { 
   isWithinInterval, isBefore, isAfter, 
@@ -9,6 +10,8 @@ import {
  * Filters events for a specific date, including those that overlap midnight
  */
 export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
+  console.log(`Filtering events for date: ${date.toISOString()}, total events: ${events.length}`);
+  
   // Filter events for the selected day including those that overlap with midnight
   const filteredEvents = events.filter(event => {
     const eventStart = new Date(event.start);
@@ -17,7 +20,7 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
     const dayEnd = endOfDay(date);
     
     // Check if the event overlaps with the selected day
-    return (
+    const overlaps = (
       // Event starts within the day
       isWithinInterval(eventStart, { start: dayStart, end: dayEnd }) ||
       // Event ends within the day
@@ -28,6 +31,24 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
       isSameDay(eventStart, date) || 
       isSameDay(eventEnd, date)
     );
+    
+    if (overlaps && event.id.includes('debug')) {
+      console.log(`Event ${event.title} overlaps with ${date.toISOString()}`, {
+        eventStart,
+        eventEnd,
+        dayStart,
+        dayEnd,
+        conditions: {
+          startsWithinDay: isWithinInterval(eventStart, { start: dayStart, end: dayEnd }),
+          endsWithinDay: isWithinInterval(eventEnd, { start: dayStart, end: dayEnd }),
+          spansEntireDay: (isBefore(eventStart, dayStart) && isAfter(eventEnd, dayEnd)),
+          sameDayStart: isSameDay(eventStart, date),
+          sameDayEnd: isSameDay(eventEnd, date)
+        }
+      });
+    }
+    
+    return overlaps;
   }).sort((a, b) => {
     // Sort by all-day first, then by start time
     if (a.allDay && !b.allDay) return -1;
@@ -35,6 +56,7 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
   
+  console.log(`Filtered ${filteredEvents.length} events for ${date.toISOString()}`);
   return filteredEvents;
 };
 
@@ -43,32 +65,15 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
  * Uses a stringified key to detect duplicates by date and time
  */
 export function filterDuplicateSleepEvents(events: Event[]): Event[] {
-  // Use a map to track unique sleep events by their time + day combination
-  const uniqueSleepEvents = new Map<string, Event>();
-  const nonSleepEvents: Event[] = [];
-  
-  events.forEach(event => {
-    if (event.isSleep) {
-      // Create a unique key for this sleep event using date + times
-      const startDay = startOfDay(event.start).getTime();
-      const key = `sleep-${startDay}`;
-      
-      if (!uniqueSleepEvents.has(key)) {
-        uniqueSleepEvents.set(key, event);
-      }
-    } else {
-      nonSleepEvents.push(event);
-    }
-  });
-  
-  // Return the non-sleep events plus exactly one sleep event per day
-  return [...nonSleepEvents, ...uniqueSleepEvents.values()];
+  // This function will be removed as we're removing sleep schedule
+  return events;
 }
 
 /**
  * Split multi-day events into segments for each day they span
  */
 export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
+  console.log(`Splitting multi-day events for ${date.toISOString()}`);
   const result: Event[] = [];
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
@@ -116,5 +121,20 @@ export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
     }
   });
   
+  console.log(`Processed ${result.length} events for ${date.toISOString()} after splitting`);
   return result;
+};
+
+/**
+ * Debug helper: logs event details
+ */
+export const logEventDetails = (event: Event, label: string = "Event detail"): void => {
+  console.group(`🔍 ${label} - ${event.title}`);
+  console.log(`ID: ${event.id}`);
+  console.log(`Start: ${event.start.toString()}`);
+  console.log(`End: ${event.end.toString()}`);
+  console.log(`All day: ${event.allDay}`);
+  console.log(`Color: ${event.color}`);
+  console.log(`Is segment: ${event.isSegment ? `Yes (${event.segmentType})` : 'No'}`);
+  console.groupEnd();
 };

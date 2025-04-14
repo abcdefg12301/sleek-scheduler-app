@@ -20,7 +20,7 @@ const EventLayout = ({ event, layout, onEventClick }: EventLayoutProps) => {
   // Generate classes for event display
   const eventClasses = cn(
     "absolute z-10 overflow-hidden",
-    event.color ? `border-l-4` : "border-l-4 border-primary",
+    "border-l-4",
     event.isSegment && event.segmentType === 'middle' && "border-l-0 border-r-0 rounded-none",
     event.isSegment && event.segmentType === 'start' && "rounded-b-none",
     event.isSegment && event.segmentType === 'end' && "rounded-t-none"
@@ -34,7 +34,7 @@ const EventLayout = ({ event, layout, onEventClick }: EventLayoutProps) => {
         left: `${layout.left}%`,
         width: `${layout.width}%`,
         height: `${Math.max(layout.height, 3)}%`, // Ensure minimum height for visibility
-        borderLeftColor: event.color || undefined
+        borderLeftColor: event.color || '#8B5CF6'
       }}
       onClick={() => onEventClick(event)}
     >
@@ -48,7 +48,7 @@ const EventLayout = ({ event, layout, onEventClick }: EventLayoutProps) => {
       )}>
         <div className="font-medium truncate">
           {event.title}
-          {event.isSegment && (event.segmentType === 'middle' || event.segmentType === 'end') && " (cont'd)"}
+          {/* Removing "cont'd" text as requested */}
         </div>
         {layout.height > 5 && (
           <div className="text-xs text-muted-foreground">
