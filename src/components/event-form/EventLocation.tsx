@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EventFormValues } from './eventFormSchema';
 import {
   FormControl,
   FormField,
@@ -12,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { MapPin } from 'lucide-react';
 
 interface EventLocationProps {
-  form: UseFormReturn<EventFormValues>;
+  form: UseFormReturn<any>;
 }
 
 const EventLocation = ({ form }: EventLocationProps) => {

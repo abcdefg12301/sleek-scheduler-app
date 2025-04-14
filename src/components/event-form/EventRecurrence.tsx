@@ -1,7 +1,5 @@
-
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EventFormValues } from './eventFormSchema';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import {
   FormControl,
@@ -30,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface EventRecurrenceProps {
-  form: UseFormReturn<EventFormValues>;
+  form: UseFormReturn<any>;
   startDate: Date;
 }
 
@@ -39,7 +37,6 @@ const EventRecurrence = ({ form, startDate }: EventRecurrenceProps) => {
   const recurrenceFrequency = form.watch('recurrenceFrequency');
   const recurrenceInterval = form.watch('recurrenceInterval');
   
-  // Calculate example next dates based on recurrence settings
   const getNextDatesExample = () => {
     if (!isRecurring) return [];
     
@@ -47,7 +44,6 @@ const EventRecurrence = ({ form, startDate }: EventRecurrenceProps) => {
     let currentDate = new Date(startDate);
     
     for (let i = 0; i < 3; i++) {
-      // Skip the first instance (start date)
       if (i === 0) {
         if (recurrenceFrequency === 'daily') {
           currentDate = addDays(currentDate, recurrenceInterval);

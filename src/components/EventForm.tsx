@@ -11,6 +11,8 @@ import EventDateTime from './event-form/EventDateTime';
 import EventLocation from './event-form/EventLocation';
 import EventRecurrence from './event-form/EventRecurrence';
 import { parseTimeToDate } from '@/lib/date-utils';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { eventFormSchema } from './event-form/eventFormSchema';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -49,7 +51,10 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
     recurrenceCount: initialValues?.recurrence?.count || 1,
   };
   
-  const form = useForm({ defaultValues });
+  const form = useForm({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues
+  });
   const isAllDay = form.watch('allDay');
 
   const handleSubmit = (data: any) => {
