@@ -1,9 +1,11 @@
+
 export interface Calendar {
   id: string;
   name: string;
   description: string;
   color: string;
   showHolidays: boolean;
+  events: Event[]; // Add events property
 }
 
 export interface Event {
@@ -18,6 +20,12 @@ export interface Event {
   color?: string;
   recurrence?: RecurrenceRule;
   isHoliday?: boolean;
+  // Add segment-related properties
+  isSegment?: boolean;
+  segmentType?: 'start' | 'middle' | 'end';
+  // Add recurrence instance property
+  isRecurrenceInstance?: boolean;
+  originalEventId?: string;
 }
 
 // Alias for better semantics in our calendar application
@@ -37,3 +45,11 @@ export interface SleepSchedule {
 }
 
 export type CalendarViewType = 'day' | 'week' | 'month';
+
+// Add Holiday type
+export interface Holiday {
+  id: string;
+  name: string;
+  date: Date;
+  type: 'public' | 'observance';
+}

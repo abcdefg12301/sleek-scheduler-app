@@ -47,7 +47,7 @@ const CalendarCard = ({ calendar, onDelete }: CalendarCardProps) => {
           {calendar.description}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          {calendar.events.length} event{calendar.events.length !== 1 ? 's' : ''}
+          {calendar.events?.length || 0} event{calendar.events?.length !== 1 ? 's' : ''}
         </p>
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
