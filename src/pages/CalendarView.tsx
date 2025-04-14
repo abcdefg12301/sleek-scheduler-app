@@ -16,7 +16,8 @@ const CalendarView = () => {
   const { 
     calendars, 
     getEventsForDateRange,
-    getEventsForDate
+    getEventsForDate,
+    updateCalendar
   } = useCalendarStore();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -102,6 +103,17 @@ const CalendarView = () => {
     setIsEditMode(false);
   };
 
+  // Add the missing handleHolidaysToggle function
+  const handleHolidaysToggle = (enabled: boolean) => {
+    try {
+      updateCalendar(calendar.id, { showHolidays: enabled });
+      toast.success(enabled ? 'Holidays enabled' : 'Holidays disabled');
+    } catch (error) {
+      console.error('Failed to update holiday settings:', error);
+      toast.error('Failed to update settings');
+    }
+  };
+
   // Helper function to check if two dates are the same day
   const isSameDay = (date1: Date, date2: Date) => {
     return (
@@ -141,6 +153,7 @@ const CalendarView = () => {
         handleNextPeriod={handleNextPeriod}
         handleTodayClick={handleTodayClick}
         handleNewEvent={() => setIsNewEventDialogOpen(true)}
+        handleHolidaysToggle={handleHolidaysToggle}
         setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
         navigate={navigate}
       />
@@ -160,7 +173,7 @@ const CalendarView = () => {
         isViewEventDialogOpen={isViewEventDialogOpen}
         setIsViewEventDialogOpen={setIsViewEventDialogOpen}
         selectedEvent={selectedEvent}
-        setSelectedEvent={setSelectedEvent} // Added the missing prop
+        setSelectedEvent={setSelectedEvent}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
         isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}

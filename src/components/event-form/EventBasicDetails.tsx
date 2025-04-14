@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EventFormValues } from './eventFormSchema';
 import {
   FormControl,
   FormField,
@@ -13,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import ColorPicker from '@/components/ColorPicker';
 
+// Using a generic type parameter for form
 interface EventBasicDetailsProps {
-  form: UseFormReturn<EventFormValues>;
+  form: UseFormReturn<any>;
 }
 
 const EventBasicDetails = ({ form }: EventBasicDetailsProps) => {

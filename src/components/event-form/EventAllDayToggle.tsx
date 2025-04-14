@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 
+// Updated to use a generic type parameter
 interface EventAllDayToggleProps {
   form: UseFormReturn<any>;
 }

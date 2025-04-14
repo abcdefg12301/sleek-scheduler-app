@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EventFormValues } from './eventFormSchema';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import {
@@ -22,8 +21,9 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import ImprovedTimePicker from './ImprovedTimePicker';
 
+// Using generic type for form to allow flexibility
 interface EventDateTimeProps {
-  form: UseFormReturn<EventFormValues>;
+  form: UseFormReturn<any>;
   startDate: Date;
   setStartDate: (date: Date) => void;
   endDate: Date;
