@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ interface FormData {
 const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, updateCalendar, updateSleepSchedule } = useCalendarStore();
+  const { calendars, updateCalendar } = useCalendarStore();
   
   const calendar = calendars.find(cal => cal.id === id);
   
@@ -32,7 +31,7 @@ const EditCalendar = () => {
       description: calendar?.description || '',
       color: calendar?.color || '#8B5CF6',
       showHolidays: calendar?.showHolidays !== undefined ? calendar.showHolidays : true,
-      sleepSchedule: calendar?.sleepSchedule || { enabled: false, startTime: '22:00', endTime: '06:00' }
+      sleepSchedule: { enabled: false, startTime: '22:00', endTime: '06:00' }
     },
   });
   
@@ -51,8 +50,6 @@ const EditCalendar = () => {
         color: data.color,
         showHolidays: data.showHolidays
       });
-      
-      updateSleepSchedule(id, data.sleepSchedule);
       
       toast.success('Calendar updated successfully');
       navigate(`/calendar/${id}`);

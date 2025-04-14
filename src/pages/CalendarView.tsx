@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, addMonths, subMonths, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import { Event } from '@/types';
@@ -33,7 +32,6 @@ const CalendarView = () => {
   
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Debug output for calendar info
   useEffect(() => {
     if (calendar) {
       console.log(`Current calendar: ${calendar.name} (${calendar.id})`);
@@ -65,11 +63,6 @@ const CalendarView = () => {
     }
   }, [calendar, id, currentDate, viewMode, calendars, getEventsForDateRange]);
   
-  // Effect to update selected date events
-  useEffect(() => {
-    updateSelectedDateEvents(hoveredDate || selectedDate);
-  }, [hoveredDate, selectedDate, events]);
-  
   useEffect(() => {
     if (!calendar && id) {
       console.error('Calendar not found with ID:', id);
@@ -82,7 +75,6 @@ const CalendarView = () => {
   }
   
   const updateSelectedDateEvents = (date: Date) => {
-    // Helper function to check if two dates are the same day
     const isSameDay = (date1: Date, date2: Date) => {
       return (
         date1.getFullYear() === date2.getFullYear() &&
@@ -103,11 +95,9 @@ const CalendarView = () => {
         );
       })
       .sort((a, b) => {
-        // Sort all-day events first
         if (a.allDay && !b.allDay) return -1;
         if (b.allDay && !a.allDay) return 1;
         
-        // Sort by start time
         return new Date(a.start).getTime() - new Date(b.start).getTime();
       });
       
@@ -148,7 +138,6 @@ const CalendarView = () => {
   };
   
   const handleDayHover = (date: Date) => {
-    // Only set hovered date in month view
     if (viewMode === 'month') {
       console.log(`Day hover: ${date.toISOString()}`);
       setHoveredDate(date);
@@ -185,7 +174,7 @@ const CalendarView = () => {
         calendar={calendar}
         currentDate={currentDate}
         viewMode={viewMode}
-        setViewMode={setViewMode}
+        setViewMode={(mode: CalendarViewType) => setViewMode(mode)}
         handlePrevPeriod={handlePrevPeriod}
         handleNextPeriod={handleNextPeriod}
         handleTodayClick={handleTodayClick}

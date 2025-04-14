@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, isToday } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,7 +6,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import CalendarSettings from './CalendarSettings';
 import { Calendar as CalendarType } from '@/types';
 
-type CalendarViewType = 'day' | 'month' | 'week';
+type CalendarViewType = 'day' | 'month';
 
 interface CalendarViewHeaderProps {
   calendar: CalendarType;
@@ -42,8 +41,6 @@ const CalendarViewHeader = ({
         return format(currentDate, 'MMMM d, yyyy');
       case 'month':
         return format(currentDate, 'MMMM yyyy');
-      case 'week':
-        return `Week of ${format(currentDate, 'MMMM d, yyyy')}`;
       default:
         return format(currentDate, 'MMMM d, yyyy');
     }

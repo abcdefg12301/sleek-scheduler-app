@@ -31,6 +31,7 @@ export interface Event {
   isHoliday?: boolean;
   isSegment?: boolean;
   segmentType?: 'start' | 'middle' | 'end';
+  isSleep?: boolean;
 }
 
 export interface RecurrenceRule {
@@ -39,4 +40,12 @@ export interface RecurrenceRule {
   endDate?: Date;
   count?: number;
   weekdays?: number[];
+}
+
+// Adding back SleepSchedule type for backward compatibility
+// This will be phased out eventually
+export interface SleepSchedule {
+  enabled: boolean;
+  startTime: string;
+  endTime: string;
 }

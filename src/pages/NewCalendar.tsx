@@ -45,12 +45,12 @@ const NewCalendar = () => {
   const onSubmit = (data: FormData) => {
     console.log('Creating new calendar with data:', data);
     try {
+      // Fixed to pass correct number of arguments
       const newCalendar = addCalendar(
         data.name, 
         data.description, 
         data.color,
-        data.showHolidays,
-        data.sleepSchedule.enabled ? data.sleepSchedule : undefined
+        data.showHolidays
       );
       
       toast.success('Calendar created successfully');
