@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import EventLayout from './EventLayout';
 import { cn } from '@/lib/utils';
 
 interface TimeGridProps {
   hours: number[];
-  timedEvents: Event[];
+  timedEvents: CalendarEvent[];
   eventLayouts: {
     [id: string]: {
       top: number;
@@ -16,7 +16,7 @@ interface TimeGridProps {
       overlappingEvents: number;
     };
   };
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 const TimeGrid = ({ hours, timedEvents, eventLayouts, onEventClick }: TimeGridProps) => {

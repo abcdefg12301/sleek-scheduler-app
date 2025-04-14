@@ -1,10 +1,10 @@
 
 import { useMemo } from 'react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { isSameDay, differenceInMinutes, addDays } from 'date-fns';
 
 // Custom hook to calculate event layouts for the daily calendar view
-export function useDailyEventLayout(events: Event[], selectedDate: Date) {
+export function useDailyEventLayout(events: CalendarEvent[], selectedDate: Date) {
   return useMemo(() => {
     // Calculate positions and sizes for all events
     const layouts: {
@@ -20,7 +20,7 @@ export function useDailyEventLayout(events: Event[], selectedDate: Date) {
     if (!events.length) return layouts;
     
     // Track overlapping events
-    const eventsByPosition: {[position: string]: Event[]} = {};
+    const eventsByPosition: {[position: string]: CalendarEvent[]} = {};
     
     events.forEach(event => {
       // Skip all-day events

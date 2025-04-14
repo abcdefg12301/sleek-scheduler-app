@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Event } from '@/types';
+import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
 import DailyCalendarView from '@/components/DailyCalendarView';
 import DayPreviewBar from '@/components/calendar/DayPreviewBar';
@@ -16,18 +16,18 @@ interface CalendarViewContentProps {
   viewMode: CalendarViewType;
   currentDate: Date;
   selectedDate: Date;
-  events: Event[];
-  selectedDateEvents: Event[];
+  events: CalendarEvent[];
+  selectedDateEvents: CalendarEvent[];
   onDateSelect: (date: Date) => void;
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
   onDayHover?: (date: Date) => void;
   handleNewEvent: () => void;
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
   isViewEventDialogOpen: boolean;
   setIsViewEventDialogOpen: (open: boolean) => void;
-  selectedEvent: Event | null;
-  setSelectedEvent: (event: Event | null) => void;
+  selectedEvent: CalendarEvent | null;
+  setSelectedEvent: (event: CalendarEvent | null) => void;
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
 }
@@ -59,7 +59,7 @@ const CalendarViewContent = ({
     updateCalendar,
   } = useCalendarStore();
 
-  const handleCreateEvent = (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+  const handleCreateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
       addEvent(calendar.id, eventData);
       setIsNewEventDialogOpen(false);
@@ -70,7 +70,7 @@ const CalendarViewContent = ({
     }
   };
   
-  const handleUpdateEvent = (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+  const handleUpdateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     if (!selectedEvent) return;
     
     try {

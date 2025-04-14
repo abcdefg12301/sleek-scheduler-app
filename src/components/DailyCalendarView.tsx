@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { ScrollArea } from './ui/scroll-area';
 import AllDayEvents from './calendar-view/AllDayEvents';
 import DailyCalendarHeader from './calendar-view/DailyCalendarHeader';
@@ -10,8 +10,8 @@ import { filterEventsForDate, splitMultiDayEvents } from '@/lib/event-utils';
 
 interface DailyCalendarViewProps {
   selectedDate: Date;
-  events: Event[];
-  onEventClick: (event: Event) => void;
+  events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 const DailyCalendarView = ({ selectedDate, events, onEventClick }: DailyCalendarViewProps) => {

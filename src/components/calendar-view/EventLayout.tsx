@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface EventLayoutProps {
-  event: Event;
+  event: CalendarEvent;
   layout: {
     top: number;
     height: number;
@@ -13,7 +13,7 @@ interface EventLayoutProps {
     width: number;
     overlappingEvents: number;
   };
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 const EventLayout = ({ event, layout, onEventClick }: EventLayoutProps) => {
@@ -48,7 +48,6 @@ const EventLayout = ({ event, layout, onEventClick }: EventLayoutProps) => {
       )}>
         <div className="font-medium truncate">
           {event.title}
-          {/* Removing "cont'd" text as requested */}
         </div>
         {layout.height > 5 && (
           <div className="text-xs text-muted-foreground">

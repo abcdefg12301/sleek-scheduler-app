@@ -1,5 +1,5 @@
 
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { 
   isWithinInterval, isBefore, isAfter, 
   startOfDay, endOfDay, isSameDay, isEqual,
@@ -9,7 +9,7 @@ import {
 /**
  * Filters events for a specific date, including those that overlap midnight
  */
-export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
+export const filterEventsForDate = (events: CalendarEvent[], date: Date): CalendarEvent[] => {
   console.log(`Filtering events for date: ${date.toISOString()}, total events: ${events.length}`);
   
   // Filter events for the selected day including those that overlap with midnight
@@ -64,7 +64,7 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
  * Filter out duplicate sleep events
  * Uses a stringified key to detect duplicates by date and time
  */
-export function filterDuplicateSleepEvents(events: Event[]): Event[] {
+export function filterDuplicateSleepEvents(events: CalendarEvent[]): CalendarEvent[] {
   // This function will be removed as we're removing sleep schedule
   return events;
 }
@@ -72,9 +72,9 @@ export function filterDuplicateSleepEvents(events: Event[]): Event[] {
 /**
  * Split multi-day events into segments for each day they span
  */
-export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
+export const splitMultiDayEvents = (events: CalendarEvent[], date: Date): CalendarEvent[] => {
   console.log(`Splitting multi-day events for ${date.toISOString()}`);
-  const result: Event[] = [];
+  const result: CalendarEvent[] = [];
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
   
@@ -97,7 +97,7 @@ export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
         end: segmentEnd,
         isSegment: true,
         segmentType: 'start'
-      } as Event);
+      });
     } 
     // If the event ends on this day
     else if (isSameDay(eventEnd, date)) {
@@ -107,7 +107,7 @@ export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
         start: segmentStart,
         isSegment: true,
         segmentType: 'end'
-      } as Event);
+      });
     }
     // If the day is in the middle of a multi-day event
     else if (isWithinInterval(date, { start: eventStart, end: eventEnd })) {
@@ -117,7 +117,7 @@ export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
         end: new Date(dayEnd),
         isSegment: true,
         segmentType: 'middle'
-      } as Event);
+      });
     }
   });
   
@@ -128,7 +128,7 @@ export const splitMultiDayEvents = (events: Event[], date: Date): Event[] => {
 /**
  * Debug helper: logs event details
  */
-export const logEventDetails = (event: Event, label: string = "Event detail"): void => {
+export const logEventDetails = (event: CalendarEvent, label: string = "Event detail"): void => {
   console.group(`🔍 ${label} - ${event.title}`);
   console.log(`ID: ${event.id}`);
   console.log(`Start: ${event.start.toString()}`);

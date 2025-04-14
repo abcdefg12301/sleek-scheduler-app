@@ -3,16 +3,16 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar, Info } from 'lucide-react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import EventDisplay from '@/components/EventDisplay';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { filterDuplicateSleepEvents } from '@/lib/event-utils';
 
 interface EventSidebarProps {
   selectedDate: Date;
-  selectedDateEvents: Event[];
+  selectedDateEvents: CalendarEvent[];
   handleNewEvent: () => void;
-  handleEventClick: (event: Event) => void;
+  handleEventClick: (event: CalendarEvent) => void;
 }
 
 const EventSidebar = ({ 

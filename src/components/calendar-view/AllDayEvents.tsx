@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import EventDisplay from '@/components/EventDisplay';
 
 interface AllDayEventsProps {
-  events: Event[];
-  onEventClick: (event: Event) => void;
+  events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 const AllDayEvents = ({ events, onEventClick }: AllDayEventsProps) => {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { DialogTitle, DialogDescription, DialogHeader, DialogContent, Dialog } from '@/components/ui/dialog';
@@ -6,18 +7,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Check, Clock, MapPin, Calendar, Pencil, Trash } from 'lucide-react';
 import EventForm from '@/components/event-form/EventForm';
+import { Event as CalendarEvent } from '@/types';
 
 interface EventDialogsProps {
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
   isViewEventDialogOpen: boolean;
   setIsViewEventDialogOpen: (open: boolean) => void;
-  selectedEvent: Event | null;
+  selectedEvent: CalendarEvent | null;
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
   selectedDate: Date;
-  handleCreateEvent: (eventData: Omit<Event, 'id' | 'calendarId'>) => void;
-  handleUpdateEvent: (eventData: Omit<Event, 'id' | 'calendarId'>) => void;
+  handleCreateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => void;
+  handleUpdateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => void;
   handleDeleteEvent: () => void;
 }
 

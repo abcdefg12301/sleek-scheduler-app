@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatEventTime } from '@/lib/date-utils';
 import { Clock, MapPin } from 'lucide-react';
 
 interface EventDisplayProps {
-  event: Event;
+  event: CalendarEvent;
   onClick: () => void;
 }
 

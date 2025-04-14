@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 import { format, isToday, isSameMonth, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getCalendarDays } from '@/lib/date-utils';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 
 interface DayProps {
   day: Date;
   currentMonth: Date;
   selectedDate: Date;
-  events: Event[];
+  events: CalendarEvent[];
   onClick: (day: Date) => void;
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
   onHover?: (day: Date) => void;
 }
 
@@ -85,9 +85,9 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick, o
 
 interface MonthlyCalendarProps {
   currentDate: Date;
-  events: Event[];
+  events: CalendarEvent[];
   onDateSelect: (date: Date) => void;
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: CalendarEvent) => void;
   onDayHover?: (date: Date) => void;
 }
 
