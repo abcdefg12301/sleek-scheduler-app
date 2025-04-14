@@ -44,14 +44,12 @@ const CalendarView = () => {
     selectedEvent,
     setSelectedEvent,
     isEditMode,
-    setIsEditMode,
-    isSleepScheduleDialogOpen,
-    setIsSleepScheduleDialogOpen
+    setIsEditMode
   } = useEventDialogs();
   
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Fetch calendar events including sleep schedule and holidays
+  // Fetch calendar events
   useEffect(() => {
     if (!calendar || !id) return;
     
@@ -69,7 +67,7 @@ const CalendarView = () => {
     setEvents(allEvents);
     
     console.log(`Loaded ${allEvents.length} events for ${viewMode} view:`, start, end);
-  }, [calendar, id, currentDate, viewMode, calendars]);
+  }, [calendar, id, currentDate, viewMode, calendars, getEventsForDateRange]);
   
   useEffect(() => {
     if (!calendar && id) {
@@ -132,13 +130,12 @@ const CalendarView = () => {
         calendar={calendar}
         currentDate={currentDate}
         viewMode={viewMode}
-        setViewMode={setViewMode}
+        setViewMode={(mode: CalendarViewType) => setViewMode(mode)}
         handlePrevPeriod={handlePrevPeriod}
         handleNextPeriod={handleNextPeriod}
         handleTodayClick={handleTodayClick}
         handleNewEvent={() => setIsNewEventDialogOpen(true)}
         handleHolidaysToggle={handleHolidaysToggle}
-        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
         navigate={navigate}
       />
       
@@ -160,8 +157,6 @@ const CalendarView = () => {
         setSelectedEvent={setSelectedEvent}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
-        isSleepScheduleDialogOpen={isSleepScheduleDialogOpen}
-        setIsSleepScheduleDialogOpen={setIsSleepScheduleDialogOpen}
       />
     </div>
   );

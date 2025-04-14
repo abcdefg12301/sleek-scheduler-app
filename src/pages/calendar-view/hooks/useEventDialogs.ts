@@ -7,7 +7,6 @@ export const useEventDialogs = () => {
   const [isViewEventDialogOpen, setIsViewEventDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isSleepScheduleDialogOpen, setIsSleepScheduleDialogOpen] = useState(false);
 
   return {
     isNewEventDialogOpen,
@@ -17,8 +16,6 @@ export const useEventDialogs = () => {
     selectedEvent,
     setSelectedEvent,
     isEditMode,
-    setIsEditMode,
-    isSleepScheduleDialogOpen,
-    setIsSleepScheduleDialogOpen
+    setIsEditMode
   };
 };

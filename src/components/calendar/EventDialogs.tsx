@@ -6,7 +6,7 @@ import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogConte
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckIcon, ClockIcon, MapPinIcon, CalendarIcon, Pencil1Icon, TrashIcon } from '@radix-ui/react-icons';
+import { Check, Clock, MapPin, Calendar, Pencil, Trash } from 'lucide-react';
 import EventForm from '@/components/event-form/EventForm';
 
 interface EventDialogsProps {
@@ -50,21 +50,14 @@ const EventDialogs = ({
           </DialogHeader>
           
           <EventForm
-            defaultValues={{
+            initialValues={{
               title: '',
               description: '',
-              location: '',
               allDay: false,
               start: selectedDate,
               end: selectedDate,
-              startTime: '09:00',
-              endTime: '10:00',
               color: '',
-              recurrenceEnabled: false,
-              recurrenceFrequency: 'daily',
-              recurrenceInterval: 1,
-              recurrenceEndDate: new Date(selectedDate.getTime() + 30 * 24 * 60 * 60 * 1000), // +30 days
-              recurrenceCount: 5
+              recurrence: undefined
             }}
             onSubmit={handleCreateEvent}
             onCancel={() => setIsNewEventDialogOpen(false)}
@@ -103,21 +96,14 @@ const EventDialogs = ({
             
             {isEditMode ? (
               <EventForm
-                defaultValues={{
+                initialValues={{
                   title: selectedEvent.title,
                   description: selectedEvent.description || '',
-                  location: selectedEvent.location || '',
                   allDay: selectedEvent.allDay,
                   start: selectedEvent.start,
                   end: selectedEvent.end,
-                  startTime: format(new Date(selectedEvent.start), 'HH:mm'),
-                  endTime: format(new Date(selectedEvent.end), 'HH:mm'),
                   color: selectedEvent.color || '',
-                  recurrenceEnabled: !!selectedEvent.recurrence,
-                  recurrenceFrequency: selectedEvent.recurrence?.frequency || 'daily',
-                  recurrenceInterval: selectedEvent.recurrence?.interval || 1,
-                  recurrenceEndDate: selectedEvent.recurrence?.endDate,
-                  recurrenceCount: selectedEvent.recurrence?.count || 5
+                  recurrence: selectedEvent.recurrence
                 }}
                 onSubmit={handleUpdateEvent}
                 onCancel={() => setIsEditMode(false)}
@@ -132,7 +118,7 @@ const EventDialogs = ({
                       onClick={() => setIsEditMode(true)}
                       disabled={selectedEvent.isHoliday}
                     >
-                      <Pencil1Icon className="h-4 w-4 mr-1" />
+                      <Pencil className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
                     <Button 
@@ -141,7 +127,7 @@ const EventDialogs = ({
                       onClick={handleDeleteEvent}
                       disabled={selectedEvent.isHoliday}
                     >
-                      <TrashIcon className="h-4 w-4 mr-1" />
+                      <Trash className="h-4 w-4 mr-1" />
                       Delete
                     </Button>
                   </div>
@@ -158,14 +144,14 @@ const EventDialogs = ({
                   <TabsContent value="details" className="space-y-4">
                     <div className="grid gap-3 py-3">
                       <div className="flex items-center">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        <Calendar className="h-4 w-4 mr-2" />
                         <span className="font-medium">
                           {format(new Date(selectedEvent.start), 'EEEE, MMMM d, yyyy')}
                         </span>
                       </div>
                       
                       <div className="flex items-center">
-                        <ClockIcon className="h-4 w-4 mr-2" />
+                        <Clock className="h-4 w-4 mr-2" />
                         {selectedEvent.allDay ? (
                           <span>All day</span>
                         ) : (
@@ -178,7 +164,7 @@ const EventDialogs = ({
                       
                       {selectedEvent.location && (
                         <div className="flex items-center">
-                          <MapPinIcon className="h-4 w-4 mr-2" />
+                          <MapPin className="h-4 w-4 mr-2" />
                           <span>{selectedEvent.location}</span>
                         </div>
                       )}
@@ -196,7 +182,7 @@ const EventDialogs = ({
                     <TabsContent value="recurrence" className="space-y-4">
                       <div className="grid gap-3 py-3">
                         <div className="flex items-start">
-                          <CheckIcon className="h-4 w-4 mr-2 mt-1" />
+                          <Check className="h-4 w-4 mr-2 mt-1" />
                           <div>
                             <p className="font-medium">Repeats every{' '}
                               {selectedEvent.recurrence.interval > 1 && selectedEvent.recurrence.interval}{' '}
