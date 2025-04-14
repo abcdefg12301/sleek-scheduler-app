@@ -39,29 +39,32 @@ export const filterEventsForDate = (events: Event[], date: Date): Event[] => {
 };
 
 /**
- * Filters out duplicate sleep events with the same times
+ * Filter out duplicate sleep events (when multiple sleep events show on the same day)
  */
-export const filterDuplicateSleepEvents = (events: Event[]): Event[] => {
-  // Track unique sleep events by their start and end times
-  const sleepEventKeys = new Set<string>();
+export function filterDuplicateSleepEvents(events: Event[]): Event[] {
+  // Track processed sleep events by date
+  const processedSleepByDate = new Map<string, Event>();
   
-  return events.filter(event => {
-    // Keep all non-sleep events
-    if (event.title !== 'Sleep') return true;
-    
-    // For sleep events, create a unique key based on start and end times
-    const sleepKey = `sleep-${event.start.getTime()}-${event.end.getTime()}`;
-    
-    // If we haven't seen this sleep event before, keep it
-    if (!sleepEventKeys.has(sleepKey)) {
-      sleepEventKeys.add(sleepKey);
-      return true;
+  // Separate sleep events from regular events
+  const sleepEvents: Event[] = [];
+  const regularEvents: Event[] = [];
+  
+  events.forEach(event => {
+    if (event.isSleep) {
+      const dateKey = `${event.start.toDateString()}`;
+      // Only keep one sleep event per day
+      if (!processedSleepByDate.has(dateKey)) {
+        processedSleepByDate.set(dateKey, event);
+        sleepEvents.push(event);
+      }
+    } else {
+      regularEvents.push(event);
     }
-    
-    // Filter out duplicate sleep events
-    return false;
   });
-};
+  
+  // Combine filtered sleep events with regular events
+  return [...regularEvents, ...sleepEvents];
+}
 
 /**
  * Split multi-day events into segments for each day they span

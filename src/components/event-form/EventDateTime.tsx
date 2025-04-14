@@ -3,7 +3,7 @@ import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { EventFormValues } from './eventFormSchema';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import {
   FormControl,
   FormDescription,
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import EnhancedTimePicker from './EnhancedTimePicker';
+import ImprovedTimePicker from './ImprovedTimePicker';
 
 interface EventDateTimeProps {
   form: UseFormReturn<EventFormValues>;
@@ -100,6 +100,7 @@ const EventDateTime = ({ form, startDate, setStartDate, endDate, setEndDate }: E
                       }
                     }}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -114,11 +115,18 @@ const EventDateTime = ({ form, startDate, setStartDate, endDate, setEndDate }: E
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Start time</FormLabel>
-                <EnhancedTimePicker
+                <ImprovedTimePicker
                   value={field.value}
                   onChange={(time) => {
                     field.onChange(time);
                     // Update startDate with time
+                    const [hours, minutes] = time.split(':').map(Number);
+                    const newStartDate = new Date(startDate);
+                    newStartDate.setHours(hours, minutes);
+                    setStartDate(newStartDate);
+                  }}
+                  onTimeSelected={(time) => {
+                    field.onChange(time);
                     const [hours, minutes] = time.split(':').map(Number);
                     const newStartDate = new Date(startDate);
                     newStartDate.setHours(hours, minutes);
@@ -167,6 +175,7 @@ const EventDateTime = ({ form, startDate, setStartDate, endDate, setEndDate }: E
                     }}
                     disabled={(date) => date < startDate}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -181,11 +190,18 @@ const EventDateTime = ({ form, startDate, setStartDate, endDate, setEndDate }: E
             render={({ field }) => (
               <FormItem>
                 <FormLabel>End time</FormLabel>
-                <EnhancedTimePicker
+                <ImprovedTimePicker
                   value={field.value}
                   onChange={(time) => {
                     field.onChange(time);
                     // Update endDate with time
+                    const [hours, minutes] = time.split(':').map(Number);
+                    const newEndDate = new Date(endDate);
+                    newEndDate.setHours(hours, minutes);
+                    setEndDate(newEndDate);
+                  }}
+                  onTimeSelected={(time) => {
+                    field.onChange(time);
                     const [hours, minutes] = time.split(':').map(Number);
                     const newEndDate = new Date(endDate);
                     newEndDate.setHours(hours, minutes);

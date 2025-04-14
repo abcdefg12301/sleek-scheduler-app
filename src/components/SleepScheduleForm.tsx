@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { SleepSchedule } from '@/types';
 import {
@@ -13,7 +13,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Bed } from 'lucide-react';
-import TimePickerInput from './event-form/TimePickerInput';
+import ImprovedTimePicker from './event-form/ImprovedTimePicker';
 
 interface SleepScheduleFormProps {
   initialValues: SleepSchedule;
@@ -45,7 +45,7 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
   
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="enabled"
@@ -71,17 +71,18 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
         />
         
         {form.watch('enabled') && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="startTime"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sleep Time</FormLabel>
-                  <TimePickerInput
+                  <ImprovedTimePicker
                     value={field.value}
                     onChange={field.onChange}
                     onTimeSelected={field.onChange}
+                    label="When you go to sleep"
                   />
                 </FormItem>
               )}
@@ -93,10 +94,11 @@ const SleepScheduleForm = ({ initialValues, onSubmit, onCancel }: SleepScheduleF
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wake Time</FormLabel>
-                  <TimePickerInput
+                  <ImprovedTimePicker
                     value={field.value}
                     onChange={field.onChange}
                     onTimeSelected={field.onChange}
+                    label="When you wake up"
                   />
                 </FormItem>
               )}

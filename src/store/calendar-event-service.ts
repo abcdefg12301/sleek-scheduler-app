@@ -16,28 +16,27 @@ export const calendarEventService = {
   getEventsForDate: (calendars: Calendar[], date: Date, holidays: Holiday[]): Event[] => {
     let allEvents: Event[] = [];
     const processedHolidays = new Set<string>();
-    const processedSleepTimes = new Set<string>();
     
+    // First collect regular events from all calendars
     calendars.forEach(calendar => {
       // Get regular events (including recurring)
       const expandedEvents = eventService.getExpandedEvents(calendar.events, date, date);
       allEvents.push(...expandedEvents);
-      
-      // Get sleep events if enabled (with deduplication)
+    });
+    
+    // Then collect all sleep events from all calendars
+    const sleepEvents: Event[] = [];
+    calendars.forEach(calendar => {
+      // Get sleep events if enabled
       if (calendar.sleepSchedule?.enabled) {
-        const sleepEvents = sleepService.getSleepEventsForDate(calendar.id, calendar.sleepSchedule, date);
-        
-        // Deduplicate sleep events by start/end time
-        sleepEvents.forEach(sleepEvent => {
-          const sleepKey = `${sleepEvent.start.getTime()}-${sleepEvent.end.getTime()}`;
-          if (!processedSleepTimes.has(sleepKey)) {
-            processedSleepTimes.add(sleepKey);
-            allEvents.push(sleepEvent);
-          }
-        });
+        const calendarSleepEvents = sleepService.getSleepEventsForDate(calendar.id, calendar.sleepSchedule, date);
+        sleepEvents.push(...calendarSleepEvents);
       }
-      
-      // Add holiday events if enabled (with deduplication)
+    });
+    
+    // Then collect holiday events (only once per holiday)
+    calendars.forEach(calendar => {
+      // Add holiday events if enabled
       if (calendar.showHolidays) {
         const holidaysForDate = holidayService.getHolidaysForDate(holidays, date);
         
@@ -52,6 +51,10 @@ export const calendarEventService = {
       }
     });
     
+    // Deduplicate sleep events before adding to results
+    const uniqueSleepEvents = filterDuplicateSleepEvents(sleepEvents);
+    allEvents = [...allEvents, ...uniqueSleepEvents];
+    
     // Sort events
     return eventService.sortEvents(allEvents);
   },
@@ -62,28 +65,27 @@ export const calendarEventService = {
   getEventsForDateRange: (calendars: Calendar[], startDate: Date, endDate: Date, holidays: Holiday[]): Event[] => {
     let allEvents: Event[] = [];
     const processedHolidays = new Set<string>();
-    const processedSleepTimes = new Set<string>();
     
+    // First collect regular events from all calendars
     calendars.forEach(calendar => {
       // Get regular events (including recurring)
       const expandedEvents = eventService.getExpandedEvents(calendar.events, startDate, endDate);
       allEvents.push(...expandedEvents);
-      
-      // Get sleep events if enabled (with deduplication)
+    });
+    
+    // Then collect all sleep events from all calendars
+    const sleepEvents: Event[] = [];
+    calendars.forEach(calendar => {
+      // Get sleep events if enabled
       if (calendar.sleepSchedule?.enabled) {
-        const sleepEvents = sleepService.getSleepEventsForDateRange(calendar.id, calendar.sleepSchedule, startDate, endDate);
-        
-        // Deduplicate sleep events
-        sleepEvents.forEach(sleepEvent => {
-          const sleepKey = `${sleepEvent.start.getTime()}-${sleepEvent.end.getTime()}`;
-          if (!processedSleepTimes.has(sleepKey)) {
-            processedSleepTimes.add(sleepKey);
-            allEvents.push(sleepEvent);
-          }
-        });
+        const calendarSleepEvents = sleepService.getSleepEventsForDateRange(calendar.id, calendar.sleepSchedule, startDate, endDate);
+        sleepEvents.push(...calendarSleepEvents);
       }
-      
-      // Add holiday events if enabled (with deduplication)
+    });
+    
+    // Then collect holiday events (only once per holiday)
+    calendars.forEach(calendar => {
+      // Add holiday events if enabled
       if (calendar.showHolidays) {
         // For each day in the range, check for holidays
         let currentDate = startOfDay(new Date(startDate));
@@ -105,6 +107,10 @@ export const calendarEventService = {
         }
       }
     });
+    
+    // Deduplicate sleep events before adding to results
+    const uniqueSleepEvents = filterDuplicateSleepEvents(sleepEvents);
+    allEvents = [...allEvents, ...uniqueSleepEvents];
     
     // Sort events
     return eventService.sortEvents(allEvents);

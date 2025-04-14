@@ -17,6 +17,7 @@ interface CalendarHeaderProps {
   handleNextPeriod: () => void;
   handleTodayClick: () => void;
   handleNewEvent: () => void;
+  handleHolidaysToggle: (enabled: boolean) => void;
   setIsSleepScheduleDialogOpen: (open: boolean) => void;
   navigate: (path: string) => void;
 }
@@ -30,11 +31,12 @@ const CalendarHeader = ({
   handleNextPeriod,
   handleTodayClick,
   handleNewEvent,
+  handleHolidaysToggle,
   setIsSleepScheduleDialogOpen,
   navigate
 }: CalendarHeaderProps) => {
   return (
-    <div className="flex flex-wrap items-center justify-between mb-6 gap-2">
+    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-2">
       <div className="flex items-center gap-2">
         <Button 
           variant="ghost" 
@@ -58,7 +60,7 @@ const CalendarHeader = ({
       <CalendarSettings 
         calendarId={calendar.id}
         showHolidays={calendar.showHolidays || false}
-        handleHolidaysToggle={(enabled) => {}}
+        handleHolidaysToggle={handleHolidaysToggle}
         handleNewEvent={handleNewEvent}
         openSleepScheduleDialog={() => setIsSleepScheduleDialogOpen(true)}
       />

@@ -1,23 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-} from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
-import { getTimeOptions, parseTimeOption } from '@/lib/date-utils';
-import { Event, RecurrenceRule } from '@/types';
+import { Form } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import EventDetailsFields from './event-form/EventDetailsFields';
-import DateTimeFields from './event-form/DateTimeFields';
-import { isAfter, format as formatDate } from 'date-fns';
-import RecurrenceOptions from './RecurrenceOptions';
+import { Event } from '@/types';
+import EventAllDayToggle from './event-form/EventAllDayToggle';
+import EventBasicDetails from './event-form/EventBasicDetails';
+import EventDateTime from './event-form/EventDateTime';
+import EventLocation from './event-form/EventLocation';
+import EventRecurrence from './event-form/EventRecurrence';
+import { parseTimeToDate } from '@/lib/date-utils';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -26,8 +19,6 @@ interface EventFormProps {
 }
 
 const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
-  console.log('Rendering EventForm with initialValues:', initialValues);
-  
   // Use current time for new events
   const now = new Date();
   const defaultStart = initialValues?.start || now;
@@ -35,9 +26,6 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   
   const [startDate, setStartDate] = useState<Date>(defaultStart);
   const [endDate, setEndDate] = useState<Date>(defaultEnd);
-  const [isAllDay, setIsAllDay] = useState<boolean>(initialValues?.allDay || false);
-  const [timeOptions] = useState(getTimeOptions());
-  const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(initialValues?.recurrence);
   
   // Format times for the form
   function formatTime(date: Date): string {
@@ -54,169 +42,88 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
     end: initialValues?.end || defaultEnd,
     startTime: initialValues?.start ? formatTime(new Date(initialValues.start)) : formatTime(defaultStart),
     endTime: initialValues?.end ? formatTime(new Date(initialValues.end)) : formatTime(defaultEnd),
+    recurrenceEnabled: !!initialValues?.recurrence,
+    recurrenceFrequency: initialValues?.recurrence?.frequency || 'daily',
+    recurrenceInterval: initialValues?.recurrence?.interval || 1,
+    recurrenceEndDate: initialValues?.recurrence?.endDate || undefined,
+    recurrenceCount: initialValues?.recurrence?.count || 1,
   };
   
   const form = useForm({ defaultValues });
-  
-  // Update end time when start time changes to ensure end is always after start
-  useEffect(() => {
-    if (!isAllDay) {
-      const startDateTime = parseTimeOption(form.getValues('startTime'), startDate);
-      const endDateTime = parseTimeOption(form.getValues('endTime'), endDate);
+  const isAllDay = form.watch('allDay');
+
+  const handleSubmit = (data: any) => {
+    // Process dates based on allDay flag
+    let processedStartDate = new Date(startDate);
+    let processedEndDate = new Date(endDate);
+    
+    if (!data.allDay) {
+      // Combine date and time for regular events
+      processedStartDate = parseTimeToDate(data.startTime, startDate);
+      processedEndDate = parseTimeToDate(data.endTime, endDate);
       
-      if (!isAfter(endDateTime, startDateTime)) {
-        // Set end time to 1 hour after start time
-        const newEnd = new Date(startDateTime);
-        newEnd.setHours(newEnd.getHours() + 1);
-        form.setValue('endTime', formatTime(newEnd));
+      // Ensure end date is after start date
+      if (processedEndDate <= processedStartDate) {
+        processedEndDate = new Date(processedStartDate.getTime() + 60 * 60 * 1000); // 1 hour later
       }
-    }
-  }, [form.getValues('startTime'), startDate, isAllDay]);
-  
-  const handleStartDateChange = (date: Date | undefined) => {
-    if (date) {
-      console.log('Start date changed to:', date);
-      setStartDate(date);
-      
-      // Adjust end date if it's now before start date
-      if (endDate < date) {
-        console.log('End date is before start date, adjusting to:', date);
-        setEndDate(date);
-        form.setValue('end', date);
-      }
-    }
-  };
-  
-  const handleAllDayToggle = (checked: boolean) => {
-    console.log('All day toggled to:', checked);
-    setIsAllDay(checked);
-  };
-  
-  const validateTimeRange = (formData: any) => {
-    const startDateTime = parseTimeOption(formData.startTime, formData.start);
-    const endDateTime = parseTimeOption(formData.endTime, formData.end);
-    
-    console.log('Validating time range:', startDateTime, endDateTime);
-    
-    if (isAfter(startDateTime, endDateTime)) {
-      console.error('Start time is after end time');
-      form.setError('endTime', { 
-        type: 'manual', 
-        message: 'End time must be after start time' 
-      });
-      return false;
-    }
-    
-    return true;
-  };
-  
-  const handleFormSubmit = (data: any) => {
-    console.log('Form submitted with data:', data);
-    
-    // Validate time range when not an all-day event
-    if (!data.allDay && !validateTimeRange(data)) {
-      return;
-    }
-    
-    // Create start and end dates with combined date and time
-    const processedData = { ...data };
-    
-    if (data.allDay) {
-      // For all-day events, set times to start/end of day
-      const startDay = new Date(startDate);
-      startDay.setHours(0, 0, 0, 0);
-      
-      const endDay = new Date(endDate);
-      endDay.setHours(23, 59, 59, 999);
-      
-      processedData.start = startDay;
-      processedData.end = endDay;
     } else {
-      // Combine date and time for non-all-day events
-      processedData.start = parseTimeOption(data.startTime, startDate);
-      processedData.end = parseTimeOption(data.endTime, endDate);
-      
-      // Final validation check
-      if (processedData.start > processedData.end) {
-        form.setError('endTime', { 
-          type: 'manual', 
-          message: 'End time must be after start time' 
-        });
-        return;
-      }
+      // For all-day events, set to start/end of day
+      processedStartDate.setHours(0, 0, 0, 0);
+      processedEndDate.setHours(23, 59, 59, 999);
     }
     
-    // Remove the separate time fields before submitting
-    delete processedData.startTime;
-    delete processedData.endTime;
+    // Build the final event
+    const newEvent: Omit<Event, 'id' | 'calendarId'> = {
+      title: data.title,
+      description: data.description || undefined,
+      location: data.location || undefined,
+      start: processedStartDate,
+      end: processedEndDate,
+      allDay: data.allDay,
+      color: data.color || undefined,
+      recurrence: data.recurrenceEnabled ? {
+        frequency: data.recurrenceFrequency,
+        interval: data.recurrenceInterval,
+        endDate: data.recurrenceEndDate,
+        count: data.recurrenceCount,
+      } : undefined,
+    };
     
-    // Add recurrence information
-    if (recurrence) {
-      processedData.recurrence = recurrence;
-    }
-    
-    onSubmit(processedData);
+    onSubmit(newEvent);
   };
   
   return (
-    <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="allDay"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">All day</FormLabel>
-                  <FormDescription>
-                    Event will last the entire day
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      handleAllDayToggle(checked);
-                    }}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          
-          <EventDetailsFields form={form} />
-          
-          <DateTimeFields 
-            form={form}
-            isAllDay={isAllDay}
-            startDate={startDate}
-            endDate={endDate}
-            timeOptions={timeOptions}
-            handleStartDateChange={handleStartDateChange}
-            setEndDate={setEndDate}
-          />
-          
-          <div className="border p-4 rounded-md">
-            <FormLabel className="mb-2 block">Repeat</FormLabel>
-            <RecurrenceOptions 
-              value={recurrence} 
-              onChange={setRecurrence} 
-              startDate={startDate} 
+    <ScrollArea className="max-h-[calc(100vh-10rem)]">
+      <div className="p-1">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <EventBasicDetails form={form} />
+            
+            <EventAllDayToggle form={form} />
+            
+            <EventDateTime
+              form={form} 
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
             />
-          </div>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {initialValues?.id ? "Update" : "Create"} Event
-            </Button>
-          </div>
-        </form>
-      </Form>
+            
+            <EventLocation form={form} />
+            
+            <EventRecurrence form={form} startDate={startDate} />
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {initialValues?.id ? 'Update Event' : 'Create Event'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
     </ScrollArea>
   );
 };

@@ -1,4 +1,3 @@
-
 import { addDays, format, getDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, isToday } from 'date-fns';
 
 export function getCalendarDays(date: Date) {
@@ -74,4 +73,34 @@ export function getNextMonth(date: Date) {
 
 export function getPreviousMonth(date: Date) {
   return subMonths(date, 1);
+}
+
+/**
+ * Parse time string and combine with date
+ */
+export function parseTimeToDate(timeString: string, date: Date): Date {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const result = new Date(date);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}
+
+/**
+ * Format a date to HH:MM time string
+ */
+export function formatDateToTimeString(date: Date): string {
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+/**
+ * Format a time string from 24h to 12h format
+ */
+export function formatTo12Hour(timeString: string): string {
+  if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return timeString;
+  
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
