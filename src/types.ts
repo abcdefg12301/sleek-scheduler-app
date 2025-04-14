@@ -1,18 +1,9 @@
-
 export interface Calendar {
   id: string;
   name: string;
   description: string;
   color: string;
-  events: Event[];
-  showHolidays?: boolean;
-}
-
-export interface Holiday {
-  id: string;
-  name: string;
-  date: Date;
-  type: string;
+  showHolidays: boolean;
 }
 
 export interface Event {
@@ -26,26 +17,23 @@ export interface Event {
   allDay: boolean;
   color?: string;
   recurrence?: RecurrenceRule;
-  isRecurrenceInstance?: boolean;
-  originalEventId?: string;
   isHoliday?: boolean;
-  isSegment?: boolean;
-  segmentType?: 'start' | 'middle' | 'end';
-  isSleep?: boolean;
 }
+
+// Alias for better semantics in our calendar application
+export type CalendarEvent = Event;
 
 export interface RecurrenceRule {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  interval?: number;
+  interval: number;
   endDate?: Date;
   count?: number;
-  weekdays?: number[];
 }
 
-// Adding back SleepSchedule type for backward compatibility
-// This will be phased out eventually
 export interface SleepSchedule {
   enabled: boolean;
   startTime: string;
   endTime: string;
 }
+
+export type CalendarViewType = 'day' | 'week' | 'month';

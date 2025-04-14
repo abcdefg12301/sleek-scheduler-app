@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Event } from '@/types';
+import { Event as CalendarEvent } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { eventFormSchema } from './eventFormSchema';
 import EventBasicDetails from './EventBasicDetails';
 import EventAllDayToggle from './EventAllDayToggle';
 import EventDateTime from './EventDateTime';
 import EventRecurrence from './EventRecurrence';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EventFormProps {
-  initialValues: Partial<Event>;
-  onSubmit: (data: Omit<Event, 'id' | 'calendarId'>) => void;
+  initialValues: Partial<CalendarEvent>;
+  onSubmit: (data: Omit<CalendarEvent, 'id' | 'calendarId'>) => void;
   onCancel: () => void;
 }
 
@@ -70,7 +72,7 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
     }
     
     // Build the final event
-    const newEvent: Omit<Event, 'id' | 'calendarId'> = {
+    const newEvent: Omit<CalendarEvent, 'id' | 'calendarId'> = {
       title: values.title,
       description: values.description || undefined,
       start: processedStart,
@@ -89,32 +91,36 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
   };
   
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-      <EventBasicDetails form={form} />
-      
-      <EventAllDayToggle form={form} />
-      
-      <EventDateTime 
-        form={form}
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-      />
-      
-      <EventRecurrence form={form} startDate={startDate} />
-      
-      <div className="flex justify-end space-x-2">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-        <Button type="submit">
-          {initialValues.id ? 'Update Event' : 'Create Event'}
-        </Button>
+    <ScrollArea className="max-h-[calc(100vh-10rem)]">
+      <div className="p-1">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <EventBasicDetails form={form} />
+            
+            <EventAllDayToggle form={form} />
+            
+            <EventDateTime
+              form={form} 
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+            />
+            
+            <EventRecurrence form={form} startDate={startDate} />
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {initialValues.id ? 'Update Event' : 'Create Event'}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
-    </form>
+    </ScrollArea>
   );
 };
 

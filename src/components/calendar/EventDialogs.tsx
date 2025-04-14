@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Check, Clock, MapPin, Calendar, Pencil, Trash } from 'lucide-react';
 import EventForm from '@/components/event-form/EventForm';
-import { Event as CalendarEvent } from '@/types';
+import { CalendarEvent } from '@/types';
 
 interface EventDialogsProps {
   isNewEventDialogOpen: boolean;
