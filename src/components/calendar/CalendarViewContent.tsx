@@ -20,6 +20,7 @@ interface CalendarViewContentProps {
   selectedDateEvents: CalendarEvent[];
   onDateSelect: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onDayHover?: (date: Date) => void; // Added the missing prop
   handleNewEvent: () => void;
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
@@ -40,6 +41,7 @@ const CalendarViewContent = ({
   selectedDateEvents,
   onDateSelect,
   onEventClick,
+  onDayHover, // Added the missing prop here as well
   handleNewEvent,
   isNewEventDialogOpen,
   setIsNewEventDialogOpen,
