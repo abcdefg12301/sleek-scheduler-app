@@ -1,16 +1,13 @@
 
 import React from 'react';
 import { format, isToday } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, HomeIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/components/ThemeProvider';
-import CalendarSettings from './CalendarSettings';
 import { Calendar as CalendarType } from '@/types';
-import { useNavigate } from 'react-router-dom';
 
 type CalendarViewType = 'day' | 'month';
 
-interface CalendarViewHeaderProps {
+interface CalendarHeaderCenteredProps {
   calendar: CalendarType;
   currentDate: Date;
   viewMode: CalendarViewType;
@@ -18,12 +15,10 @@ interface CalendarViewHeaderProps {
   handlePrevPeriod: () => void;
   handleNextPeriod: () => void;
   handleTodayClick: () => void;
-  handleNewEvent: () => void;
-  handleHolidaysToggle: (enabled: boolean) => void;
-  navigate: (path: string) => void;
+  navigateToDashboard: () => void;
 }
 
-const CalendarViewHeader = ({
+const CalendarHeaderCentered = ({
   calendar,
   currentDate,
   viewMode,
@@ -31,12 +26,8 @@ const CalendarViewHeader = ({
   handlePrevPeriod,
   handleNextPeriod,
   handleTodayClick,
-  handleNewEvent,
-  handleHolidaysToggle,
-  navigate
-}: CalendarViewHeaderProps) => {
-  const { theme, toggleTheme } = useTheme();
-  
+  navigateToDashboard
+}: CalendarHeaderCenteredProps) => {
   const getFormattedDateRange = () => {
     switch(viewMode) {
       case 'day':
@@ -49,31 +40,33 @@ const CalendarViewHeader = ({
   };
   
   return (
-    <div className="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center mb-6">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => navigate('/')}
-          title="Back to Dashboard"
-        >
-          <HomeIcon className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">{calendar.name}</h1>
-          <p className="text-muted-foreground">{calendar.description}</p>
+    <div className="calendar-container">
+      <div className="flex justify-between items-center mb-6 relative">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={navigateToDashboard}
+            title="Back to Dashboard"
+          >
+            <HomeIcon className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold">{calendar.name}</h1>
+            <p className="text-muted-foreground">{calendar.description}</p>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex flex-col w-full md:w-auto md:flex-row gap-4 items-center">
-        <div className="text-center w-full">
-          <span className="font-medium text-lg">
+        
+        {/* Centered Month/Year */}
+        <div className="calendar-header-title">
+          <span className="text-xl font-medium">
             {getFormattedDateRange()}
           </span>
         </div>
         
-        <div className="flex items-center justify-end w-full">
-          <div className="flex items-center space-x-1 mr-2">
+        {/* Right-aligned navigation */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center space-x-1">
             <Button 
               onClick={handlePrevPeriod} 
               size="icon" 
@@ -128,25 +121,6 @@ const CalendarViewHeader = ({
                 Day
               </Button>
             </div>
-            
-            <Button
-              onClick={handleNewEvent}
-              size="sm"
-              variant="default"
-              style={{
-                backgroundColor: calendar.color || undefined,
-                color: calendar.color ? '#ffffff' : undefined
-              }}
-            >
-              New event
-            </Button>
-            
-            <CalendarSettings 
-              calendarId={calendar.id}
-              calendarColor={calendar.color}
-              showHolidays={calendar.showHolidays || false}
-              handleHolidaysToggle={handleHolidaysToggle}
-            />
           </div>
         </div>
       </div>
@@ -154,4 +128,4 @@ const CalendarViewHeader = ({
   );
 };
 
-export default CalendarViewHeader;
+export default CalendarHeaderCentered;

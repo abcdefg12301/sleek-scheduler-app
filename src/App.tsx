@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import Dashboard from '@/pages/Dashboard';
 import NewCalendar from '@/pages/NewCalendar';
 import EditCalendar from '@/pages/EditCalendar';
-import CalendarView from '@/pages/CalendarView';
+import CalendarView from '@/pages/calendar-view/CalendarView';
 import NotFound from '@/pages/NotFound';
 import { ThemeProvider } from '@/components/ThemeProvider';
 

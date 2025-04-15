@@ -150,7 +150,7 @@ export const holidayService = {
       start: holidayDate,
       end: holidayDate,
       allDay: true,
-      color: holiday.type === 'public' ? '#10B981' : '#60A5FA', // Green for public holidays, blue for observances
+      color: '#60A5FA', // Light blue for all holidays
       isHoliday: true
     };
   },

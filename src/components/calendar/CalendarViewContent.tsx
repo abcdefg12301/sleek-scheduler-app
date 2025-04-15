@@ -20,7 +20,6 @@ interface CalendarViewContentProps {
   selectedDateEvents: CalendarEvent[];
   onDateSelect: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
-  onDayHover?: (date: Date) => void;
   handleNewEvent: () => void;
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
@@ -41,7 +40,6 @@ const CalendarViewContent = ({
   selectedDateEvents,
   onDateSelect,
   onEventClick,
-  onDayHover,
   handleNewEvent,
   isNewEventDialogOpen,
   setIsNewEventDialogOpen,
@@ -125,7 +123,6 @@ const CalendarViewContent = ({
             events={events}
             onDateSelect={onDateSelect}
             onEventClick={onEventClick}
-            onDayHover={onDayHover}
           />
         ) : (
           <DailyCalendarView

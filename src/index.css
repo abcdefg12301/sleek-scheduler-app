@@ -43,6 +43,8 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --holiday-color: 214 95% 68%; /* Light blue for holidays */
   }
 
   .dark {
@@ -144,4 +146,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+}
+
+/* New styles for fixed positioning of calendar elements */
+.calendar-header {
+  margin-bottom: 1.5rem;
+}
+
+.calendar-header-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.calendar-nav-controls {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+}
+
+.calendar-container {
+  position: relative;
+  padding-top: 3rem;
 }
