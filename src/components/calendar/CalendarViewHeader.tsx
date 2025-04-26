@@ -51,7 +51,6 @@ const CalendarViewHeader = ({
         <div className="flex items-center gap-2">
           <Button
             onClick={handleNewEvent}
-            className="flex items-center gap-1"
             style={{
               backgroundColor: calendar.color || undefined,
               color: calendar.color ? '#ffffff' : undefined
