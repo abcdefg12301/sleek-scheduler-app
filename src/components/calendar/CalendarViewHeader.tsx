@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { format } from 'date-fns';
 import { Calendar } from '@/types';
 import CalendarHeaderCentered from './CalendarHeaderCentered';
 import CalendarSettings from './CalendarSettings';

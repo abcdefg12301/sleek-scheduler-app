@@ -77,8 +77,7 @@ const CalendarHeaderCentered = ({
             
             <Button 
               onClick={handleTodayClick} 
-              variant="outline" 
-              className={isToday(currentDate) ? 'font-bold' : ''}
+              variant="outline"
             >
               Today
             </Button>
