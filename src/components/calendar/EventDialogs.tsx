@@ -1,7 +1,13 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { DialogTitle, DialogDescription, DialogHeader, DialogContent, Dialog } from '@/components/ui/dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
