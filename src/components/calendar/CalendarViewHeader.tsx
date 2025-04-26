@@ -56,8 +56,8 @@ const CalendarViewHeader = ({
               color: calendar.color ? '#ffffff' : undefined
             }}
           >
-            <PlusCircle className="h-4 w-4" />
-            <span>New Event</span>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Event
           </Button>
           
           <CalendarSettings 
