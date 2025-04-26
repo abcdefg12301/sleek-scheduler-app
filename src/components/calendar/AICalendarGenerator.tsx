@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Info } from 'lucide-react';  // Changed from InfoCircle to Info
-import { Tooltip } from '@/components/ui/tooltip';
-import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
@@ -90,16 +89,16 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-md flex items-center gap-2">
             AI Calendar Generator
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground" />  {/* Changed from InfoCircle */}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Let AI generate events for your calendar based on your description</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Let AI generate events for your calendar based on your description</p>
+              </TooltipContent>
+            </Tooltip>
           </CardTitle>
           <div className="flex items-center space-x-2">
             <Switch
@@ -119,16 +118,16 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-md flex items-center gap-2">
           Calendar Details
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />  {/* Changed from InfoCircle */}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>This tool uses AI to generate calendar events based on your description</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>This tool uses AI to generate calendar events based on your description</p>
+            </TooltipContent>
+          </Tooltip>
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Switch
