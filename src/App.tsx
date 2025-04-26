@@ -12,7 +12,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="calendar-theme">
-      <TooltipProvider>
+      <TooltipProvider delayDuration={0}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/new-calendar" element={<NewCalendar />} />
