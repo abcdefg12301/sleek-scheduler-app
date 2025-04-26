@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck, Settings } from 'lucide-react';
@@ -36,7 +35,6 @@ const CalendarSettings = ({
 }: CalendarSettingsProps) => {
   const navigate = useNavigate();
   
-  // Extract calendarId from calendar object if not provided directly
   const id = calendarId || (calendar ? calendar.id : '');
   const color = calendarColor || (calendar ? calendar.color : undefined);
   const showHolidaysValue = typeof showHolidays !== 'undefined' ? showHolidays : (calendar ? calendar.showHolidays : true);

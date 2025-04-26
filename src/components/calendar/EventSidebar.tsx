@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Calendar, Info } from 'lucide-react';
 import { Event as CalendarEvent } from '@/types';
 import EventDisplay from '@/components/EventDisplay';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { filterDuplicateSleepEvents } from '@/lib/event-utils';
 
 interface EventSidebarProps {
@@ -21,7 +21,6 @@ const EventSidebar = ({
   handleNewEvent,
   handleEventClick 
 }: EventSidebarProps) => {
-  // Deduplicate sleep events using our utility function
   const filteredEvents = React.useMemo(() =>
     filterDuplicateSleepEvents(selectedDateEvents),
     [selectedDateEvents]
@@ -34,19 +33,17 @@ const EventSidebar = ({
           <h2 className="font-medium">
             {format(selectedDate, 'MMMM d, yyyy')}
           </h2>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>This sidebar shows all events for the selected day.<br />
-                Click on any event to view, edit or delete it.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>This sidebar shows all events for the selected day.<br />
+              Click on any event to view, edit or delete it.</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <Button size="sm" variant="outline" onClick={handleNewEvent}>
           <Plus className="h-3 w-3 mr-1" /> Add
