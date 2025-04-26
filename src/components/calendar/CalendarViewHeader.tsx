@@ -58,11 +58,11 @@ const CalendarViewHeader = ({
             }}
           >
             <PlusCircle className="h-4 w-4" />
-            New Event
+            <span>New Event</span>
           </Button>
           
           <CalendarSettings 
-            calendar={calendar}
+            calendarId={calendar.id}
             showHolidays={calendar.showHolidays}
             handleHolidaysToggle={handleHolidaysToggle}
             showNewEventButton={false}
