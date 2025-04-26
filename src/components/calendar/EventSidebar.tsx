@@ -36,8 +36,10 @@ const EventSidebar = ({
           </h2>
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-muted-foreground" />
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>This sidebar shows all events for the selected day.<br />
