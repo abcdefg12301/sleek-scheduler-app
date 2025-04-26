@@ -1,17 +1,16 @@
 
 import React from 'react';
-import { format, isToday } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, HomeIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTheme } from '@/components/ThemeProvider';
+import { format } from 'date-fns';
+import { Calendar } from '@/types';
+import CalendarHeaderCentered from './CalendarHeaderCentered';
 import CalendarSettings from './CalendarSettings';
-import { Calendar as CalendarType } from '@/types';
-import { useNavigate } from 'react-router-dom';
+import { Button } from '../ui/button';
+import { PlusCircle } from 'lucide-react';
 
 type CalendarViewType = 'day' | 'month';
 
-interface CalendarViewHeaderProps {
-  calendar: CalendarType;
+interface CalendarHeaderProps {
+  calendar: Calendar;
   currentDate: Date;
   viewMode: CalendarViewType;
   setViewMode: (mode: CalendarViewType) => void;
@@ -34,120 +33,40 @@ const CalendarViewHeader = ({
   handleNewEvent,
   handleHolidaysToggle,
   navigate
-}: CalendarViewHeaderProps) => {
-  const { theme, toggleTheme } = useTheme();
-  
-  const getFormattedDateRange = () => {
-    switch(viewMode) {
-      case 'day':
-        return format(currentDate, 'MMMM d, yyyy');
-      case 'month':
-        return format(currentDate, 'MMMM yyyy');
-      default:
-        return format(currentDate, 'MMMM d, yyyy');
-    }
-  };
-  
+}: CalendarHeaderProps) => {
   return (
-    <div className="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center mb-6">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => navigate('/')}
-          title="Back to Dashboard"
-        >
-          <HomeIcon className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">{calendar.name}</h1>
-          <p className="text-muted-foreground">{calendar.description}</p>
-        </div>
-      </div>
-      
-      <div className="flex flex-col w-full md:w-auto md:flex-row gap-4 items-center">
-        <div className="text-center w-full">
-          <span className="font-medium text-lg">
-            {getFormattedDateRange()}
-          </span>
-        </div>
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <CalendarHeaderCentered
+          calendar={calendar}
+          currentDate={currentDate}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          handlePrevPeriod={handlePrevPeriod}
+          handleNextPeriod={handleNextPeriod}
+          handleTodayClick={handleTodayClick}
+          navigateToDashboard={() => navigate('/')}
+        />
         
-        <div className="flex items-center justify-end w-full">
-          <div className="flex items-center space-x-1 mr-2">
-            <Button 
-              onClick={handlePrevPeriod} 
-              size="icon" 
-              variant="outline"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              onClick={handleTodayClick} 
-              variant="outline" 
-              className={isToday(currentDate) ? 'font-bold' : ''}
-            >
-              Today
-            </Button>
-            
-            <Button 
-              onClick={handleNextPeriod} 
-              size="icon" 
-              variant="outline"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleNewEvent}
+            className="flex items-center gap-1"
+            style={{
+              backgroundColor: calendar.color || undefined,
+              color: calendar.color ? '#ffffff' : undefined
+            }}
+          >
+            <PlusCircle className="h-4 w-4" />
+            New Event
+          </Button>
           
-          <div className="flex items-center space-x-2">
-            <div className="flex rounded-md border border-input overflow-hidden">
-              <Button
-                type="button"
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                className={`rounded-none ${viewMode === 'month' ? '' : 'hover:bg-muted'}`}
-                onClick={() => setViewMode('month')}
-                style={viewMode === 'month' ? {
-                  backgroundColor: calendar.color || undefined,
-                  color: calendar.color ? '#ffffff' : undefined
-                } : {}}
-              >
-                Month
-              </Button>
-              <Button
-                type="button"
-                variant={viewMode === 'day' ? 'default' : 'ghost'} 
-                size="sm"
-                className={`rounded-none ${viewMode === 'day' ? '' : 'hover:bg-muted'}`}
-                onClick={() => setViewMode('day')}
-                style={viewMode === 'day' ? {
-                  backgroundColor: calendar.color || undefined,
-                  color: calendar.color ? '#ffffff' : undefined
-                } : {}}
-              >
-                Day
-              </Button>
-            </div>
-            
-            <Button
-              onClick={handleNewEvent}
-              size="sm"
-              variant="default"
-              style={{
-                backgroundColor: calendar.color || undefined,
-                color: calendar.color ? '#ffffff' : undefined
-              }}
-            >
-              New event
-            </Button>
-            
-            <CalendarSettings 
-              calendarId={calendar.id}
-              calendarColor={calendar.color}
-              showHolidays={calendar.showHolidays || false}
-              handleHolidaysToggle={handleHolidaysToggle}
-            />
-          </div>
+          <CalendarSettings 
+            calendar={calendar}
+            onHolidaysToggle={handleHolidaysToggle}
+            showNewEventButton={false}
+            onNewEvent={handleNewEvent}
+          />
         </div>
       </div>
     </div>

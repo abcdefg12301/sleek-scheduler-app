@@ -8,6 +8,7 @@ import EventSidebar from '@/components/calendar/EventSidebar';
 import EventDialogs from '@/components/calendar/EventDialogs';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
+import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 
 type CalendarViewType = 'day' | 'month';
 
@@ -20,7 +21,7 @@ interface CalendarViewContentProps {
   selectedDateEvents: CalendarEvent[];
   onDateSelect: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
-  onDayHover?: (date: Date) => void; // Added the missing prop
+  onDayHover?: (date: Date) => void;
   handleNewEvent: () => void;
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
@@ -41,7 +42,7 @@ const CalendarViewContent = ({
   selectedDateEvents,
   onDateSelect,
   onEventClick,
-  onDayHover, // Added the missing prop here as well
+  onDayHover,
   handleNewEvent,
   isNewEventDialogOpen,
   setIsNewEventDialogOpen,
@@ -135,12 +136,16 @@ const CalendarViewContent = ({
         )}
       </div>
       
-      <EventSidebar 
-        selectedDate={selectedDate}
-        selectedDateEvents={selectedDateEvents}
-        handleNewEvent={handleNewEvent}
-        handleEventClick={onEventClick}
-      />
+      <div className="lg:w-1/4 space-y-4">
+        <AICalendarGenerator calendarId={calendar.id} />
+        
+        <EventSidebar 
+          selectedDate={selectedDate}
+          selectedDateEvents={selectedDateEvents}
+          handleNewEvent={handleNewEvent}
+          handleEventClick={onEventClick}
+        />
+      </div>
       
       <EventDialogs
         isNewEventDialogOpen={isNewEventDialogOpen}

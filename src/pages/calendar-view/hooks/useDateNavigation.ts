@@ -10,8 +10,9 @@ export const useDateNavigation = (viewMode: CalendarViewType) => {
 
   const handlePrevPeriod = () => {
     if (viewMode === 'day') {
-      setCurrentDate(subDays(currentDate, 1));
-      setSelectedDate(subDays(selectedDate, 1));
+      const newDate = subDays(currentDate, 1);
+      setCurrentDate(newDate);
+      setSelectedDate(newDate);
     } else if (viewMode === 'month') {
       setCurrentDate(subMonths(currentDate, 1));
     }
@@ -19,8 +20,9 @@ export const useDateNavigation = (viewMode: CalendarViewType) => {
   
   const handleNextPeriod = () => {
     if (viewMode === 'day') {
-      setCurrentDate(addDays(currentDate, 1));
-      setSelectedDate(addDays(selectedDate, 1));
+      const newDate = addDays(currentDate, 1);
+      setCurrentDate(newDate);
+      setSelectedDate(newDate);
     } else if (viewMode === 'month') {
       setCurrentDate(addMonths(currentDate, 1));
     }
@@ -35,8 +37,9 @@ export const useDateNavigation = (viewMode: CalendarViewType) => {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     
-    // Switch to day view when clicking a day in month view
     if (viewMode === 'month') {
+      setCurrentDate(date);
+    } else {
       setCurrentDate(date);
     }
   };

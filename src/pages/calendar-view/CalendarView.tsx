@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { Event } from '@/types';
@@ -9,23 +9,18 @@ import CalendarViewContent from '@/components/calendar/CalendarViewContent';
 import CalendarHeader from '@/components/calendar/CalendarViewHeader';
 import { useDateNavigation } from './hooks/useDateNavigation';
 import { useEventDialogs } from './hooks/useEventDialogs';
+import { useCalendarEvents } from './hooks/useCalendarEvents';
 
 type CalendarViewType = 'day' | 'month';
 
 const CalendarView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { 
-    calendars, 
-    getEventsForDateRange,
-    getEventsForDate,
-    updateCalendar
-  } = useCalendarStore();
+  const { calendars, updateCalendar } = useCalendarStore();
   
-  const [viewMode, setViewMode] = useState<CalendarViewType>('month');
-  const [events, setEvents] = useState<Event[]>([]);
+  const [viewMode, setViewMode] = React.useState<CalendarViewType>('month');
   
-  // Use custom hooks for date navigation and event dialogs
+  // Use custom hooks for date navigation, event dialogs and event fetching
   const { 
     currentDate,
     selectedDate,
@@ -47,29 +42,17 @@ const CalendarView = () => {
     setIsEditMode
   } = useEventDialogs();
   
+  const { events, selectedDateEvents } = useCalendarEvents(
+    id,
+    calendars, 
+    currentDate, 
+    selectedDate,
+    viewMode
+  );
+  
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Fetch calendar events
-  useEffect(() => {
-    if (!calendar || !id) return;
-    
-    // Get the appropriate date range based on view mode
-    const start = viewMode === 'day' 
-      ? startOfDay(currentDate)
-      : startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
-    
-    const end = viewMode === 'day'
-      ? endOfDay(currentDate)
-      : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
-    
-    // Get all events for the date range
-    const allEvents = getEventsForDateRange(start, end);
-    setEvents(allEvents);
-    
-    console.log(`Loaded ${allEvents.length} events for ${viewMode} view:`, start, end);
-  }, [calendar, id, currentDate, viewMode, calendars, getEventsForDateRange]);
-  
-  useEffect(() => {
+  React.useEffect(() => {
     if (!calendar && id) {
       console.error('Calendar not found with ID:', id);
       navigate('/');
@@ -85,34 +68,6 @@ const CalendarView = () => {
     setIsViewEventDialogOpen(true);
     setIsEditMode(false);
   };
-
-  // Helper function to check if two dates are the same day
-  const isSameDay = (date1: Date, date2: Date) => {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
-  };
-  
-  // Get events for the selected date for the sidebar
-  const selectedDateEvents = events.filter(event => {
-    const eventStart = new Date(event.start);
-    const eventEnd = new Date(event.end);
-    
-    return (
-      isSameDay(selectedDate, eventStart) || 
-      isSameDay(selectedDate, eventEnd) ||
-      (eventStart < selectedDate && eventEnd > selectedDate)
-    );
-  }).sort((a, b) => {
-    // Sort all-day events first
-    if (a.allDay && !b.allDay) return -1;
-    if (b.allDay && !a.allDay) return 1;
-    
-    // Sort by start time
-    return new Date(a.start).getTime() - new Date(b.start).getTime();
-  });
 
   const handleHolidaysToggle = (enabled: boolean) => {
     try {
@@ -148,6 +103,7 @@ const CalendarView = () => {
         selectedDateEvents={selectedDateEvents}
         onDateSelect={handleDateSelect}
         onEventClick={handleEventClick}
+        onDayHover={() => {}} // Empty function since we removed hover feature
         handleNewEvent={() => setIsNewEventDialogOpen(true)}
         isNewEventDialogOpen={isNewEventDialogOpen}
         setIsNewEventDialogOpen={setIsNewEventDialogOpen}
