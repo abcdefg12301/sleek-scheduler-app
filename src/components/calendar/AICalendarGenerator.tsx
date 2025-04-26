@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';  // Changed from InfoCircle to Info
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,7 +93,7 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                  <Info className="h-4 w-4 text-muted-foreground" />  {/* Changed from InfoCircle */}
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Let AI generate events for your calendar based on your description</p>
@@ -122,7 +122,7 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                <Info className="h-4 w-4 text-muted-foreground" />  {/* Changed from InfoCircle */}
               </TooltipTrigger>
               <TooltipContent>
                 <p>This tool uses AI to generate calendar events based on your description</p>
