@@ -13,21 +13,33 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
+import { Calendar } from '@/types';
 
 interface CalendarSettingsProps {
-  calendarId: string;
+  calendarId?: string;
+  calendar?: Calendar;
   calendarColor?: string;
-  showHolidays: boolean;
+  showHolidays?: boolean;
   handleHolidaysToggle: (enabled: boolean) => void;
+  showNewEventButton?: boolean;
+  onNewEvent?: () => void;
 }
 
 const CalendarSettings = ({
   calendarId,
+  calendar,
   calendarColor,
-  showHolidays,
-  handleHolidaysToggle
+  showHolidays = true,
+  handleHolidaysToggle,
+  showNewEventButton = false,
+  onNewEvent
 }: CalendarSettingsProps) => {
   const navigate = useNavigate();
+  
+  // Extract calendarId from calendar object if not provided directly
+  const id = calendarId || (calendar ? calendar.id : '');
+  const color = calendarColor || (calendar ? calendar.color : undefined);
+  const showHolidaysValue = typeof showHolidays !== 'undefined' ? showHolidays : (calendar ? calendar.showHolidays : true);
 
   return (
     <DropdownMenu>
@@ -38,10 +50,17 @@ const CalendarSettings = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => navigate(`/edit-calendar/${calendarId}`)}>
+          <DropdownMenuItem onClick={() => navigate(`/edit-calendar/${id}`)}>
             <CalendarCheck className="mr-2 h-4 w-4" />
             <span>Edit calendar</span>
           </DropdownMenuItem>
+          
+          {showNewEventButton && onNewEvent && (
+            <DropdownMenuItem onClick={onNewEvent}>
+              <CalendarCheck className="mr-2 h-4 w-4" />
+              <span>New event</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         
         <DropdownMenuSeparator />
@@ -51,7 +70,7 @@ const CalendarSettings = ({
             <Label htmlFor="show-holidays" className="font-normal">Show holidays</Label>
             <Switch 
               id="show-holidays" 
-              checked={showHolidays}
+              checked={showHolidaysValue}
               onCheckedChange={handleHolidaysToggle}
             />
           </div>

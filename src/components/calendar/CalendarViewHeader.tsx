@@ -63,7 +63,8 @@ const CalendarViewHeader = ({
           
           <CalendarSettings 
             calendar={calendar}
-            onHolidaysToggle={handleHolidaysToggle}
+            showHolidays={calendar.showHolidays}
+            handleHolidaysToggle={handleHolidaysToggle}
             showNewEventButton={false}
             onNewEvent={handleNewEvent}
           />
