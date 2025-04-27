@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { format, startOfDay, endOfDay } from 'date-fns';
 import { Event } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';

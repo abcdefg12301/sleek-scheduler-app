@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
@@ -7,7 +8,6 @@ import EventSidebar from '@/components/calendar/EventSidebar';
 import EventDialogs from '@/components/calendar/EventDialogs';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
-import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 
 type CalendarViewType = 'day' | 'month';
 

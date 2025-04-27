@@ -40,8 +40,9 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="calendar-container">
-      <div className="flex justify-between items-center mb-6 relative">
+    <div className="w-full">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+        {/* Calendar title & home button */}
         <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
@@ -52,73 +53,74 @@ const CalendarHeaderCentered = ({
             <HomeIcon className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">{calendar.name}</h1>
-            <p className="text-muted-foreground">{calendar.description}</p>
+            <h1 className="text-xl md:text-2xl font-semibold">{calendar.name}</h1>
+            <p className="text-muted-foreground text-sm">{calendar.description}</p>
           </div>
         </div>
         
-        {/* Centered Month/Year */}
-        <div className="calendar-header-title">
-          <span className="text-xl font-medium">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-2 md:mt-0">
+          {/* Date display */}
+          <div className="text-lg font-medium mr-2">
             {getFormattedDateRange()}
-          </span>
-        </div>
-        
-        {/* Right-aligned navigation */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center space-x-1">
-            <Button 
-              onClick={handlePrevPeriod} 
-              size="icon" 
-              variant="outline"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              onClick={handleTodayClick} 
-              variant="outline"
-            >
-              Today
-            </Button>
-            
-            <Button 
-              onClick={handleNextPeriod} 
-              size="icon" 
-              variant="outline"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <div className="flex rounded-md border border-input overflow-hidden">
-              <Button
-                type="button"
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                className={`rounded-none ${viewMode === 'month' ? '' : 'hover:bg-muted'}`}
-                onClick={() => setViewMode('month')}
-                style={viewMode === 'month' ? {
-                  backgroundColor: calendar.color || undefined,
-                  color: calendar.color ? '#ffffff' : undefined
-                } : {}}
+          {/* Navigation controls */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center space-x-1">
+              <Button 
+                onClick={handlePrevPeriod} 
+                size="icon" 
+                variant="outline"
               >
-                Month
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button
-                type="button"
-                variant={viewMode === 'day' ? 'default' : 'ghost'} 
+              
+              <Button 
+                onClick={handleTodayClick} 
+                variant="outline"
                 size="sm"
-                className={`rounded-none ${viewMode === 'day' ? '' : 'hover:bg-muted'}`}
-                onClick={() => setViewMode('day')}
-                style={viewMode === 'day' ? {
-                  backgroundColor: calendar.color || undefined,
-                  color: calendar.color ? '#ffffff' : undefined
-                } : {}}
               >
-                Day
+                Today
               </Button>
+              
+              <Button 
+                onClick={handleNextPeriod} 
+                size="icon" 
+                variant="outline"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center">
+              <div className="flex rounded-md border border-input overflow-hidden">
+                <Button
+                  type="button"
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={`rounded-none ${viewMode === 'month' ? '' : 'hover:bg-muted'}`}
+                  onClick={() => setViewMode('month')}
+                  style={viewMode === 'month' ? {
+                    backgroundColor: calendar.color || undefined,
+                    color: calendar.color ? '#ffffff' : undefined
+                  } : {}}
+                >
+                  Month
+                </Button>
+                <Button
+                  type="button"
+                  variant={viewMode === 'day' ? 'default' : 'ghost'} 
+                  size="sm"
+                  className={`rounded-none ${viewMode === 'day' ? '' : 'hover:bg-muted'}`}
+                  onClick={() => setViewMode('day')}
+                  style={viewMode === 'day' ? {
+                    backgroundColor: calendar.color || undefined,
+                    color: calendar.color ? '#ffffff' : undefined
+                  } : {}}
+                >
+                  Day
+                </Button>
+              </div>
             </div>
           </div>
         </div>

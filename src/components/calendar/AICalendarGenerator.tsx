@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AIGeneratedEventsList from './AIGeneratedEventsList';
+import { Event } from '@/types';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -17,7 +18,7 @@ interface AICalendarGeneratorProps {
 const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedEvents, setGeneratedEvents] = useState<any[]>([]);
+  const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -43,7 +44,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
         body: { calendarDetails },
       });
 
-      console.log('Response from generate-calendar function:', { data, error });
+      console.log('Response from generate-calendar function:', data, error);
 
       if (error) {
         console.error('Error generating calendar:', error);
@@ -57,15 +58,22 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
         return;
       }
 
+      // Process received events to ensure all dates are properly parsed
+      const processedEvents = data.events.map((event: any) => ({
+        ...event,
+        start: new Date(event.start),
+        end: new Date(event.end),
+      }));
+
       // Add new events to existing ones instead of replacing
-      const newEvents = [...generatedEvents, ...data.events];
+      const newEvents = [...generatedEvents, ...processedEvents];
       setGeneratedEvents(newEvents);
       
       if (onEventsGenerated) {
         onEventsGenerated(newEvents);
       }
 
-      toast.success(`Successfully generated ${data.events.length} new events`);
+      toast.success(`Successfully generated ${processedEvents.length} new events`);
       setCalendarDetails('');
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
@@ -87,7 +95,9 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>This tool uses AI to generate calendar events based on your description</p>
+              <p className="max-w-xs">
+                Describe your events in natural language. For example: "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm" or "I have a team meeting every Tuesday at 10am"
+              </p>
             </TooltipContent>
           </Tooltip>
         </CardTitle>
