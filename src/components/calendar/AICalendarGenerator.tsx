@@ -2,25 +2,32 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCalendarStore } from '@/store/calendar-store';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import AIGeneratedEventsList from './AIGeneratedEventsList';
 
 interface AICalendarGeneratorProps {
-  calendarId?: string;
   standalone?: boolean;
+  onEventsGenerated?: (events: any[]) => void;
 }
 
-const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGeneratorProps) => {
-  const [isEnabled, setIsEnabled] = useState(standalone ? true : false);
+const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const { addEvent } = useCalendarStore();
+  const [generatedEvents, setGeneratedEvents] = useState<any[]>([]);
+
+  const handleDeleteEvent = (index: number) => {
+    const newEvents = [...generatedEvents];
+    newEvents.splice(index, 1);
+    setGeneratedEvents(newEvents);
+    
+    if (onEventsGenerated) {
+      onEventsGenerated(newEvents);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!calendarDetails.trim()) {
@@ -50,45 +57,16 @@ const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGener
         return;
       }
 
-      // Add all generated events to the calendar
-      let addedCount = 0;
+      // Add new events to existing ones instead of replacing
+      const newEvents = [...generatedEvents, ...data.events];
+      setGeneratedEvents(newEvents);
       
-      if (calendarId) {
-        for (const event of data.events) {
-          try {
-            // Convert ISO string dates to Date objects
-            const eventWithDates = {
-              ...event,
-              start: new Date(event.start),
-              end: new Date(event.end),
-              // Convert recurrence end date if it exists
-              recurrence: event.recurrence ? {
-                ...event.recurrence,
-                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
-              } : undefined,
-              // Add AI generated flag
-              isAIGenerated: true
-            };
-
-            addEvent(calendarId, eventWithDates);
-            addedCount++;
-          } catch (eventError) {
-            console.error('Error adding event:', eventError, event);
-          }
-        }
-
-        if (addedCount > 0) {
-          toast.success(`Successfully added ${addedCount} events to your calendar`);
-          setCalendarDetails('');
-        } else {
-          toast.error('Failed to add any events to your calendar');
-        }
-      } else {
-        // Store the events in session storage for use when creating a new calendar
-        sessionStorage.setItem('aiGeneratedEvents', JSON.stringify(data.events));
-        toast.success(`Successfully generated ${data.events.length} events`);
-        setCalendarDetails('');
+      if (onEventsGenerated) {
+        onEventsGenerated(newEvents);
       }
+
+      toast.success(`Successfully generated ${data.events.length} new events`);
+      setCalendarDetails('');
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
       toast.error('An error occurred during calendar generation');
@@ -97,39 +75,9 @@ const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGener
     }
   };
 
-  if (!isEnabled && !standalone) {
-    return (
-      <Card className="mb-4">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-md flex items-center gap-2">
-            AI Calendar Generator
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Let AI generate events for your calendar based on your description</p>
-              </TooltipContent>
-            </Tooltip>
-          </CardTitle>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="ai-generator-toggle"
-              checked={isEnabled}
-              onCheckedChange={setIsEnabled}
-            />
-            <Label htmlFor="ai-generator-toggle">Enable</Label>
-          </div>
-        </CardHeader>
-      </Card>
-    );
-  }
-
   return (
     <Card className="mb-4">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="pb-2">
         <CardTitle className="text-md flex items-center gap-2">
           Calendar Details
           <Tooltip>
@@ -143,16 +91,6 @@ const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGener
             </TooltipContent>
           </Tooltip>
         </CardTitle>
-        {!standalone && (
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="ai-generator-toggle"
-              checked={isEnabled}
-              onCheckedChange={setIsEnabled}
-            />
-            <Label htmlFor="ai-generator-toggle">Enable</Label>
-          </div>
-        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -169,6 +107,13 @@ const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGener
           >
             {isGenerating ? 'Generating...' : 'Generate Events'}
           </Button>
+          
+          {generatedEvents.length > 0 && (
+            <AIGeneratedEventsList 
+              events={generatedEvents} 
+              onDeleteEvent={handleDeleteEvent}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

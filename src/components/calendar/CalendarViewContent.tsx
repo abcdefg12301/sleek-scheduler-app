@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
@@ -111,8 +110,8 @@ const CalendarViewContent = ({
   };
 
   return (
-    <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:gap-6">
-      <div className="lg:w-3/4">
+    <div className="flex flex-col lg:flex-row lg:space-x-6">
+      <div className="lg:flex-grow">
         {viewMode === 'day' && (
           <DayPreviewBar 
             selectedDate={currentDate}
@@ -136,16 +135,12 @@ const CalendarViewContent = ({
         )}
       </div>
       
-      <div className="lg:w-1/4 space-y-4">
-        <AICalendarGenerator calendarId={calendar.id} />
-        
-        <EventSidebar 
-          selectedDate={selectedDate}
-          selectedDateEvents={selectedDateEvents}
-          handleNewEvent={handleNewEvent}
-          handleEventClick={onEventClick}
-        />
-      </div>
+      <EventSidebar 
+        selectedDate={selectedDate}
+        selectedDateEvents={selectedDateEvents}
+        handleNewEvent={handleNewEvent}
+        handleEventClick={onEventClick}
+      />
       
       <EventDialogs
         isNewEventDialogOpen={isNewEventDialogOpen}

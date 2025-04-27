@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,7 @@ interface FormData {
 const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
+  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<any[]>([]);
 
   const defaultValues: FormData = {
     name: '',
@@ -43,6 +43,10 @@ const NewCalendar = () => {
     defaultValues,
   });
 
+  const handleAiEventsGenerated = (events: any[]) => {
+    setAiGeneratedEvents(events);
+  };
+
   const onSubmit = (data: FormData) => {
     console.log('Creating new calendar with data:', data);
     try {
@@ -54,44 +58,32 @@ const NewCalendar = () => {
         data.showHolidays
       );
       
-      // Check if there are any AI-generated events to add
-      const aiEventsJson = sessionStorage.getItem('aiGeneratedEvents');
-      if (aiEventsJson) {
-        try {
-          const aiEvents = JSON.parse(aiEventsJson);
-          let addedCount = 0;
-          
-          for (const event of aiEvents) {
-            try {
-              // Convert ISO string dates to Date objects
-              const eventWithDates = {
-                ...event,
-                start: new Date(event.start),
-                end: new Date(event.end),
-                // Convert recurrence end date if it exists
-                recurrence: event.recurrence ? {
-                  ...event.recurrence,
-                  endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
-                } : undefined,
-                // Add AI generated flag
-                isAIGenerated: true
-              };
+      // Add all AI-generated events
+      if (aiGeneratedEvents.length > 0) {
+        let addedCount = 0;
+        
+        for (const event of aiGeneratedEvents) {
+          try {
+            const eventWithDates = {
+              ...event,
+              start: new Date(event.start),
+              end: new Date(event.end),
+              recurrence: event.recurrence ? {
+                ...event.recurrence,
+                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+              } : undefined,
+              isAIGenerated: true
+            };
 
-              addEvent(newCalendar.id, eventWithDates);
-              addedCount++;
-            } catch (eventError) {
-              console.error('Error adding AI-generated event:', eventError, event);
-            }
+            addEvent(newCalendar.id, eventWithDates);
+            addedCount++;
+          } catch (eventError) {
+            console.error('Error adding AI-generated event:', eventError, event);
           }
-          
-          if (addedCount > 0) {
-            toast.success(`Added ${addedCount} AI-generated events to your calendar`);
-          }
-          
-          // Clear the stored events
-          sessionStorage.removeItem('aiGeneratedEvents');
-        } catch (parseError) {
-          console.error('Error parsing AI-generated events:', parseError);
+        }
+        
+        if (addedCount > 0) {
+          toast.success(`Added ${addedCount} AI-generated events to your calendar`);
         }
       }
       
@@ -127,27 +119,29 @@ const NewCalendar = () => {
 
   return (
     <div className="container max-w-xl pt-10 pb-20">
-      <div className="mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold mb-2">Create New Calendar</h1>
-        <p className="text-muted-foreground mb-6">
-          Set up a new calendar to organize your events.
-        </p>
-        
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
-          <AICalendarGenerator standalone={true} />
-        </div>
-        
-        <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate('/')}
+        className="mb-6"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
+      
+      <h1 className="text-2xl font-bold mb-2">Create New Calendar</h1>
+      <p className="text-muted-foreground mb-6">
+        Set up a new calendar to organize your events.
+      </p>
+      
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
+        <AICalendarGenerator 
+          standalone={true}
+          onEventsGenerated={handleAiEventsGenerated}
+        />
       </div>
+      
+      <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
