@@ -111,7 +111,7 @@ const CalendarViewContent = ({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:gap-6">
       <div className="lg:w-3/4">
         {viewMode === 'day' && (
           <DayPreviewBar 

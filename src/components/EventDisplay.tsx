@@ -1,50 +1,56 @@
 
 import React from 'react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { Event as CalendarEvent } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatEventTime } from '@/lib/date-utils';
-import { Clock, MapPin } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface EventDisplayProps {
   event: CalendarEvent;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 const EventDisplay = ({ event, onClick }: EventDisplayProps) => {
+  const isAllDay = event.allDay;
+  const isHoliday = event.isHoliday;
+  const isAI = event.isAIGenerated;
+  
   return (
-    <Card 
-      className="mb-2 cursor-pointer hover:shadow-md transition-shadow" 
+    <div
+      className={cn(
+        "p-2 mb-2 rounded-md border-l-4 cursor-pointer hover:bg-accent/50 transition-colors",
+        isHoliday ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "bg-card"
+      )}
       style={{ 
-        borderLeft: `4px solid ${event.color || '#8B5CF6'}` 
+        borderLeftColor: event.color || (isHoliday ? '#ef4444' : '#8B5CF6')
       }}
       onClick={onClick}
     >
-      <CardContent className="py-3 px-4">
-        <h4 className="font-medium mb-1">{event.title}</h4>
-        
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Clock size={14} className="mr-1" />
-          {event.allDay ? (
-            <span>All day</span>
-          ) : (
-            <span>
-              {formatEventTime(event.start)} - {formatEventTime(event.end)}
+      <div className="flex justify-between items-start">
+        <h3 className="font-medium mb-1 text-sm">
+          {event.title}
+          {isAI && (
+            <span className="inline-flex items-center ml-1 text-amber-500">
+              <Sparkles size={12} className="inline" />
             </span>
           )}
-        </div>
+        </h3>
+      </div>
+      
+      <div className="text-xs text-muted-foreground">
+        {isAllDay ? (
+          <span>All day</span>
+        ) : (
+          <span>
+            {format(new Date(event.start), 'h:mm a')} - {format(new Date(event.end), 'h:mm a')}
+          </span>
+        )}
         
         {event.location && (
-          <div className="flex items-center text-sm text-muted-foreground mt-1">
-            <MapPin size={14} className="mr-1" />
-            <span>{event.location}</span>
-          </div>
+          <div className="mt-1 truncate">{event.location}</div>
         )}
-        
-        {event.description && (
-          <p className="text-sm mt-2 line-clamp-2">{event.description}</p>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

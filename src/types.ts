@@ -26,6 +26,8 @@ export interface Event {
   // Add recurrence instance property
   isRecurrenceInstance?: boolean;
   originalEventId?: string;
+  // Add AI-generated flag
+  isAIGenerated?: boolean;
 }
 
 // Alias for better semantics in our calendar application

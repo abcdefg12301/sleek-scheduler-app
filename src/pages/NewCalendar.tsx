@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
+import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 
 interface FormData {
   name: string;
@@ -24,7 +25,7 @@ interface FormData {
 
 const NewCalendar = () => {
   const navigate = useNavigate();
-  const { addCalendar } = useCalendarStore();
+  const { addCalendar, addEvent } = useCalendarStore();
 
   const defaultValues: FormData = {
     name: '',
@@ -45,13 +46,54 @@ const NewCalendar = () => {
   const onSubmit = (data: FormData) => {
     console.log('Creating new calendar with data:', data);
     try {
-      // Fixed to pass correct number of arguments
+      // Create the new calendar
       const newCalendar = addCalendar(
         data.name, 
         data.description, 
         data.color,
         data.showHolidays
       );
+      
+      // Check if there are any AI-generated events to add
+      const aiEventsJson = sessionStorage.getItem('aiGeneratedEvents');
+      if (aiEventsJson) {
+        try {
+          const aiEvents = JSON.parse(aiEventsJson);
+          let addedCount = 0;
+          
+          for (const event of aiEvents) {
+            try {
+              // Convert ISO string dates to Date objects
+              const eventWithDates = {
+                ...event,
+                start: new Date(event.start),
+                end: new Date(event.end),
+                // Convert recurrence end date if it exists
+                recurrence: event.recurrence ? {
+                  ...event.recurrence,
+                  endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+                } : undefined,
+                // Add AI generated flag
+                isAIGenerated: true
+              };
+
+              addEvent(newCalendar.id, eventWithDates);
+              addedCount++;
+            } catch (eventError) {
+              console.error('Error adding AI-generated event:', eventError, event);
+            }
+          }
+          
+          if (addedCount > 0) {
+            toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+          }
+          
+          // Clear the stored events
+          sessionStorage.removeItem('aiGeneratedEvents');
+        } catch (parseError) {
+          console.error('Error parsing AI-generated events:', parseError);
+        }
+      }
       
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);
@@ -95,9 +137,16 @@ const NewCalendar = () => {
           Back
         </Button>
         <h1 className="text-2xl font-bold mb-2">Create New Calendar</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-6">
           Set up a new calendar to organize your events.
         </p>
+        
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
+          <AICalendarGenerator standalone={true} />
+        </div>
+        
+        <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
       </div>
 
       <Form {...form}>

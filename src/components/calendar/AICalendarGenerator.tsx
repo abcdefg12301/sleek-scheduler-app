@@ -12,11 +12,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AICalendarGeneratorProps {
-  calendarId: string;
+  calendarId?: string;
+  standalone?: boolean;
 }
 
-const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
-  const [isEnabled, setIsEnabled] = useState(false);
+const AICalendarGenerator = ({ calendarId, standalone = false }: AICalendarGeneratorProps) => {
+  const [isEnabled, setIsEnabled] = useState(standalone ? true : false);
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { addEvent } = useCalendarStore();
@@ -28,53 +29,66 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
     }
 
     setIsGenerating(true);
+    console.log('Generating calendar with details:', calendarDetails);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
         body: { calendarDetails },
       });
 
+      console.log('Response from generate-calendar function:', { data, error });
+
       if (error) {
         console.error('Error generating calendar:', error);
-        toast.error('Failed to generate calendar events');
+        toast.error(`Failed to generate calendar events: ${error.message || 'Unknown error'}`);
         return;
       }
 
-      if (!data.events || !Array.isArray(data.events)) {
+      if (!data || !data.events || !Array.isArray(data.events)) {
+        console.error('Invalid response format from AI:', data);
         toast.error('Invalid response from AI');
         return;
       }
 
       // Add all generated events to the calendar
       let addedCount = 0;
-      for (const event of data.events) {
-        try {
-          // Convert ISO string dates to Date objects
-          const eventWithDates = {
-            ...event,
-            start: new Date(event.start),
-            end: new Date(event.end),
-            // Convert recurrence end date if it exists
-            recurrence: event.recurrence ? {
-              ...event.recurrence,
-              endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
-            } : undefined
-          };
+      
+      if (calendarId) {
+        for (const event of data.events) {
+          try {
+            // Convert ISO string dates to Date objects
+            const eventWithDates = {
+              ...event,
+              start: new Date(event.start),
+              end: new Date(event.end),
+              // Convert recurrence end date if it exists
+              recurrence: event.recurrence ? {
+                ...event.recurrence,
+                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+              } : undefined,
+              // Add AI generated flag
+              isAIGenerated: true
+            };
 
-          addEvent(calendarId, eventWithDates);
-          addedCount++;
-        } catch (eventError) {
-          console.error('Error adding event:', eventError, event);
+            addEvent(calendarId, eventWithDates);
+            addedCount++;
+          } catch (eventError) {
+            console.error('Error adding event:', eventError, event);
+          }
         }
-      }
 
-      if (addedCount > 0) {
-        toast.success(`Successfully added ${addedCount} events to your calendar`);
-        setCalendarDetails('');
+        if (addedCount > 0) {
+          toast.success(`Successfully added ${addedCount} events to your calendar`);
+          setCalendarDetails('');
+        } else {
+          toast.error('Failed to add any events to your calendar');
+        }
       } else {
-        toast.error('Failed to add any events to your calendar');
+        // Store the events in session storage for use when creating a new calendar
+        sessionStorage.setItem('aiGeneratedEvents', JSON.stringify(data.events));
+        toast.success(`Successfully generated ${data.events.length} events`);
+        setCalendarDetails('');
       }
-
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
       toast.error('An error occurred during calendar generation');
@@ -83,7 +97,7 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
     }
   };
 
-  if (!isEnabled) {
+  if (!isEnabled && !standalone) {
     return (
       <Card className="mb-4">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -129,14 +143,16 @@ const AICalendarGenerator = ({ calendarId }: AICalendarGeneratorProps) => {
             </TooltipContent>
           </Tooltip>
         </CardTitle>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="ai-generator-toggle"
-            checked={isEnabled}
-            onCheckedChange={setIsEnabled}
-          />
-          <Label htmlFor="ai-generator-toggle">Enable</Label>
-        </div>
+        {!standalone && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="ai-generator-toggle"
+              checked={isEnabled}
+              onCheckedChange={setIsEnabled}
+            />
+            <Label htmlFor="ai-generator-toggle">Enable</Label>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
