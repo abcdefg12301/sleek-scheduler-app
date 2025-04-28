@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { useCalendarStore } from '@/store/calendar-store';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
+import { Event } from '@/types';
 
 interface FormData {
   name: string;
@@ -25,7 +27,7 @@ interface FormData {
 const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
-  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<any[]>([]);
+  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
 
   const defaultValues: FormData = {
     name: '',
@@ -43,7 +45,7 @@ const NewCalendar = () => {
     defaultValues,
   });
 
-  const handleAiEventsGenerated = (events: any[]) => {
+  const handleAiEventsGenerated = (events: Event[]) => {
     setAiGeneratedEvents(events);
   };
 
@@ -58,7 +60,7 @@ const NewCalendar = () => {
         data.showHolidays
       );
       
-      // Add all AI-generated events
+      // Add all AI-generated events to this specific calendar only
       if (aiGeneratedEvents.length > 0) {
         let addedCount = 0;
         
@@ -86,6 +88,9 @@ const NewCalendar = () => {
           toast.success(`Added ${addedCount} AI-generated events to your calendar`);
         }
       }
+      
+      // Clear the AI generated events after they're added to a calendar
+      setAiGeneratedEvents([]);
       
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);

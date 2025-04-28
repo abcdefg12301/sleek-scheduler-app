@@ -12,7 +12,7 @@ import { Event } from '@/types';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
-  onEventsGenerated?: (events: any[]) => void;
+  onEventsGenerated?: (events: Event[]) => void;
 }
 
 const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalendarGeneratorProps) => {

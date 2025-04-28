@@ -34,8 +34,8 @@ const CalendarViewHeader = ({
   navigate
 }: CalendarHeaderProps) => {
   return (
-    <div className="mb-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="mb-6 flex flex-col space-y-4">
+      <div className="flex flex-col md:flex-row justify-between md:items-center">
         <CalendarHeaderCentered
           calendar={calendar}
           currentDate={currentDate}
@@ -47,7 +47,7 @@ const CalendarViewHeader = ({
           navigateToDashboard={() => navigate('/')}
         />
         
-        <div className="flex items-center gap-2 mt-2 md:mt-0">
+        <div className="flex items-center gap-2 mt-4 md:mt-0">
           <Button
             onClick={handleNewEvent}
             style={{

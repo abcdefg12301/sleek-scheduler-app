@@ -39,6 +39,19 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
     }
   };
 
+  const formatEventDate = (event: Event) => {
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    
+    if (event.recurrence) {
+      // For recurring events, show day of week
+      return `${format(start, 'EEEE')} ${format(start, 'p')} - ${format(end, 'p')}`;
+    } else {
+      // For one-time events, show the full date
+      return `${format(start, 'PPP')} ${format(start, 'p')} - ${format(end, 'p')}`;
+    }
+  };
+
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue="generated-events">
       <AccordionItem value="generated-events">
@@ -59,11 +72,8 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {format(new Date(event.start), 'PPp')} - {format(new Date(event.end), 'p')}
+                    {formatEventDate(event)}
                   </p>
-                  {event.description && (
-                    <p className="text-sm mt-1 text-muted-foreground">{event.description}</p>
-                  )}
                 </div>
                 <Button 
                   variant="ghost" 
