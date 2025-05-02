@@ -9,8 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import EventForm from '@/components/EventForm';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -22,6 +23,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -94,21 +96,30 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       }));
 
       // Add new events to existing ones instead of replacing
-      const newEvents = [...generatedEvents, ...processedEvents];
+      const newEvents = [...processedEvents];
       setGeneratedEvents(newEvents);
       
       if (onEventsGenerated) {
         onEventsGenerated(newEvents);
       }
 
-      toast.success(`Successfully generated ${processedEvents.length} new events`);
+      toast.success(`Successfully generated ${processedEvents.length} events`);
       setCalendarDetails('');
+      setIsPreviewOpen(true);
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
       toast.error('An error occurred during calendar generation');
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const clearAllEvents = () => {
+    setGeneratedEvents([]);
+    if (onEventsGenerated) {
+      onEventsGenerated([]);
+    }
+    toast.success('All generated events cleared');
   };
 
   return (
@@ -124,7 +135,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             </TooltipTrigger>
             <TooltipContent>
               <p className="max-w-xs">
-                Describe your events in natural language. For example: "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm" or "I have a team meeting every Tuesday at 10am"
+                Describe your events in natural language. For example: "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm" or "I have a team meeting every Tuesday at 10am" or "Generate a study schedule where I study 1 hour a day after 3pm"
               </p>
             </TooltipContent>
           </Tooltip>
@@ -138,28 +149,56 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             value={calendarDetails}
             onChange={(e) => setCalendarDetails(e.target.value)}
           />
-          <Button 
-            onClick={handleGenerate} 
-            disabled={isGenerating || !calendarDetails.trim()}
-            className="w-full"
-          >
-            {isGenerating ? 'Generating...' : 'Generate Events'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isGenerating || !calendarDetails.trim()}
+              className="flex-1"
+            >
+              {isGenerating ? 'Generating...' : 'Generate Events'}
+            </Button>
+            
+            {generatedEvents.length > 0 && (
+              <Sheet open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline">
+                    Preview Events ({generatedEvents.length})
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full sm:max-w-md">
+                  <SheetHeader className="mb-4">
+                    <SheetTitle>Generated Events</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4">
+                    <AIGeneratedEventsList 
+                      events={generatedEvents} 
+                      onDeleteEvent={handleDeleteEvent}
+                      onEditEvent={handleEditEvent}
+                    />
+                    {generatedEvents.length > 0 && (
+                      <Button 
+                        variant="outline" 
+                        onClick={clearAllEvents} 
+                        className="w-full"
+                      >
+                        Clear All Events
+                      </Button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+          </div>
           
-          {generatedEvents.length > 0 && (
-            <AIGeneratedEventsList 
-              events={generatedEvents} 
-              onDeleteEvent={handleDeleteEvent}
-              onEditEvent={handleEditEvent}
-            />
-          )}
-
           {/* Event editing dialog */}
           <Dialog 
             open={editingEvent !== null} 
             onOpenChange={(open) => !open && setEditingEvent(null)}
           >
             <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Edit Event</DialogTitle>
+              </DialogHeader>
               {editingEvent && (
                 <EventForm
                   initialValues={editingEvent.event}

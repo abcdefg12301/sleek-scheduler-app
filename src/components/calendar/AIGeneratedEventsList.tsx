@@ -9,13 +9,14 @@ import {
 } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Trash } from 'lucide-react';
+import { Trash, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 
 interface AIGeneratedEventsListProps {
   events: Event[];
   onDeleteEvent: (eventIndex: number) => void;
-  onEditEvent?: (event: Event, index: number) => void; // New edit handler
+  onEditEvent?: (event: Event, index: number) => void;
 }
 
 const AIGeneratedEventsList = ({ 
@@ -66,6 +67,11 @@ const AIGeneratedEventsList = ({
     }
   };
 
+  const getEventTypeLabel = (event: Event) => {
+    if (!event.recurrence) return "One-time";
+    return formatRecurrence(event) || "Recurring";
+  };
+
   return (
     <Accordion type="single" collapsible className="w-full" defaultValue="generated-events">
       <AccordionItem value="generated-events">
@@ -73,63 +79,49 @@ const AIGeneratedEventsList = ({
           Generated Events ({events.length})
         </AccordionTrigger>
         <AccordionContent>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {events.map((event, index) => (
-              <div key={index} className="flex items-start justify-between p-3 rounded-lg bg-secondary">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{event.title}</h4>
-                    {formatRecurrence(event) && (
+              <Card key={index} className="p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{event.title}</h4>
                       <Badge variant="outline" className="text-xs">
-                        {formatRecurrence(event)}
+                        {getEventTypeLabel(event)}
                       </Badge>
-                    )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {formatEventDate(event)}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {formatEventDate(event)}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  {onEditEvent && (
+                  <div className="flex gap-1">
+                    {onEditEvent && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditEvent(event, index);
+                        }}
+                        className="h-8 w-8"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEditEvent(event, index);
+                        onDeleteEvent(index);
                       }}
                       className="h-8 w-8"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-pencil"
-                      >
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                      </svg>
+                      <Trash className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteEvent(index);
-                    }}
-                    className="h-8 w-8"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </AccordionContent>

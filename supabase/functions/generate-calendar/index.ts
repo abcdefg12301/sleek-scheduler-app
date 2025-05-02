@@ -56,9 +56,44 @@ serve(async (req) => {
 });
 
 function parseCalendarDetailsIntoEvents(details: string) {
-  // This is a parser that identifies event patterns in the text
+  // Break the input into potential separate events
   const events = [];
   const currentDate = new Date();
+  
+  // Split the input by common separators that might indicate different events
+  const eventTexts = splitIntoEventTexts(details);
+  
+  // Process each potential event text
+  for (const eventText of eventTexts) {
+    const parsedEvents = parseEventText(eventText, currentDate);
+    events.push(...parsedEvents);
+  }
+  
+  // If no events were detected, create at least one default event
+  if (events.length === 0) {
+    const defaultEvent = createDefaultEvent(details, currentDate);
+    events.push(defaultEvent);
+  }
+  
+  return events;
+}
+
+// Helper function to split input text into potential separate events
+function splitIntoEventTexts(text: string) {
+  // Remove any "generate" or "create" prefixes
+  const cleanedText = text.replace(/^(please |can you |)?(generate|create) (me )?(a |an |some )?/i, '');
+  
+  // Split by common separators
+  const segments = cleanedText.split(/(?:,\s*and\s*|\.\s*|\n+|\s+and\s+|;\s*)/);
+  
+  // Filter out empty segments and trim each segment
+  return segments
+    .map(segment => segment.trim())
+    .filter(segment => segment.length > 0);
+}
+
+function parseEventText(text: string, baseDate: Date) {
+  const events = [];
   
   // Regex patterns for common time and date formats
   const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?(?:\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?)?/g;
@@ -70,6 +105,10 @@ function parseCalendarDetailsIntoEvents(details: string) {
   const specificDateRegex = /\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/g;
   const noRepeatIndicators = /\b(only|once|one-time|single)\b/gi;
   
+  // Schedule pattern indicators
+  const scheduleRegex = /\b(schedule|fit in|add to|include in)\b/gi;
+  const timeConstraintRegex = /\b(after|before|between)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/gi;
+  
   // Activity keywords to help with title extraction
   const activityKeywords = [
     "gym", "workout", "exercise", "training",
@@ -77,7 +116,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
     "class", "lecture", "study", "exam",
     "doctor", "dentist", "appointment",
     "lunch", "dinner", "breakfast", "coffee",
-    "shopping", "grocery", "errands",
+    "shopping", "grocery", "errands", 
     "sleep", "rest", "nap",
     "work", "job", "shift",
     "party", "celebration", "birthday", "anniversary",
@@ -86,30 +125,18 @@ function parseCalendarDetailsIntoEvents(details: string) {
     "vacation", "holiday", "trip", "visit"
   ];
   
-  // Helper to parse and standardize time
-  const parseTime = (hour: string, minute: string = "00", ampm: string = "") => {
-    let h = parseInt(hour, 10);
-    const m = parseInt(minute || "0", 10);
-    
-    // Convert to 24-hour format if AM/PM is provided
-    if (ampm && ampm.toLowerCase() === "pm" && h < 12) {
-      h += 12;
-    } else if (ampm && ampm.toLowerCase() === "am" && h === 12) {
-      h = 0;
-    }
-    
-    return { hour: h, minute: m };
-  };
-
+  // Extract title using improved methods
+  const eventTitle = extractEventTitle(text, activityKeywords);
+  
   // Check for specific date patterns
   let specificDate: Date | null = null;
   let specificDateMatch;
   const dateMatches = [];
   
-  while ((specificDateMatch = specificDateRegex.exec(details)) !== null) {
+  while ((specificDateMatch = specificDateRegex.exec(text)) !== null) {
     const month = parseInt(specificDateMatch[1], 10) - 1; // 0-indexed months
     const day = parseInt(specificDateMatch[2], 10);
-    let year = specificDateMatch[3] ? parseInt(specificDateMatch[3], 10) : currentDate.getFullYear();
+    let year = specificDateMatch[3] ? parseInt(specificDateMatch[3], 10) : baseDate.getFullYear();
     
     // Fix 2-digit years
     if (year < 100) {
@@ -127,7 +154,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
   // Extract recurring days
   let recurringDays = [];
   let matchWeekday;
-  while ((matchWeekday = weekdayRegex.exec(details)) !== null) {
+  while ((matchWeekday = weekdayRegex.exec(text)) !== null) {
     const day = matchWeekday[0].toLowerCase();
     const dayMap: {[key: string]: number} = {
       'monday': 1, 'mon': 1,
@@ -139,29 +166,29 @@ function parseCalendarDetailsIntoEvents(details: string) {
       'sunday': 0, 'sun': 0
     };
     
-    if (dayMap[day] !== undefined) {
+    if (dayMap[day] !== undefined && !recurringDays.includes(dayMap[day])) {
       recurringDays.push(dayMap[day]);
     }
   }
   
   // Determine recurrence pattern
   let recurrenceType = null;
-  let noRepeat = noRepeatIndicators.test(details);
+  let noRepeat = noRepeatIndicators.test(text);
   
   if (specificDate !== null || noRepeat) {
     recurrenceType = "none"; // One-time event
-  } else if (everydayRegex.test(details)) {
+  } else if (everydayRegex.test(text)) {
     recurrenceType = "daily";
     recurringDays = []; // No need for specific days with daily recurrence
-  } else if (weeklyRegex.test(details)) {
+  } else if (weeklyRegex.test(text)) {
     recurrenceType = "weekly";
     // If no specific days mentioned, default to today
     if (recurringDays.length === 0) {
-      recurringDays = [currentDate.getDay()];
+      recurringDays = [baseDate.getDay()];
     }
-  } else if (monthlyRegex.test(details)) {
+  } else if (monthlyRegex.test(text)) {
     recurrenceType = "monthly";
-  } else if (yearlyRegex.test(details)) {
+  } else if (yearlyRegex.test(text)) {
     recurrenceType = "yearly";
   } else if (recurringDays.length > 0) {
     // If we found specific days but no explicit recurrence pattern
@@ -172,13 +199,10 @@ function parseCalendarDetailsIntoEvents(details: string) {
     recurrenceType = "none";
   }
 
-  // Extract title from details - improved function
-  const eventTitle = extractSmartEventTitle(details, activityKeywords);
-
   // Look for time patterns
+  let timeMatches = [];
   let matchTime;
-  const timeMatches = [];
-  while ((matchTime = timeRegex.exec(details)) !== null) {
+  while ((matchTime = timeRegex.exec(text)) !== null) {
     const startHour = matchTime[1];
     const startMinute = matchTime[2];
     const startAmpm = matchTime[3];
@@ -200,7 +224,19 @@ function parseCalendarDetailsIntoEvents(details: string) {
     }
   }
   
-  // If no specific times were found, create a default time
+  // Check for schedule constraints
+  let scheduleConstraints = null;
+  if (scheduleRegex.test(text)) {
+    scheduleConstraints = extractTimeConstraints(text);
+  }
+  
+  // If no specific times were found but we have schedule constraints, generate times
+  if (timeMatches.length === 0 && scheduleConstraints) {
+    const generatedTimes = generateTimeSlots(scheduleConstraints, recurrenceType === "daily");
+    timeMatches = generatedTimes;
+  }
+  
+  // If still no specific times were found, create a default time
   if (timeMatches.length === 0) {
     timeMatches.push({
       start: { hour: 9, minute: 0 },
@@ -211,7 +247,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
   // Generate events based on the extracted patterns
   if (recurrenceType === "none" || specificDate !== null) {
     // Create a one-time event
-    const eventDate = specificDate || new Date(currentDate);
+    const eventDate = specificDate || new Date(baseDate);
     
     // Use the first time pattern found
     const timePattern = timeMatches[0];
@@ -242,33 +278,35 @@ function parseCalendarDetailsIntoEvents(details: string) {
   } else {
     // Handle recurring events differently based on the type
     if (recurrenceType === "daily") {
-      // For daily events, create just one event with daily recurrence
-      const eventDate = new Date(currentDate);
-      const timePattern = timeMatches[0];
+      // For daily events, create one event with daily recurrence
+      const eventDate = new Date(baseDate);
       
-      const startDate = new Date(eventDate);
-      startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
-      
-      const endDate = new Date(eventDate);
-      endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
-      
-      if (endDate < startDate) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      
-      events.push({
-        title: eventTitle,
-        description: "",
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        allDay: false,
-        color: getRandomEventColor(),
-        isAIGenerated: true,
-        recurrence: {
-          frequency: "daily",
-          interval: 1,
-          count: 30 // Repeat for 30 occurrences by default
+      // For each time slot (if multiple were mentioned)
+      timeMatches.forEach(timePattern => {
+        const startDate = new Date(eventDate);
+        startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
+        
+        const endDate = new Date(eventDate);
+        endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
+        
+        if (endDate < startDate) {
+          endDate.setDate(endDate.getDate() + 1);
         }
+        
+        events.push({
+          title: eventTitle,
+          description: "",
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          allDay: false,
+          color: getRandomEventColor(),
+          isAIGenerated: true,
+          recurrence: {
+            frequency: "daily",
+            interval: 1,
+            count: 365 // Repeat for a year by default
+          }
+        });
       });
     } else if (recurrenceType === "weekly") {
       // For weekly recurrence with specific days
@@ -276,7 +314,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
         // Create one weekly recurring event per day of the week specified
         recurringDays.forEach(dayOfWeek => {
           // Find the next occurrence of this day of the week
-          let eventDate = new Date(currentDate);
+          let eventDate = new Date(baseDate);
           const currentDay = eventDate.getDay();
           
           // Calculate days to add to get to the target day
@@ -284,9 +322,40 @@ function parseCalendarDetailsIntoEvents(details: string) {
           if (daysToAdd < 0) daysToAdd += 7;
           eventDate.setDate(eventDate.getDate() + daysToAdd);
           
-          // Use the first time pattern for all days
-          const timePattern = timeMatches[0];
-          
+          // For each time slot (if multiple were mentioned)
+          timeMatches.forEach(timePattern => {
+            const startDate = new Date(eventDate);
+            startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
+            
+            const endDate = new Date(eventDate);
+            endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
+            
+            if (endDate < startDate) {
+              endDate.setDate(endDate.getDate() + 1);
+            }
+            
+            events.push({
+              title: eventTitle,
+              description: "",
+              start: startDate.toISOString(),
+              end: endDate.toISOString(),
+              allDay: false,
+              color: getRandomEventColor(),
+              isAIGenerated: true,
+              recurrence: {
+                frequency: "weekly",
+                interval: 1,
+                count: 52 // Repeat for a year by default
+              }
+            });
+          });
+        });
+      } else {
+        // Weekly recurrence without specific days (use current day)
+        const eventDate = new Date(baseDate);
+        
+        // For each time slot (if multiple were mentioned)
+        timeMatches.forEach(timePattern => {
           const startDate = new Date(eventDate);
           startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
           
@@ -308,15 +377,17 @@ function parseCalendarDetailsIntoEvents(details: string) {
             recurrence: {
               frequency: "weekly",
               interval: 1,
-              count: 12 // Repeat for 12 weeks by default
+              count: 52 // Repeat for a year by default
             }
           });
         });
-      } else {
-        // Weekly recurrence without specific days (use current day)
-        const eventDate = new Date(currentDate);
-        const timePattern = timeMatches[0];
-        
+      }
+    } else if (recurrenceType === "monthly") {
+      // For monthly recurrence
+      const eventDate = new Date(baseDate);
+      
+      // For each time slot (if multiple were mentioned)
+      timeMatches.forEach(timePattern => {
         const startDate = new Date(eventDate);
         startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
         
@@ -336,141 +407,220 @@ function parseCalendarDetailsIntoEvents(details: string) {
           color: getRandomEventColor(),
           isAIGenerated: true,
           recurrence: {
-            frequency: "weekly",
+            frequency: "monthly",
             interval: 1,
-            count: 12 // Repeat for 12 weeks by default
+            count: 24 // Repeat for 2 years by default
           }
         });
-      }
-    } else if (recurrenceType === "monthly") {
-      // For monthly recurrence
-      const eventDate = new Date(currentDate);
-      const timePattern = timeMatches[0];
-      
-      const startDate = new Date(eventDate);
-      startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
-      
-      const endDate = new Date(eventDate);
-      endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
-      
-      if (endDate < startDate) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      
-      events.push({
-        title: eventTitle,
-        description: "",
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        allDay: false,
-        color: getRandomEventColor(),
-        isAIGenerated: true,
-        recurrence: {
-          frequency: "monthly",
-          interval: 1,
-          count: 12 // Repeat for 12 months by default
-        }
       });
     } else if (recurrenceType === "yearly") {
       // For yearly recurrence
-      const eventDate = new Date(currentDate);
-      const timePattern = timeMatches[0];
+      const eventDate = new Date(baseDate);
       
-      const startDate = new Date(eventDate);
-      startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
-      
-      const endDate = new Date(eventDate);
-      endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
-      
-      if (endDate < startDate) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      
-      events.push({
-        title: eventTitle,
-        description: "",
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        allDay: false,
-        color: getRandomEventColor(),
-        isAIGenerated: true,
-        recurrence: {
-          frequency: "yearly",
-          interval: 1,
-          count: 5 // Repeat for 5 years by default
+      // For each time slot (if multiple were mentioned)
+      timeMatches.forEach(timePattern => {
+        const startDate = new Date(eventDate);
+        startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
+        
+        const endDate = new Date(eventDate);
+        endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
+        
+        if (endDate < startDate) {
+          endDate.setDate(endDate.getDate() + 1);
         }
+        
+        events.push({
+          title: eventTitle,
+          description: "",
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          allDay: false,
+          color: getRandomEventColor(),
+          isAIGenerated: true,
+          recurrence: {
+            frequency: "yearly",
+            interval: 1,
+            count: 10 // Repeat for 10 years by default
+          }
+        });
       });
     }
-  }
-
-  // If no events were created (unlikely with our fallbacks), create a generic event
-  if (events.length === 0) {
-    const startDate = new Date(currentDate);
-    startDate.setHours(9, 0, 0, 0);
-    
-    const endDate = new Date(currentDate);
-    endDate.setHours(10, 0, 0, 0);
-    
-    events.push({
-      title: eventTitle || "New Event",
-      description: "",
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-      allDay: false,
-      color: getRandomEventColor(),
-      isAIGenerated: true
-    });
   }
 
   return events;
 }
 
-function extractSmartEventTitle(details: string, activityKeywords: string[]) {
-  // First try to find exact activity keywords
+// Helper to parse and standardize time
+function parseTime(hour: string, minute: string = "00", ampm: string = "") {
+  let h = parseInt(hour, 10);
+  const m = parseInt(minute || "0", 10);
+  
+  // Handle 12-hour format if AM/PM is provided
+  if (ampm) {
+    const isPM = ampm.toLowerCase() === "pm";
+    
+    // 12 AM -> 0, 1-11 AM -> 1-11
+    if (!isPM && h === 12) h = 0;
+    // 12 PM -> 12, 1-11 PM -> 13-23
+    else if (isPM && h < 12) h += 12;
+  }
+  
+  return { hour: h, minute: m };
+}
+
+// Function to extract meaningful event title
+function extractEventTitle(text: string, activityKeywords: string[]) {
+  // First, look for common activity keywords
   for (const keyword of activityKeywords) {
-    if (details.toLowerCase().includes(keyword.toLowerCase())) {
-      // Capitalize the first letter of the activity
-      return keyword.charAt(0).toUpperCase() + keyword.slice(1);
-    }
-  }
-  
-  // If no direct match, look for common patterns
-  const patterns = [
-    // Patterns like "I go to X" -> "X"
-    /(?:go to|visit|attend)\s+(?:the\s+)?([a-z0-9\s]{2,20})(?:\s|$)/i,
-    // Patterns like "have X" -> "X"
-    /have\s+(?:a\s+)?([a-z0-9\s]{2,20})(?:\s|$)/i,
-    // Patterns with possessives like "my X" -> "X"
-    /my\s+([a-z0-9\s]{2,20})(?:\s|$)/i,
-    // Generic action patterns
-    /([a-z]{3,15})\s+(?:at|with|in)/i
-  ];
-
-  for (const pattern of patterns) {
-    const match = details.match(pattern);
-    if (match && match[1]) {
-      const title = match[1].trim();
+    // Look for direct matches of the keyword
+    const regexPattern = new RegExp(`\\b(${keyword})\\b`, 'i');
+    const match = text.match(regexPattern);
+    if (match) {
       // Capitalize the first letter
-      return title.charAt(0).toUpperCase() + title.slice(1);
+      return match[0].charAt(0).toUpperCase() + match[0].slice(1).toLowerCase();
     }
   }
-
-  // If all else fails, extract the first noun phrase (very simple approach)
-  const words = details.split(/\s+/);
-  // Skip common pronouns and prepositions at the beginning
-  const skipWords = ["i", "we", "they", "he", "she", "it", "to", "at", "on", "in", "with", "every", "have"];
   
-  let startIndex = 0;
-  while (startIndex < words.length && skipWords.includes(words[startIndex].toLowerCase())) {
-    startIndex++;
+  // Look for phrases like "X session" or "X class"
+  const sessionPattern = /\b(\w+)\s+(session|class|appointment|meeting)\b/i;
+  const sessionMatch = text.match(sessionPattern);
+  if (sessionMatch) {
+    return sessionMatch[1].charAt(0).toUpperCase() + sessionMatch[1].slice(1).toLowerCase();
   }
   
-  if (startIndex < words.length) {
-    return words[startIndex].charAt(0).toUpperCase() + words[startIndex].slice(1);
+  // Look for verbs like "go to X" or "have X"
+  const actionPattern = /\b(?:go to|have|attend)\s+(?:the\s+)?(\w+)\b/i;
+  const actionMatch = text.match(actionPattern);
+  if (actionMatch) {
+    return actionMatch[1].charAt(0).toUpperCase() + actionMatch[1].slice(1).toLowerCase();
   }
   
-  // Last resort
+  // Try to extract a meaningful noun phrase
+  const nounPhrases = extractPotentialNounPhrases(text);
+  if (nounPhrases.length > 0) {
+    for (const phrase of nounPhrases) {
+      if (phrase.length > 2 && !["the", "and", "but", "for", "with"].includes(phrase.toLowerCase())) {
+        return phrase.charAt(0).toUpperCase() + phrase.slice(1).toLowerCase();
+      }
+    }
+  }
+  
+  // Default case: first word that's not a common word
+  const words = text.split(/\s+/);
+  const commonWords = ["i", "me", "my", "we", "our", "the", "a", "an", "want", "need", "would", "like", "every", "each", "on", "at", "in"];
+  
+  for (const word of words) {
+    const cleanWord = word.replace(/[^\w]/g, "").toLowerCase();
+    if (cleanWord.length > 2 && !commonWords.includes(cleanWord)) {
+      return cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1);
+    }
+  }
+  
+  // Final fallback
   return "Event";
+}
+
+// Simple noun phrase extractor
+function extractPotentialNounPhrases(text: string) {
+  const phrases = [];
+  
+  // Remove common prefixes like "I want", "I need", etc.
+  const cleanedText = text.replace(/^(i|we) (want|need|would like|have|go to|attend|do)/i, "");
+  
+  // Split by common delimiters
+  const segments = cleanedText.split(/[,.\s]+/);
+  
+  // Look for words that are likely nouns (not starting with common articles/prepositions)
+  const skipWords = ["the", "a", "an", "to", "at", "in", "on", "with", "by", "and", "but", "or", "from"];
+  
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i] && !skipWords.includes(segments[i].toLowerCase())) {
+      phrases.push(segments[i]);
+    }
+  }
+  
+  return phrases;
+}
+
+// Extract time constraints for scheduling
+function extractTimeConstraints(text: string) {
+  const constraints = {
+    earliestHour: 9, // Default 9 AM
+    latestHour: 17,  // Default 5 PM
+  };
+  
+  // Look for "after X" pattern
+  const afterRegex = /\b(?:after|from|starting)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?\b/i;
+  const afterMatch = text.match(afterRegex);
+  if (afterMatch) {
+    const time = parseTime(afterMatch[1], afterMatch[2], afterMatch[3]);
+    constraints.earliestHour = time.hour;
+  }
+  
+  // Look for "before X" pattern
+  const beforeRegex = /\b(?:before|until|till|by|ending at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?\b/i;
+  const beforeMatch = text.match(beforeRegex);
+  if (beforeMatch) {
+    const time = parseTime(beforeMatch[1], beforeMatch[2], beforeMatch[3]);
+    constraints.latestHour = time.hour;
+  }
+  
+  return constraints;
+}
+
+// Generate appropriate time slots based on constraints
+function generateTimeSlots(constraints: { earliestHour: number, latestHour: number }, isDaily: boolean) {
+  const slots = [];
+  const { earliestHour, latestHour } = constraints;
+  
+  // Determine how many slots to generate
+  let slotsCount = 1; // Default to one slot
+  if (isDaily) {
+    // For daily recurring events, generate 1-2 slots based on available time
+    const hoursAvailable = latestHour - earliestHour;
+    slotsCount = hoursAvailable >= 6 ? 2 : 1;
+  }
+  
+  // Generate evenly distributed slots
+  const availableHours = latestHour - earliestHour;
+  const slotDuration = Math.min(1.5, availableHours / slotsCount); // In hours, default to 1.5 hour max
+  
+  for (let i = 0; i < slotsCount; i++) {
+    const slotStartHour = earliestHour + (availableHours / (slotsCount + 1)) * (i + 1);
+    
+    const startHour = Math.floor(slotStartHour);
+    const startMinute = Math.round((slotStartHour - startHour) * 60);
+    
+    const endHour = Math.floor(slotStartHour + slotDuration);
+    const endMinute = Math.round(((slotStartHour + slotDuration) - endHour) * 60);
+    
+    slots.push({
+      start: { hour: startHour, minute: startMinute },
+      end: { hour: endHour, minute: endMinute }
+    });
+  }
+  
+  return slots;
+}
+
+function createDefaultEvent(text: string, baseDate: Date) {
+  const title = extractEventTitle(text, []);
+  
+  const startDate = new Date(baseDate);
+  startDate.setHours(9, 0, 0, 0);
+  
+  const endDate = new Date(baseDate);
+  endDate.setHours(10, 0, 0, 0);
+  
+  return {
+    title,
+    description: "",
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    allDay: false,
+    color: getRandomEventColor(),
+    isAIGenerated: true
+  };
 }
 
 function getRandomEventColor() {
