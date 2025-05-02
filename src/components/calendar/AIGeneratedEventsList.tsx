@@ -15,13 +15,18 @@ import { Badge } from '@/components/ui/badge';
 interface AIGeneratedEventsListProps {
   events: Event[];
   onDeleteEvent: (eventIndex: number) => void;
+  onEditEvent?: (event: Event, index: number) => void; // New edit handler
 }
 
-const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListProps) => {
+const AIGeneratedEventsList = ({ 
+  events, 
+  onDeleteEvent,
+  onEditEvent
+}: AIGeneratedEventsListProps) => {
   if (!events.length) return null;
 
   const formatRecurrence = (event: Event) => {
-    if (!event.recurrence) return "One-time event";
+    if (!event.recurrence) return null;
     
     const { frequency, interval = 1 } = event.recurrence;
     
@@ -35,7 +40,7 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
       case "yearly":
         return interval === 1 ? "Yearly" : `Every ${interval} years`;
       default:
-        return "Recurring event";
+        return null;
     }
   };
 
@@ -43,11 +48,20 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
     const start = new Date(event.start);
     const end = new Date(event.end);
     
-    if (event.recurrence) {
-      // For recurring events, show day of week
+    // For recurring weekly events, just show day of week
+    if (event.recurrence && event.recurrence.frequency === "weekly") {
       return `${format(start, 'EEEE')} ${format(start, 'p')} - ${format(end, 'p')}`;
-    } else {
-      // For one-time events, show the full date
+    } 
+    // For daily events
+    else if (event.recurrence && event.recurrence.frequency === "daily") {
+      return `${format(start, 'p')} - ${format(end, 'p')}`;
+    }
+    // For monthly/yearly events
+    else if (event.recurrence) {
+      return `${format(start, 'do')} ${format(start, 'p')} - ${format(end, 'p')}`;
+    }
+    // For one-time events, show the full date
+    else {
       return `${format(start, 'PPP')} ${format(start, 'p')} - ${format(end, 'p')}`;
     }
   };
@@ -65,7 +79,7 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium">{event.title}</h4>
-                    {event.recurrence && (
+                    {formatRecurrence(event) && (
                       <Badge variant="outline" className="text-xs">
                         {formatRecurrence(event)}
                       </Badge>
@@ -75,14 +89,46 @@ const AIGeneratedEventsList = ({ events, onDeleteEvent }: AIGeneratedEventsListP
                     {formatEventDate(event)}
                   </p>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => onDeleteEvent(index)}
-                  className="ml-2 mt-1"
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  {onEditEvent && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditEvent(event, index);
+                      }}
+                      className="h-8 w-8"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-pencil"
+                      >
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteEvent(index);
+                    }}
+                    className="h-8 w-8"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

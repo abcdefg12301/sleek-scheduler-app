@@ -28,6 +28,7 @@ const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
   const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
+  const [newCalendarId, setNewCalendarId] = useState<string | null>(null);
 
   const defaultValues: FormData = {
     name: '',
@@ -46,6 +47,8 @@ const NewCalendar = () => {
   });
 
   const handleAiEventsGenerated = (events: Event[]) => {
+    // Clear any previously stored calendar ID to ensure events only apply to the new calendar
+    setNewCalendarId(null);
     setAiGeneratedEvents(events);
   };
 
@@ -59,6 +62,9 @@ const NewCalendar = () => {
         data.color,
         data.showHolidays
       );
+
+      // Store the new calendar ID
+      setNewCalendarId(newCalendar.id);
       
       // Add all AI-generated events to this specific calendar only
       if (aiGeneratedEvents.length > 0) {

@@ -70,6 +70,22 @@ function parseCalendarDetailsIntoEvents(details: string) {
   const specificDateRegex = /\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/g;
   const noRepeatIndicators = /\b(only|once|one-time|single)\b/gi;
   
+  // Activity keywords to help with title extraction
+  const activityKeywords = [
+    "gym", "workout", "exercise", "training",
+    "meeting", "call", "conference",
+    "class", "lecture", "study", "exam",
+    "doctor", "dentist", "appointment",
+    "lunch", "dinner", "breakfast", "coffee",
+    "shopping", "grocery", "errands",
+    "sleep", "rest", "nap",
+    "work", "job", "shift",
+    "party", "celebration", "birthday", "anniversary",
+    "game", "match", "practice", "rehearsal",
+    "flight", "train", "bus", "drive",
+    "vacation", "holiday", "trip", "visit"
+  ];
+  
   // Helper to parse and standardize time
   const parseTime = (hour: string, minute: string = "00", ampm: string = "") => {
     let h = parseInt(hour, 10);
@@ -136,7 +152,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
     recurrenceType = "none"; // One-time event
   } else if (everydayRegex.test(details)) {
     recurrenceType = "daily";
-    recurringDays = [0, 1, 2, 3, 4, 5, 6]; // All days of the week
+    recurringDays = []; // No need for specific days with daily recurrence
   } else if (weeklyRegex.test(details)) {
     recurrenceType = "weekly";
     // If no specific days mentioned, default to today
@@ -145,7 +161,6 @@ function parseCalendarDetailsIntoEvents(details: string) {
     }
   } else if (monthlyRegex.test(details)) {
     recurrenceType = "monthly";
-    recurringDays = [currentDate.getDay()]; // Use current day of week
   } else if (yearlyRegex.test(details)) {
     recurrenceType = "yearly";
   } else if (recurringDays.length > 0) {
@@ -157,8 +172,8 @@ function parseCalendarDetailsIntoEvents(details: string) {
     recurrenceType = "none";
   }
 
-  // Extract title from details
-  const eventTitle = extractEventTitle(details);
+  // Extract title from details - improved function
+  const eventTitle = extractSmartEventTitle(details, activityKeywords);
 
   // Look for time patterns
   let matchTime;
@@ -256,15 +271,50 @@ function parseCalendarDetailsIntoEvents(details: string) {
         }
       });
     } else if (recurrenceType === "weekly") {
-      // For weekly recurrence, create one event per day of the week specified
-      recurringDays.forEach(dayOfWeek => {
-        // Find the next occurrence of this day of the week
-        let eventDate = new Date(currentDate);
-        while (eventDate.getDay() !== dayOfWeek) {
-          eventDate.setDate(eventDate.getDate() + 1);
-        }
-        
-        // Use the first time pattern for all days
+      // For weekly recurrence with specific days
+      if (recurringDays.length > 0) {
+        // Create one weekly recurring event per day of the week specified
+        recurringDays.forEach(dayOfWeek => {
+          // Find the next occurrence of this day of the week
+          let eventDate = new Date(currentDate);
+          const currentDay = eventDate.getDay();
+          
+          // Calculate days to add to get to the target day
+          let daysToAdd = dayOfWeek - currentDay;
+          if (daysToAdd < 0) daysToAdd += 7;
+          eventDate.setDate(eventDate.getDate() + daysToAdd);
+          
+          // Use the first time pattern for all days
+          const timePattern = timeMatches[0];
+          
+          const startDate = new Date(eventDate);
+          startDate.setHours(timePattern.start.hour, timePattern.start.minute, 0, 0);
+          
+          const endDate = new Date(eventDate);
+          endDate.setHours(timePattern.end.hour, timePattern.end.minute, 0, 0);
+          
+          if (endDate < startDate) {
+            endDate.setDate(endDate.getDate() + 1);
+          }
+          
+          events.push({
+            title: eventTitle,
+            description: "",
+            start: startDate.toISOString(),
+            end: endDate.toISOString(),
+            allDay: false,
+            color: getRandomEventColor(),
+            isAIGenerated: true,
+            recurrence: {
+              frequency: "weekly",
+              interval: 1,
+              count: 12 // Repeat for 12 weeks by default
+            }
+          });
+        });
+      } else {
+        // Weekly recurrence without specific days (use current day)
+        const eventDate = new Date(currentDate);
         const timePattern = timeMatches[0];
         
         const startDate = new Date(eventDate);
@@ -291,7 +341,7 @@ function parseCalendarDetailsIntoEvents(details: string) {
             count: 12 // Repeat for 12 weeks by default
           }
         });
-      });
+      }
     } else if (recurrenceType === "monthly") {
       // For monthly recurrence
       const eventDate = new Date(currentDate);
@@ -375,59 +425,52 @@ function parseCalendarDetailsIntoEvents(details: string) {
   return events;
 }
 
-function extractEventTitle(details: string) {
-  // Try to extract a meaningful title from the details
-  // Remove time patterns, day references, and recurrence patterns
-  const withoutTimes = details.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)?(?:\s*-\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)?)?/g, '');
-  const withoutDays = withoutTimes.replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b/gi, '');
-  const withoutRecurrence = withoutDays.replace(/\b(every\s*day|daily|weekly|monthly|yearly|annually)\b/gi, '');
-  const withoutDates = withoutRecurrence.replace(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/g, '');
+function extractSmartEventTitle(details: string, activityKeywords: string[]) {
+  // First try to find exact activity keywords
+  for (const keyword of activityKeywords) {
+    if (details.toLowerCase().includes(keyword.toLowerCase())) {
+      // Capitalize the first letter of the activity
+      return keyword.charAt(0).toUpperCase() + keyword.slice(1);
+    }
+  }
   
-  // Look for common event keywords and extract phrases around them
-  const eventKeywords = [
-    "meeting", "appointment", "class", "workout", "gym", "lunch", "dinner", 
-    "breakfast", "coffee", "call", "interview", "doctor", "dentist", 
-    "date", "party", "birthday", "anniversary", "conference", "presentation", 
-    "exam", "study", "lecture", "flight", "train", "concert", "game", "match", 
-    "festival", "holiday", "vacation", "trip", "visit", "session", "event"
+  // If no direct match, look for common patterns
+  const patterns = [
+    // Patterns like "I go to X" -> "X"
+    /(?:go to|visit|attend)\s+(?:the\s+)?([a-z0-9\s]{2,20})(?:\s|$)/i,
+    // Patterns like "have X" -> "X"
+    /have\s+(?:a\s+)?([a-z0-9\s]{2,20})(?:\s|$)/i,
+    // Patterns with possessives like "my X" -> "X"
+    /my\s+([a-z0-9\s]{2,20})(?:\s|$)/i,
+    // Generic action patterns
+    /([a-z]{3,15})\s+(?:at|with|in)/i
   ];
-  
-  for (const keyword of eventKeywords) {
-    if (withoutDates.toLowerCase().includes(keyword)) {
-      // Extract a phrase around the keyword
-      const regex = new RegExp(`\\b([\\w\\s]{0,20}\\s*${keyword}\\s*[\\w\\s]{0,20})\\b`, 'i');
-      const match = withoutDates.match(regex);
-      if (match) {
-        // Clean up the match and capitalize it
-        return match[0].trim().replace(/\s+/g, ' ').replace(/^\w/, c => c.toUpperCase());
-      }
+
+  for (const pattern of patterns) {
+    const match = details.match(pattern);
+    if (match && match[1]) {
+      const title = match[1].trim();
+      // Capitalize the first letter
+      return title.charAt(0).toUpperCase() + title.slice(1);
     }
   }
+
+  // If all else fails, extract the first noun phrase (very simple approach)
+  const words = details.split(/\s+/);
+  // Skip common pronouns and prepositions at the beginning
+  const skipWords = ["i", "we", "they", "he", "she", "it", "to", "at", "on", "in", "with", "every", "have"];
   
-  // If no keyword found, look for verbs that might indicate an activity
-  const activityVerbs = ["go", "have", "attend", "visit", "meet", "see", "watch", "play"];
-  
-  for (const verb of activityVerbs) {
-    if (withoutDates.toLowerCase().includes(verb)) {
-      // Extract a phrase around the verb
-      const regex = new RegExp(`\\b(${verb}\\s+[\\w\\s]{1,20})\\b`, 'i');
-      const match = withoutDates.match(regex);
-      if (match) {
-        return match[0].trim().replace(/\s+/g, ' ').replace(/^\w/, c => c.toUpperCase());
-      }
-    }
+  let startIndex = 0;
+  while (startIndex < words.length && skipWords.includes(words[startIndex].toLowerCase())) {
+    startIndex++;
   }
   
-  // If still no good title, use a cleaned-up version of the first portion
-  const cleanDetails = withoutDates.trim().replace(/\s+/g, ' ');
-  if (cleanDetails.length > 0) {
-    const words = cleanDetails.split(' ');
-    const titleWords = words.slice(0, 4);
-    return titleWords.join(' ').replace(/^\w/, c => c.toUpperCase());
+  if (startIndex < words.length) {
+    return words[startIndex].charAt(0).toUpperCase() + words[startIndex].slice(1);
   }
   
-  // Last resort - just return a generic title
-  return "New Event";
+  // Last resort
+  return "Event";
 }
 
 function getRandomEventColor() {

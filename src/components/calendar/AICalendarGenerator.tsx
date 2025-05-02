@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import EventForm from '@/components/EventForm';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -19,6 +21,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
+  const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -28,6 +31,31 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
     if (onEventsGenerated) {
       onEventsGenerated(newEvents);
     }
+  };
+
+  const handleEditEvent = (event: Event, index: number) => {
+    setEditingEvent({ event, index });
+  };
+
+  const handleUpdateEvent = (updatedEvent: Omit<Event, 'id' | 'calendarId'>) => {
+    if (!editingEvent) return;
+
+    const newEvents = [...generatedEvents];
+    newEvents[editingEvent.index] = { 
+      ...updatedEvent,
+      id: editingEvent.event.id || '',
+      calendarId: editingEvent.event.calendarId || '',
+      isAIGenerated: true
+    };
+
+    setGeneratedEvents(newEvents);
+    
+    if (onEventsGenerated) {
+      onEventsGenerated(newEvents);
+    }
+
+    setEditingEvent(null);
+    toast.success('Event updated successfully');
   };
 
   const handleGenerate = async () => {
@@ -122,8 +150,25 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             <AIGeneratedEventsList 
               events={generatedEvents} 
               onDeleteEvent={handleDeleteEvent}
+              onEditEvent={handleEditEvent}
             />
           )}
+
+          {/* Event editing dialog */}
+          <Dialog 
+            open={editingEvent !== null} 
+            onOpenChange={(open) => !open && setEditingEvent(null)}
+          >
+            <DialogContent className="sm:max-w-[500px]">
+              {editingEvent && (
+                <EventForm
+                  initialValues={editingEvent.event}
+                  onSubmit={handleUpdateEvent}
+                  onCancel={() => setEditingEvent(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>
