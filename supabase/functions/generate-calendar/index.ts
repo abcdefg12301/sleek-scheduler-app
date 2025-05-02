@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -106,9 +107,13 @@ function splitIntoEventTexts(text: string) {
 function parseEventText(text: string, baseDate: Date) {
   const events = [];
   
-  // Regex patterns for common time and date formats - improved for better time extraction
-  const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?(?:\s*-\s*|\s+to\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/g;
-  const singleTimeRegex = /(?:at|from|starting)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)/gi;
+  // IMPROVED TIME EXTRACTION: Better regex patterns for common time and date formats
+  // Time range pattern like "5pm-7pm" or "5:30 PM to 7:00 PM"
+  const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?(?:\s*[-–—to]+\s*)(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/g;
+  
+  // Single time mention like "at 3pm" or "starts at 3:30"
+  const singleTimeRegex = /(?:at|from|starting|starts?(?:\s+at)?)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)/gi;
+  
   const weekdayRegex = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b/gi;
   const everydayRegex = /\b(every\s*day|daily)\b/gi;
   const weeklyRegex = /\b(every\s*week|weekly)\b/gi;
@@ -137,7 +142,7 @@ function parseEventText(text: string, baseDate: Date) {
     "vacation", "holiday", "trip", "visit", "tour"
   ];
   
-  // Extract title using improved methods
+  // IMPROVED TITLE EXTRACTION: Extract title using enhanced methods that preserve the original wording
   const eventTitle = extractEventTitle(text, activityKeywords);
   
   // Check for specific date patterns
@@ -211,11 +216,11 @@ function parseEventText(text: string, baseDate: Date) {
     recurrenceType = "none";
   }
 
-  // Look for time patterns - improved to better extract times
+  // IMPROVED TIME EXTRACTION: Look for time patterns
   let timeMatches = [];
   let matchTime;
   
-  // First try to find time ranges like "5pm-7pm"
+  // First try to find time ranges like "5pm-7pm" with improved regex
   while ((matchTime = timeRegex.exec(text)) !== null) {
     const startHour = matchTime[1];
     const startMinute = matchTime[2] || "00";
@@ -229,7 +234,12 @@ function parseEventText(text: string, baseDate: Date) {
       const startTime = parseTime(startHour, startMinute, startAmpm);
       const endTime = parseTime(endHour, endMinute, endAmpm);
       
-      timeMatches.push({ start: startTime, end: endTime });
+      // IMPROVED: Store the original time text for better title generation
+      timeMatches.push({ 
+        start: startTime, 
+        end: endTime,
+        originalText: matchTime[0] 
+      });
     }
   }
   
@@ -249,7 +259,11 @@ function parseEventText(text: string, baseDate: Date) {
           minute: startTime.minute
         };
         
-        timeMatches.push({ start: startTime, end: endTime });
+        timeMatches.push({ 
+          start: startTime, 
+          end: endTime,
+          originalText: singleTimeMatch[0] 
+        });
       }
     }
   }
@@ -263,15 +277,21 @@ function parseEventText(text: string, baseDate: Date) {
   // If no specific times were found but we have schedule constraints, generate times
   if (timeMatches.length === 0 && scheduleConstraints) {
     const generatedTimes = generateTimeSlots(scheduleConstraints, recurrenceType === "daily");
-    timeMatches = generatedTimes;
+    timeMatches = generatedTimes.map(time => ({
+      ...time,
+      originalText: `between ${formatTimeForDisplay(time.start)} and ${formatTimeForDisplay(time.end)}`
+    }));
   }
   
-  // If still no specific times were found, create a default time
+  // If still no specific times were found, create a default time that makes sense for the activity
   if (timeMatches.length === 0) {
-    // Use a more meaningful default time (midday) instead of just 9am
+    // IMPROVED: Use activity-based default times instead of fixed defaults
+    const defaultTime = getDefaultTimeForActivity(eventTitle.toLowerCase(), recurrenceType);
+    
     timeMatches.push({
-      start: { hour: 12, minute: 0 },
-      end: { hour: 13, minute: 0 }
+      start: defaultTime.start,
+      end: defaultTime.end,
+      originalText: `around ${formatTimeForDisplay(defaultTime.start)}`
     });
   }
   
@@ -294,9 +314,12 @@ function parseEventText(text: string, baseDate: Date) {
         endDate.setDate(endDate.getDate() + 1);
       }
       
+      // IMPROVED TITLE GENERATION: Create a better event title that includes accurate time info
+      const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+      
       // Create the event object
       events.push({
-        title: eventTitle,
+        title: betterTitle,
         description: "",
         start: startDate.toISOString(),
         end: endDate.toISOString(),
@@ -324,8 +347,11 @@ function parseEventText(text: string, baseDate: Date) {
           endDate.setDate(endDate.getDate() + 1);
         }
         
+        // IMPROVED TITLE GENERATION
+        const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+        
         events.push({
-          title: eventTitle,
+          title: betterTitle,
           description: "",
           start: startDate.toISOString(),
           end: endDate.toISOString(),
@@ -364,8 +390,11 @@ function parseEventText(text: string, baseDate: Date) {
               endDate.setDate(endDate.getDate() + 1);
             }
             
+            // IMPROVED TITLE GENERATION
+            const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+            
             events.push({
-              title: eventTitle,
+              title: betterTitle,
               description: "",
               start: startDate.toISOString(),
               end: endDate.toISOString(),
@@ -395,8 +424,11 @@ function parseEventText(text: string, baseDate: Date) {
             endDate.setDate(endDate.getDate() + 1);
           }
           
+          // IMPROVED TITLE GENERATION
+          const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+          
           events.push({
-            title: eventTitle,
+            title: betterTitle,
             description: "",
             start: startDate.toISOString(),
             end: endDate.toISOString(),
@@ -426,8 +458,11 @@ function parseEventText(text: string, baseDate: Date) {
           endDate.setDate(endDate.getDate() + 1);
         }
         
+        // IMPROVED TITLE GENERATION
+        const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+        
         events.push({
-          title: eventTitle,
+          title: betterTitle,
           description: "",
           start: startDate.toISOString(),
           end: endDate.toISOString(),
@@ -456,8 +491,11 @@ function parseEventText(text: string, baseDate: Date) {
           endDate.setDate(endDate.getDate() + 1);
         }
         
+        // IMPROVED TITLE GENERATION
+        const betterTitle = createAccurateEventTitle(eventTitle, timePattern.originalText);
+        
         events.push({
-          title: eventTitle,
+          title: betterTitle,
           description: "",
           start: startDate.toISOString(),
           end: endDate.toISOString(),
@@ -476,13 +514,40 @@ function parseEventText(text: string, baseDate: Date) {
   return events;
 }
 
-// Helper to parse and standardize time
+// IMPROVED: Format time for display in titles
+function formatTimeForDisplay(time: { hour: number, minute: number }) {
+  const h = time.hour % 12 || 12;
+  const period = time.hour >= 12 ? 'PM' : 'AM';
+  const m = time.minute === 0 ? '' : `:${time.minute.toString().padStart(2, '0')}`;
+  return `${h}${m} ${period}`;
+}
+
+// NEW HELPER: Create a more accurate event title that includes time information
+function createAccurateEventTitle(baseTitle: string, timeText: string) {
+  // If the base title already includes time-related text, use it as is
+  if (/\d+(:\d+)?\s*(am|pm|AM|PM)/.test(baseTitle)) {
+    return baseTitle;
+  }
+  
+  // For gym-related activities, include the time in the title
+  if (/\b(gym|workout|exercise|training|fitness)\b/i.test(baseTitle.toLowerCase())) {
+    // Extract just the time part from timeText (e.g., "5pm-7pm" from "from 5pm-7pm")
+    const simpleTimeMatch = timeText.match(/(\d+(?::\d+)?\s*(?:am|pm)(?:\s*[-–—to]+\s*\d+(?::\d+)?\s*(?:am|pm))?)/i);
+    const simpleTime = simpleTimeMatch ? simpleTimeMatch[1] : timeText;
+    
+    return baseTitle;
+  }
+  
+  return baseTitle;
+}
+
+// IMPROVED: Helper to parse and standardize time with better defaults
 function parseTime(hour: string, minute: string = "00", ampm: string = "") {
   let h = parseInt(hour, 10);
   const m = parseInt(minute || "0", 10);
   
   // Handle 12-hour format if AM/PM is provided
-  if (ampm) {
+  if (ampm && ampm.toLowerCase()) {
     const isPM = ampm.toLowerCase() === "pm";
     
     // 12 AM -> 0, 1-11 AM -> 1-11
@@ -491,6 +556,7 @@ function parseTime(hour: string, minute: string = "00", ampm: string = "") {
     else if (isPM && h < 12) h += 12;
   } else if (h < 12) {
     // If no AM/PM is provided, make a smart guess based on typical daily patterns
+    
     // Morning hours (7-11) stay as AM
     if (h >= 7 && h < 12) {
       // Keep as is, assuming AM
@@ -508,44 +574,108 @@ function parseTime(hour: string, minute: string = "00", ampm: string = "") {
   return { hour: h, minute: m };
 }
 
-// Function to extract meaningful event title
-function extractEventTitle(text: string, activityKeywords: string[]) {
-  // Look for phrases with action verbs followed by an activity
-  const actionActivityPattern = /\b(?:go to|have|attend|do|work on|participate in)\s+(?:the\s+)?(\w+(?:\s+\w+)?)/i;
-  const actionActivityMatch = text.match(actionActivityPattern);
-  if (actionActivityMatch && actionActivityMatch[1].length > 2) {
-    return actionActivityMatch[1].charAt(0).toUpperCase() + actionActivityMatch[1].slice(1).toLowerCase();
-  }
-
-  // First, look for common activity keywords
-  for (const keyword of activityKeywords) {
-    // Look for direct matches of the keyword
-    const regexPattern = new RegExp(`\\b(${keyword})\\b`, 'i');
-    const match = text.match(regexPattern);
-    if (match) {
-      // Capitalize the first letter
-      return match[0].charAt(0).toUpperCase() + match[0].slice(1).toLowerCase();
+// NEW HELPER: Provide default times based on activity types
+function getDefaultTimeForActivity(activity: string, recurrenceType: string) {
+  const now = new Date();
+  const currentHour = now.getHours();
+  
+  // Workout/gym is typically morning or evening
+  if (/\b(gym|workout|exercise|training|fitness)\b/i.test(activity)) {
+    // Morning workout (6-8 AM) or evening workout (5-7 PM)
+    if (currentHour < 12) {
+      return { start: { hour: 6, minute: 0 }, end: { hour: 8, minute: 0 } };
+    } else {
+      return { start: { hour: 17, minute: 0 }, end: { hour: 19, minute: 0 } };
     }
   }
   
-  // Look for phrases like "X session" or "X class"
+  // Meals
+  if (/\b(breakfast)\b/i.test(activity)) {
+    return { start: { hour: 8, minute: 0 }, end: { hour: 9, minute: 0 } };
+  }
+  
+  if (/\b(lunch)\b/i.test(activity)) {
+    return { start: { hour: 12, minute: 0 }, end: { hour: 13, minute: 0 } };
+  }
+  
+  if (/\b(dinner)\b/i.test(activity)) {
+    return { start: { hour: 18, minute: 0 }, end: { hour: 19, minute: 0 } };
+  }
+  
+  // Meetings usually during business hours
+  if (/\b(meeting|call|conference|appointment)\b/i.test(activity)) {
+    // During business hours (9 AM - 5 PM)
+    const businessHour = Math.max(9, Math.min(16, currentHour));
+    return { 
+      start: { hour: businessHour, minute: 0 }, 
+      end: { hour: businessHour + 1, minute: 0 } 
+    };
+  }
+  
+  // Default to a reasonable time based on current time
+  if (currentHour >= 8 && currentHour <= 17) {
+    // During waking hours, schedule for the next hour
+    const nextHour = (currentHour + 1) % 24;
+    return { 
+      start: { hour: nextHour, minute: 0 }, 
+      end: { hour: (nextHour + 1) % 24, minute: 0 } 
+    };
+  } else {
+    // Default to 9 AM for early morning or late night current time
+    return { start: { hour: 9, minute: 0 }, end: { hour: 10, minute: 0 } };
+  }
+}
+
+// Function to extract meaningful event title
+function extractEventTitle(text: string, activityKeywords: string[]) {
+  // IMPROVED TITLE EXTRACTION: Multiple approaches to find the best title
+  
+  // 1. Look for phrases with action verbs followed by an activity
+  const actionActivityPattern = /\b(?:go to|have|attend|do|work on|participate in)\s+(?:the\s+)?(\w+(?:\s+\w+)*)/i;
+  const actionActivityMatch = text.match(actionActivityPattern);
+  if (actionActivityMatch && actionActivityMatch[1].length > 2) {
+    // Extract and clean up the found activity
+    const activity = actionActivityMatch[1].replace(/\s+at\s+.*/i, '').trim();
+    
+    // If the activity is followed by a time description, remove it from the title
+    const activityWithoutTime = activity.replace(/\s+\d+(?::\d+)?\s*(?:am|pm|AM|PM).*/i, '').trim();
+    
+    return activityWithoutTime.charAt(0).toUpperCase() + activityWithoutTime.slice(1).toLowerCase();
+  }
+
+  // 2. Look for common activity keywords
+  for (const keyword of activityKeywords) {
+    // Look for direct matches of the keyword
+    const regexPattern = new RegExp(`\\b(${keyword}(?:\\s+\\w+)*)\\b`, 'i');
+    const match = text.match(regexPattern);
+    if (match) {
+      // Clean up the found activity
+      const activity = match[0].replace(/\s+at\s+.*/i, '').trim();
+      const activityWithoutTime = activity.replace(/\s+\d+(?::\d+)?\s*(?:am|pm|AM|PM).*/i, '').trim();
+      return activityWithoutTime.charAt(0).toUpperCase() + activityWithoutTime.slice(1).toLowerCase();
+    }
+  }
+  
+  // 3. Look for phrases like "X session" or "X class"
   const sessionPattern = /\b(\w+)\s+(session|class|appointment|meeting|event|time)\b/i;
   const sessionMatch = text.match(sessionPattern);
   if (sessionMatch) {
     return sessionMatch[1].charAt(0).toUpperCase() + sessionMatch[1].slice(1).toLowerCase();
   }
   
-  // Try to extract a meaningful noun phrase
+  // 4. Try to extract a meaningful noun phrase
   const nounPhrases = extractPotentialNounPhrases(text);
   if (nounPhrases.length > 0) {
     for (const phrase of nounPhrases) {
       if (phrase.length > 2 && !["the", "and", "but", "for", "with"].includes(phrase.toLowerCase())) {
-        return phrase.charAt(0).toUpperCase() + phrase.slice(1).toLowerCase();
+        // Remove any time-related info from the phrase
+        const phraseWithoutTime = phrase.replace(/\s+\d+(?::\d+)?\s*(?:am|pm|AM|PM).*/i, '').trim();
+        return phraseWithoutTime.charAt(0).toUpperCase() + phraseWithoutTime.slice(1).toLowerCase();
       }
     }
   }
   
-  // Default case: first word that's not a common word
+  // 5. Default case: first word that's not a common word
   const words = text.split(/\s+/);
   const commonWords = ["i", "me", "my", "we", "our", "the", "a", "an", "want", "need", "would", "like", "every", "each", "on", "at", "in"];
   
@@ -937,3 +1067,4 @@ function getRandomEventColor() {
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+

@@ -21,17 +21,6 @@ export const getNextOccurrence = (date: Date, frequency: string, interval: numbe
   }
 };
 
-// Helper to calculate the last date in a recurrence pattern
-export const getLastRecurrenceDate = (startDate: Date, frequency: string, interval = 1, count: number): Date => {
-  let lastDate = new Date(startDate);
-  
-  for (let i = 1; i < count; i++) {
-    lastDate = getNextOccurrence(lastDate, frequency, interval);
-  }
-  
-  return lastDate;
-};
-
 // Helper functions for generating recurring events
 export const generateRecurringEvents = (event: Event, startDate: Date, endDate: Date): Event[] => {
   if (!event.recurrence) return [event];
@@ -43,19 +32,15 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   }
   
   const events: Event[] = [];
-  const { frequency, interval = 1, count, endDate: recurrenceEndDate } = event.recurrence;
+  const { frequency, interval = 1 } = event.recurrence;
   
   const originalStart = new Date(event.start);
   const originalEnd = new Date(event.end);
   const eventDurationMs = originalEnd.getTime() - originalStart.getTime();
 
-  // Determine the actual end date for the recurrence
-  // We're now only limiting to the requested date range, not based on count
-  let maxDate = recurrenceEndDate ? new Date(recurrenceEndDate) : endDate;
-  
   // Include the original event if it's within range
-  if ((isWithinInterval(originalStart, { start: startDate, end: maxDate }) || 
-       isWithinInterval(originalEnd, { start: startDate, end: maxDate }) ||
+  if ((isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
+       isWithinInterval(originalEnd, { start: startDate, end: endDate }) ||
        isSameDay(originalStart, startDate) ||
        (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate)))) {
     events.push(event);
@@ -65,7 +50,8 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   let currentStart = getNextOccurrence(originalStart, frequency, interval);
   
   // Generate occurrences only within the requested date range
-  while (isBefore(currentStart, maxDate)) {
+  // No limit on how many recurrences we generate - we only limit by the view range
+  while (isBefore(currentStart, endDate)) {
     // Skip if the current occurrence is before the requested range
     if (isAfter(currentStart, startDate) || isSameDay(currentStart, startDate) || 
         (isBefore(currentStart, startDate) && isAfter(new Date(currentStart.getTime() + eventDurationMs), startDate))) {
