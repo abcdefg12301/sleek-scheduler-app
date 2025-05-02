@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Trash, Edit } from 'lucide-react';
+import { Trash, Edit, Clock, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface AIGeneratedEventsListProps {
   events: Event[];
@@ -25,6 +27,22 @@ const AIGeneratedEventsList = ({
   onEditEvent
 }: AIGeneratedEventsListProps) => {
   if (!events.length) return null;
+  
+  // Group events by recurrence type for better organization
+  const groupedEvents = events.reduce((acc: Record<string, Event[]>, event) => {
+    let group = 'one-time';
+    
+    if (event.recurrence) {
+      group = event.recurrence.frequency || 'recurring';
+    }
+    
+    if (!acc[group]) {
+      acc[group] = [];
+    }
+    
+    acc[group].push(event);
+    return acc;
+  }, {});
 
   const formatRecurrence = (event: Event) => {
     if (!event.recurrence) return null;
@@ -72,61 +90,86 @@ const AIGeneratedEventsList = ({
     return formatRecurrence(event) || "Recurring";
   };
 
+  // Order of event groups for display
+  const groupDisplayOrder = ['daily', 'weekly', 'monthly', 'yearly', 'recurring', 'one-time'];
+
   return (
-    <Accordion type="single" collapsible className="w-full" defaultValue="generated-events">
-      <AccordionItem value="generated-events">
-        <AccordionTrigger className="font-medium">
-          Generated Events ({events.length})
-        </AccordionTrigger>
-        <AccordionContent>
-          <div className="space-y-2">
-            {events.map((event, index) => (
-              <Card key={index} className="p-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{event.title}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {getEventTypeLabel(event)}
-                      </Badge>
+    <ScrollArea className="h-[400px] w-full pr-4">
+      <div className="space-y-4 p-1">
+        {groupDisplayOrder.map(groupKey => {
+          const eventsInGroup = groupedEvents[groupKey];
+          if (!eventsInGroup || eventsInGroup.length === 0) return null;
+          
+          return (
+            <div key={groupKey} className="space-y-2">
+              <h3 className="text-sm font-medium capitalize flex items-center mb-1">
+                {groupKey === 'one-time' ? 'One-time events' : `${groupKey} events`}
+                <Badge variant="outline" className="ml-2">
+                  {eventsInGroup.length}
+                </Badge>
+              </h3>
+              
+              {eventsInGroup.map((event, originalIndex) => {
+                const index = events.findIndex(e => e === event); // Get the original index in the full events array
+                
+                return (
+                  <Card key={index} className="p-3 hover:shadow-sm transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{event.title}</h4>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>{formatEventDate(event)}</span>
+                          </div>
+                          
+                          {event.recurrence && (
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-3.5 w-3.5" />
+                              <span>{getEventTypeLabel(event)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-1">
+                        {onEditEvent && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditEvent(event, index);
+                            }}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteEvent(index);
+                          }}
+                          className="h-8 w-8"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formatEventDate(event)}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    {onEditEvent && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditEvent(event, index);
-                        }}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteEvent(index);
-                      }}
-                      className="h-8 w-8"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+                  </Card>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </ScrollArea>
   );
 };
 

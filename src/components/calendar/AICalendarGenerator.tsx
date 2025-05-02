@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Info } from 'lucide-react';
+import { Info, Calendar, Bot } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +11,8 @@ import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import EventForm from '@/components/EventForm';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -96,7 +97,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       }));
 
       // Add new events to existing ones instead of replacing
-      const newEvents = [...processedEvents];
+      const newEvents = [...generatedEvents, ...processedEvents];
       setGeneratedEvents(newEvents);
       
       if (onEventsGenerated) {
@@ -104,8 +105,14 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       }
 
       toast.success(`Successfully generated ${processedEvents.length} events`);
+      
+      // Auto-open the preview if we generated events
+      if (processedEvents.length > 0) {
+        setIsPreviewOpen(true);
+      }
+      
+      // Clear the input only if successful
       setCalendarDetails('');
-      setIsPreviewOpen(true);
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
       toast.error('An error occurred during calendar generation');
@@ -120,22 +127,28 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       onEventsGenerated([]);
     }
     toast.success('All generated events cleared');
+    setIsPreviewOpen(false);
   };
 
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
         <CardTitle className="text-md flex items-center gap-2">
-          Calendar Details
+          <Bot className="h-5 w-5" />
+          Calendar Generator
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
                 <Info className="h-4 w-4 text-muted-foreground" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">
-                Describe your events in natural language. For example: "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm" or "I have a team meeting every Tuesday at 10am" or "Generate a study schedule where I study 1 hour a day after 3pm"
+            <TooltipContent className="max-w-sm">
+              <p>
+                Describe your events in natural language. Examples:<br />
+                • "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm"<br />
+                • "I have a team meeting every Tuesday at 10am"<br />
+                • "Generate a study schedule after 3pm before I sleep"<br />
+                • "Team lunch at 12:30pm on Fridays"
               </p>
             </TooltipContent>
           </Tooltip>
@@ -159,34 +172,42 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             </Button>
             
             {generatedEvents.length > 0 && (
-              <Sheet open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline">
-                    Preview Events ({generatedEvents.length})
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:max-w-md">
-                  <SheetHeader className="mb-4">
-                    <SheetTitle>Generated Events</SheetTitle>
-                  </SheetHeader>
-                  <div className="space-y-4">
+              <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>Preview ({generatedEvents.length})</span>
+                </Button>
+                <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+                  <DialogHeader className="pb-2">
+                    <DialogTitle>Generated Events</DialogTitle>
+                  </DialogHeader>
+                  <Separator />
+                  <div className="flex-1 overflow-hidden py-2">
                     <AIGeneratedEventsList 
                       events={generatedEvents} 
                       onDeleteEvent={handleDeleteEvent}
                       onEditEvent={handleEditEvent}
                     />
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-end pt-2">
                     {generatedEvents.length > 0 && (
                       <Button 
                         variant="outline" 
                         onClick={clearAllEvents} 
-                        className="w-full"
+                        className="mr-2"
                       >
-                        Clear All Events
+                        Clear All
                       </Button>
                     )}
+                    <Button onClick={() => setIsPreviewOpen(false)}>Done</Button>
                   </div>
-                </SheetContent>
-              </Sheet>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
           

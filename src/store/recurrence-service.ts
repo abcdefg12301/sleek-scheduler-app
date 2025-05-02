@@ -50,14 +50,9 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   const eventDurationMs = originalEnd.getTime() - originalStart.getTime();
 
   // Determine the actual end date for the recurrence
-  let maxDate = recurrenceEndDate ? new Date(recurrenceEndDate) : addYears(endDate, 5); // Use a reasonable limit for infinite recurrences
-  if (count) {
-    const lastDate = getLastRecurrenceDate(originalStart, frequency, interval, count);
-    if (isBefore(lastDate, maxDate)) {
-      maxDate = lastDate;
-    }
-  }
-
+  // We're now only limiting to the requested date range, not based on count
+  let maxDate = recurrenceEndDate ? new Date(recurrenceEndDate) : endDate;
+  
   // Include the original event if it's within range
   if ((isWithinInterval(originalStart, { start: startDate, end: maxDate }) || 
        isWithinInterval(originalEnd, { start: startDate, end: maxDate }) ||
@@ -66,11 +61,11 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     events.push(event);
   }
 
-  // Loop and generate recurring events
-  let recurrenceCount = 1; // Start from 1 because we already checked the original event
+  // Loop and generate recurring events but only up to the requested end date
   let currentStart = getNextOccurrence(originalStart, frequency, interval);
   
-  while (recurrenceCount < (count || Number.MAX_SAFE_INTEGER) && isBefore(currentStart, maxDate)) {
+  // Generate occurrences only within the requested date range
+  while (isBefore(currentStart, maxDate)) {
     // Skip if the current occurrence is before the requested range
     if (isAfter(currentStart, startDate) || isSameDay(currentStart, startDate) || 
         (isBefore(currentStart, startDate) && isAfter(new Date(currentStart.getTime() + eventDurationMs), startDate))) {
@@ -80,7 +75,7 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
       // Create a new instance of the recurring event
       const newEvent: Event = {
         ...event,
-        id: `${event.id}-recurrence-${recurrenceCount}`,
+        id: `${event.id}-recurrence-${currentStart.getTime()}`,
         start: new Date(currentStart),
         end: new Date(currentEnd),
         isRecurrenceInstance: true,
@@ -91,7 +86,6 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     }
     
     // Move to next occurrence
-    recurrenceCount++;
     currentStart = getNextOccurrence(currentStart, frequency, interval);
   }
   
