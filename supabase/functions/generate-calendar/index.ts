@@ -56,7 +56,7 @@ serve(async (req) => {
   }
 });
 
-// Use the Microsoft AI model to interpret and generate calendar events
+// Use the OpenAI API to interpret and generate calendar events
 async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
   try {
     // Current date information for context
@@ -117,11 +117,11 @@ Return ONLY a valid JSON array where each object represents one event with these
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
 CRITICAL RULES:
-1. CREATE SHORT, CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
+1. CREATE SHORT, EXTREMELY CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
 2. USE THE EXACT TIMES mentioned in the input (5pm becomes 17:00, not any other time)
 3. If a time range is specified (like "5pm-7pm"), use those PRECISE times
 4. CAREFULLY FIND ALL RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
-5. Do NOT make up times unless requested by the user (e.g., if they ask for a study schedule, you can suggest reasonable times)
+5. Do not make up times unless requested by the user. For example, if the user asks for you to make a study schedule, then you can make up times. You should avoid any schedule conflicts with the current user's schedule.
 6. When no specific time is mentioned but the user is requesting a scheduled activity (like "create a study schedule"), suggest appropriate times while avoiding conflicts with existing events
 7. If recurring patterns are mentioned (like "every day" or "weekdays" or "every Monday"), set the appropriate recurrence pattern
 
@@ -131,19 +131,22 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
     // User input is the calendar details provided
     const userPrompt = userInput;
 
-    console.log("Sending request to AI model with system prompt length:", systemPrompt.length);
+    console.log("Sending request to OpenAI API with system prompt length:", systemPrompt.length);
     console.log("User prompt:", userPrompt);
 
-    // Make request to the AI model
-    // Try using the OpenAI API as a more reliable alternative
+    // The hardcoded API key (in a real production app, this should come from environment variables)
+    const OPENAI_API_KEY = "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";
+
+    // Make request to the OpenAI API
+    console.log("Starting OpenAI API request...");
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY") || ""}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Using OpenAI's model as a reliable alternative
+        model: "gpt-4o-mini", // Using OpenAI's model
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -156,13 +159,16 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
     const data = await response.json();
     
     if (!response.ok) {
-      console.error("AI model error:", data);
-      throw new Error("Failed to process with AI model");
+      console.error("OpenAI API error:", JSON.stringify(data, null, 2));
+      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
     }
 
+    console.log("OpenAI API response status:", response.status);
+    console.log("OpenAI API response headers:", Object.fromEntries(response.headers));
+    
     // Extract the AI response content
     const aiResponse = data.choices[0].message.content;
-    console.log("AI response:", aiResponse);
+    console.log("AI raw response:", aiResponse);
     
     // Try to parse the JSON response from the AI
     let parsedEvents;
@@ -170,17 +176,22 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
       // Handle potential text before or after the JSON
       const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
       const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
+      console.log("Extracted JSON string:", jsonStr);
+      
       parsedEvents = JSON.parse(jsonStr);
+      console.log("Successfully parsed events:", parsedEvents);
       
       // Process the events to ensure proper formatting
       return processAIGeneratedEvents(parsedEvents);
     } catch (error) {
       console.error("Error parsing AI response:", error);
+      console.error("AI response that couldn't be parsed:", aiResponse);
       // Fallback to simple event creation if AI parsing fails
       return [createDefaultEvent(userInput)];
     }
   } catch (error) {
     console.error("Error in AI event generation:", error);
+    console.error("Error stack:", error.stack);
     // Fallback to simple event creation
     return [createDefaultEvent(userInput)];
   }
@@ -189,9 +200,12 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
 // Process and standardize AI-generated events
 function processAIGeneratedEvents(events) {
   const currentDate = new Date();
+  console.log("Processing AI-generated events:", events);
   
   return events.map(event => {
     try {
+      console.log("Processing event:", event);
+      
       // Ensure start and end are proper dates
       let start, end;
       
@@ -199,6 +213,7 @@ function processAIGeneratedEvents(events) {
       if (event.start) {
         start = new Date(event.start);
         if (isNaN(start.getTime())) {
+          console.error("Invalid start date:", event.start);
           // If invalid date, create a default
           start = new Date(currentDate);
           start.setHours(9, 0, 0, 0);
@@ -206,11 +221,13 @@ function processAIGeneratedEvents(events) {
       } else {
         start = new Date(currentDate);
         start.setHours(9, 0, 0, 0);
+        console.log("No start date provided, using default:", start);
       }
       
       if (event.end) {
         end = new Date(event.end);
         if (isNaN(end.getTime())) {
+          console.error("Invalid end date:", event.end);
           // If invalid date, make it 1 hour after start
           end = new Date(start);
           end.setHours(start.getHours() + 1);
@@ -219,11 +236,13 @@ function processAIGeneratedEvents(events) {
         // Default to 1 hour duration
         end = new Date(start);
         end.setHours(start.getHours() + 1);
+        console.log("No end date provided, using default:", end);
       }
       
       // Convert days of week to proper format if needed
       let recurrence = null;
       if (event.recurrence) {
+        console.log("Processing recurrence:", event.recurrence);
         recurrence = {
           frequency: event.recurrence.frequency || "weekly",
           interval: event.recurrence.interval || 1,
@@ -231,7 +250,7 @@ function processAIGeneratedEvents(events) {
         };
       }
       
-      return {
+      const processedEvent = {
         title: event.title || "Untitled Event",
         description: event.description || "",
         start: start.toISOString(),
@@ -241,8 +260,13 @@ function processAIGeneratedEvents(events) {
         isAIGenerated: true,
         recurrence
       };
+      
+      console.log("Processed event:", processedEvent);
+      return processedEvent;
     } catch (error) {
-      console.error("Error processing AI event:", error, event);
+      console.error("Error processing AI event:", error);
+      console.error("Problematic event:", event);
+      console.error("Error stack:", error.stack);
       return createDefaultEvent("Event");
     }
   });
@@ -252,6 +276,7 @@ function processAIGeneratedEvents(events) {
 function createDefaultEvent(text) {
   // Create a simple title from the text (first 30 chars or until first period)
   const title = text.split('.')[0].substring(0, 30) || "Event";
+  console.log("Creating default event with title:", title);
   
   const startDate = new Date();
   startDate.setHours(9, 0, 0, 0);

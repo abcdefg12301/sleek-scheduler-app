@@ -28,7 +28,7 @@ const EventGroupHeader: React.FC<EventGroupHeaderProps> = ({ groupKey, eventCoun
       case 'yearly':
         return 'Yearly events';
       default:
-        return `${groupKey} events`;
+        return `${groupKey.charAt(0).toUpperCase() + groupKey.slice(1)} events`;
     }
   };
 

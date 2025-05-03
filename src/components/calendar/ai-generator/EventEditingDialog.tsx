@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Event } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import EventForm from '@/components/EventForm';
 
 interface EventEditingDialogProps {
@@ -39,6 +39,9 @@ const EventEditingDialog: React.FC<EventEditingDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>
+            Make changes to your AI-generated event details.
+          </DialogDescription>
         </DialogHeader>
         
         {editingEvent && (

@@ -27,6 +27,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -70,7 +71,9 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
     }
 
     setIsGenerating(true);
+    setApiError(null);
     console.log('Generating calendar with details:', calendarDetails);
+    console.log('Using previous events for context:', generatedEvents.length > 0 ? `${generatedEvents.length} events` : 'None');
 
     try {
       // Pass existing generated events to provide context to the AI
@@ -85,12 +88,14 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
 
       if (error) {
         console.error('Error generating calendar:', error);
+        setApiError(`API Error: ${error.message || 'Unknown error'}`);
         toast.error(`Failed to generate calendar events: ${error.message || 'Unknown error'}`);
         return;
       }
 
       if (!data || !data.events || !Array.isArray(data.events)) {
         console.error('Invalid response format from AI:', data);
+        setApiError('Invalid response format from AI');
         toast.error('Invalid response from AI');
         return;
       }
@@ -101,6 +106,8 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
         start: new Date(event.start),
         end: new Date(event.end),
       }));
+
+      console.log('Processed events from AI:', processedEvents);
 
       // Add new events to existing ones instead of replacing
       const newEvents = [...generatedEvents, ...processedEvents];
@@ -121,6 +128,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       setCalendarDetails('');
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
+      setApiError(`Client Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       toast.error('An error occurred during calendar generation');
     } finally {
       setIsGenerating(false);
@@ -169,6 +177,18 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
               />
             )}
           </div>
+          
+          {apiError && (
+            <div className="text-sm text-red-500 mt-2">
+              {apiError}
+            </div>
+          )}
+
+          {generatedEvents.length > 0 && (
+            <div className="text-sm text-muted-foreground mt-2">
+              {generatedEvents.length} events generated. View or edit them using the "Preview Events" button.
+            </div>
+          )}
           
           <EventEditingDialog
             editingEvent={editingEvent}
