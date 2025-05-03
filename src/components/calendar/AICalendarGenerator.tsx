@@ -11,8 +11,10 @@ import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import EventForm from '@/components/EventForm';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader';
+import EventsPreviewDialog from './ai-generator/EventsPreviewDialog';
+import EventEditingDialog from './ai-generator/EventEditingDialog';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -133,26 +135,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-md flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          Calendar Generator
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-sm">
-              <p>
-                Describe your events in natural language. Examples:<br />
-                • "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm"<br />
-                • "I have a team meeting every Tuesday at 10am"<br />
-                • "Generate a study schedule after 3pm before I sleep"<br />
-                • "Team lunch at 12:30pm on Fridays"
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </CardTitle>
+        <AICalendarGeneratorHeader />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -172,63 +155,22 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             </Button>
             
             {generatedEvents.length > 0 && (
-              <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsPreviewOpen(true)}
-                  className="gap-2"
-                >
-                  <Calendar className="h-4 w-4" />
-                  <span>Preview ({generatedEvents.length})</span>
-                </Button>
-                <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-                  <DialogHeader className="pb-2">
-                    <DialogTitle>Generated Events</DialogTitle>
-                  </DialogHeader>
-                  <Separator />
-                  <div className="flex-1 overflow-hidden py-2">
-                    <AIGeneratedEventsList 
-                      events={generatedEvents} 
-                      onDeleteEvent={handleDeleteEvent}
-                      onEditEvent={handleEditEvent}
-                    />
-                  </div>
-                  <Separator className="my-2" />
-                  <div className="flex justify-end pt-2">
-                    {generatedEvents.length > 0 && (
-                      <Button 
-                        variant="outline" 
-                        onClick={clearAllEvents} 
-                        className="mr-2"
-                      >
-                        Clear All
-                      </Button>
-                    )}
-                    <Button onClick={() => setIsPreviewOpen(false)}>Done</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <EventsPreviewDialog
+                isOpen={isPreviewOpen}
+                setIsOpen={setIsPreviewOpen}
+                events={generatedEvents}
+                onDeleteEvent={handleDeleteEvent}
+                onEditEvent={handleEditEvent}
+                clearAllEvents={clearAllEvents}
+              />
             )}
           </div>
           
-          {/* Event editing dialog */}
-          <Dialog 
-            open={editingEvent !== null} 
-            onOpenChange={(open) => !open && setEditingEvent(null)}
-          >
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Edit Event</DialogTitle>
-              </DialogHeader>
-              {editingEvent && (
-                <EventForm
-                  initialValues={editingEvent.event}
-                  onSubmit={handleUpdateEvent}
-                  onCancel={() => setEditingEvent(null)}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
+          <EventEditingDialog
+            editingEvent={editingEvent}
+            setEditingEvent={setEditingEvent}
+            onUpdateEvent={handleUpdateEvent}
+          />
         </div>
       </CardContent>
     </Card>

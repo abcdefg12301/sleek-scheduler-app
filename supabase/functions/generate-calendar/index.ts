@@ -64,40 +64,38 @@ async function generateEventsWithAI(userInput: string) {
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    // System prompt that instructs the AI model exactly how to interpret calendar details
+    // IMPROVED SYSTEM PROMPT - More precise instructions for better extraction
     const systemPrompt = `
-You are an AI assistant specializing in interpreting calendar events from natural language.
-Your task is to extract structured calendar event data from the user's input.
+You are an AI assistant specializing in creating calendar events from natural language instructions.
+Your ONLY task is to convert the user's input into properly structured calendar events.
 
-For each event mentioned, extract:
-1. Title - Be specific and accurate, capturing the exact activity (like "Gym Workout" not just "Gym")
-2. Start and end times - These MUST match exactly what's in the user's input (e.g., "5pm-7pm" should become start: "17:00", end: "19:00")
-3. Date information - Specific dates or recurring patterns
-4. Recurrence information - Daily, weekly, monthly, or yearly patterns
+For example, if the user says "I go to the gym from 5pm-7pm every day", you should extract:
+- Title: "Gym Workout" (descriptive of the activity)
+- Time: 5pm to 7pm (17:00 to 19:00 in 24-hour format)
+- Recurrence: daily
 
-RULES:
-- If specific times are mentioned (like "5pm-7pm"), use EXACTLY those times in 24-hour format (17:00-19:00).
-- Do not make up times if they're not specified.
-- Include all words related to the activity in the title field (e.g., "Gym Workout" for "go to the gym").
-- Maintain any descriptions or context in the event details.
-- For recurring events, correctly identify the frequency (daily, weekly, monthly, yearly).
-- For recurring events on specific days, capture those days accurately.
-- Pay special attention to time ranges like "from X to Y" or "between X and Y".
-- Use ISO format dates (YYYY-MM-DD) and 24-hour format times (HH:MM).
-
-Return a JSON array where each object represents one event with these fields:
-- title: String (The event name/title)
-- description: String (Additional details if any)
-- start: String (ISO datetime)
-- end: String (ISO datetime)
-- allDay: Boolean (Whether it's an all-day event)
+OUTPUT REQUIREMENTS:
+Return ONLY a valid JSON array where each object represents one event with these exact fields:
+- title: String (preserve the original wording like "go to the gym" rather than simplifying to "Gym")
+- description: String (additional context if any, otherwise empty string)
+- start: String (ISO datetime with the EXACT time mentioned, e.g. "2025-05-03T17:00:00.000Z")
+- end: String (ISO datetime with the EXACT end time mentioned, e.g. "2025-05-03T19:00:00.000Z")
+- allDay: Boolean (true if it's an all-day event)
 - recurrence: Object (null if not recurring) with:
   - frequency: String (daily, weekly, monthly, yearly)
   - interval: Number (default 1)
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
+CRITICAL RULES:
+1. PRESERVE THE FULL EVENT DESCRIPTION in the title (e.g., "go to the gym" not just "gym")
+2. USE THE EXACT TIMES mentioned in the input (5pm becomes 17:00, not any other time)
+3. If a time range is specified (like "5pm-7pm"), use those PRECISE times
+4. For recurring events with specific days (like "Monday, Wednesday, Friday"), create separate events for each day
+5. Do NOT make up information that isn't in the input
+6. If no time is specified but an activity clearly has a typical time, you may suggest a reasonable time
+7. If recurring patterns are mentioned (like "every day" or "weekdays"), set the appropriate recurrence pattern
+
 Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.
-Return only the JSON array with no additional text.
 `;
 
     // User input is the calendar details provided
@@ -115,8 +113,8 @@ Return only the JSON array with no additional text.
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.3, // Lower temperature for more consistent outputs
-        max_tokens: 2048 // Allow enough tokens for detailed calendar events
+        temperature: 0.2, // Lower temperature for more consistent outputs
+        max_tokens: 2048  // Allow enough tokens for detailed calendar events
       })
     });
 
