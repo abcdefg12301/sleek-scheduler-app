@@ -14,8 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const { calendarDetails } = await req.json();
+    const { calendarDetails, previousEvents = [] } = await req.json();
     console.log("Received request to generate calendar with details:", calendarDetails);
+    console.log("Previous events context:", previousEvents.length > 0 ? `${previousEvents.length} events` : "None");
 
     if (!calendarDetails || typeof calendarDetails !== 'string') {
       console.error("Invalid calendar details:", calendarDetails);
@@ -31,7 +32,7 @@ serve(async (req) => {
     }
 
     // Use the AI model to generate calendar events based on natural language input
-    const events = await generateEventsWithAI(calendarDetails);
+    const events = await generateEventsWithAI(calendarDetails, previousEvents);
     console.log("Generated events:", events);
 
     return new Response(
@@ -56,27 +57,56 @@ serve(async (req) => {
 });
 
 // Use the Microsoft AI model to interpret and generate calendar events
-async function generateEventsWithAI(userInput: string) {
+async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
   try {
     // Current date information for context
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0];
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    // Create a context from previous events if any
+    let previousEventsContext = "";
+    if (previousEvents && previousEvents.length > 0) {
+      previousEventsContext = `\n\nYou should also be aware of the user's existing schedule:\n`;
+      previousEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
+        const startTime = new Date(event.start).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const endTime = new Date(event.end).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const startDate = new Date(event.start).toLocaleDateString('en-US', { 
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        previousEventsContext += `${index + 1}. "${event.title}" on ${startDate} from ${startTime} to ${endTime}`;
+        if (event.recurrence) {
+          previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
+        }
+        previousEventsContext += "\n";
+      });
+    }
 
-    // IMPROVED SYSTEM PROMPT - More precise instructions for better extraction
+    // IMPROVED SYSTEM PROMPT - Based on your specific requirements
     const systemPrompt = `
 You are an AI assistant specializing in creating calendar events from natural language instructions.
 Your ONLY task is to convert the user's input into properly structured calendar events.
 
 For example, if the user says "I go to the gym from 5pm-7pm every day", you should extract:
-- Title: "Gym Workout" (descriptive of the activity)
+- Title: "Gym" (simple, concise title)
 - Time: 5pm to 7pm (17:00 to 19:00 in 24-hour format)
 - Recurrence: daily
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON array where each object represents one event with these exact fields:
-- title: String (preserve the original wording like "go to the gym" rather than simplifying to "Gym")
+- title: String (concise, short title that captures the essence of the event)
 - description: String (additional context if any, otherwise empty string)
 - start: String (ISO datetime with the EXACT time mentioned, e.g. "2025-05-03T17:00:00.000Z")
 - end: String (ISO datetime with the EXACT end time mentioned, e.g. "2025-05-03T19:00:00.000Z")
@@ -87,28 +117,33 @@ Return ONLY a valid JSON array where each object represents one event with these
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
 CRITICAL RULES:
-1. PRESERVE THE FULL EVENT DESCRIPTION in the title (e.g., "go to the gym" not just "gym")
+1. CREATE SHORT, CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
 2. USE THE EXACT TIMES mentioned in the input (5pm becomes 17:00, not any other time)
 3. If a time range is specified (like "5pm-7pm"), use those PRECISE times
-4. For recurring events with specific days (like "Monday, Wednesday, Friday"), create separate events for each day
-5. Do NOT make up information that isn't in the input
-6. If no time is specified but an activity clearly has a typical time, you may suggest a reasonable time
-7. If recurring patterns are mentioned (like "every day" or "weekdays"), set the appropriate recurrence pattern
+4. CAREFULLY FIND ALL RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
+5. Do NOT make up times unless requested by the user (e.g., if they ask for a study schedule, you can suggest reasonable times)
+6. When no specific time is mentioned but the user is requesting a scheduled activity (like "create a study schedule"), suggest appropriate times while avoiding conflicts with existing events
+7. If recurring patterns are mentioned (like "every day" or "weekdays" or "every Monday"), set the appropriate recurrence pattern
 
-Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.
+Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${previousEventsContext}
 `;
 
     // User input is the calendar details provided
     const userPrompt = userInput;
 
+    console.log("Sending request to AI model with system prompt length:", systemPrompt.length);
+    console.log("User prompt:", userPrompt);
+
     // Make request to the AI model
-    const response = await fetch("https://api.aiinfra.co.uk/chat/completions", {
+    // Try using the OpenAI API as a more reliable alternative
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY") || ""}`,
       },
       body: JSON.stringify({
-        model: "microsoft/mai-ds-r1:free",
+        model: "gpt-4o-mini", // Using OpenAI's model as a reliable alternative
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -191,7 +226,8 @@ function processAIGeneratedEvents(events) {
       if (event.recurrence) {
         recurrence = {
           frequency: event.recurrence.frequency || "weekly",
-          interval: event.recurrence.interval || 1
+          interval: event.recurrence.interval || 1,
+          daysOfWeek: event.recurrence.daysOfWeek || undefined
         };
       }
       
@@ -214,6 +250,7 @@ function processAIGeneratedEvents(events) {
 
 // Create a default event as a fallback
 function createDefaultEvent(text) {
+  // Create a simple title from the text (first 30 chars or until first period)
   const title = text.split('.')[0].substring(0, 30) || "Event";
   
   const startDate = new Date();

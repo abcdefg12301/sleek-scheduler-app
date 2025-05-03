@@ -73,8 +73,12 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
     console.log('Generating calendar with details:', calendarDetails);
 
     try {
+      // Pass existing generated events to provide context to the AI
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
-        body: { calendarDetails },
+        body: { 
+          calendarDetails,
+          previousEvents: generatedEvents 
+        },
       });
 
       console.log('Response from generate-calendar function:', data, error);
