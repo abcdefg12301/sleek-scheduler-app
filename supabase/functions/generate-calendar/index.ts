@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -86,30 +85,36 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
     // Create a context from previous events if any
     let previousEventsContext = "";
     if (previousEvents && previousEvents.length > 0) {
-      previousEventsContext = `\n\nYou should also be aware of the user's existing schedule:\n`;
-      previousEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
-        const startTime = new Date(event.start).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        });
-        const endTime = new Date(event.end).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        });
-        const startDate = new Date(event.start).toLocaleDateString('en-US', { 
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric'
-        });
+      previousEventsContext = `\n\nYou MUST be aware of and avoid conflicts with the user's existing schedule:\n`;
+      
+      // Sort events by start time to make them easier to process
+      const sortedEvents = [...previousEvents].sort((a, b) => {
+        const startA = new Date(a.start).getTime();
+        const startB = new Date(b.start).getTime();
+        return startA - startB;
+      });
+      
+      // Format the events in a more structured way
+      sortedEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
+        // Handle date formatting more consistently
+        const startDate = new Date(event.start);
+        const endDate = new Date(event.end);
+
+        // Format as simple 24-hour time for consistency
+        const formatSimpleTime = (date: Date) => {
+          return date.toISOString().split('T')[0] + ' ' + 
+            date.getHours().toString().padStart(2, '0') + ':' + 
+            date.getMinutes().toString().padStart(2, '0');
+        };
         
-        previousEventsContext += `${index + 1}. "${event.title}" on ${startDate} from ${startTime} to ${endTime}`;
+        previousEventsContext += `${index + 1}. "${event.title}" from ${formatSimpleTime(startDate)} to ${formatSimpleTime(endDate)}`;
         if (event.recurrence) {
           previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
         }
         previousEventsContext += "\n";
       });
+      
+      previousEventsContext += "\nYou MUST avoid scheduling events that overlap with these existing events.";
     }
 
     // System prompt for MistralAI
@@ -129,15 +134,21 @@ Return a valid JSON array where each object represents one event with these exac
   - interval: Number (default 1)
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
-CRITICAL RULES:
+CRITICAL TIME HANDLING RULES:
+1. When a specific time is mentioned (like "5pm-7pm", "5pm to 7pm", "5:00 PM"), use EXACTLY those times
+2. When users request times like "5pm" or "5:00 PM", interpret these as LOCAL times, not UTC
+3. NEVER shift or adjust times from what the user specified unless explicitly requested
+4. For dates/times that might be ambiguous, use the current date as default
+
+SCHEDULING RULES:
 1. CREATE SHORT, CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
-2. USE EXACT TIME ZONES in ISO format with Z suffix (UTC) for all datetime strings
-3. If a time range is specified (like "5pm-7pm"), use those PRECISE times
-4. All dates and times MUST be in ISO 8601 format with timezone (e.g., "2025-05-04T17:00:00.000Z")
-5. CAREFULLY IDENTIFY RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
-6. ALWAYS include a recurrence object for recurring events
-7. DO NOT make up times unless the user explicitly asks for suggestions
-8. If the user mentions TODAY, TOMORROW, or specific dates, use those exact dates
+2. If a time range is specified (like "5pm-7pm"), use those PRECISE times
+3. All dates and times MUST be in ISO 8601 format (e.g., "2025-05-04T17:00:00.000Z")
+4. CAREFULLY IDENTIFY RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
+5. ALWAYS include a recurrence object for recurring events
+6. If the user mentions TODAY, TOMORROW, or specific dates, use those exact dates
+7. DO NOT suggest or create events at times that conflict with existing events in the user's schedule
+8. IMPORTANT: When generating multiple events (like a study schedule), MAKE SURE they don't overlap with each other or with existing events
 
 Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${previousEventsContext}
 `;
@@ -232,17 +243,13 @@ function processAIGeneratedEvents(events) {
     try {
       console.log("Processing event:", event);
       
-      // Ensure start and end are proper dates with UTC timezone
+      // Ensure start and end are proper dates
       let start, end;
       
-      // Parse dates ensuring they have proper timezone info
+      // Parse dates ensuring they have proper format
       if (event.start) {
-        // Make sure we have a timezone component
-        if (!event.start.endsWith('Z') && !event.start.includes('+')) {
-          start = new Date(`${event.start}Z`);
-        } else {
-          start = new Date(event.start);
-        }
+        // Handle ISO strings directly without timezone manipulation
+        start = new Date(event.start);
         
         if (isNaN(start.getTime())) {
           console.error("Invalid start date:", event.start);
@@ -256,11 +263,8 @@ function processAIGeneratedEvents(events) {
       }
       
       if (event.end) {
-        if (!event.end.endsWith('Z') && !event.end.includes('+')) {
-          end = new Date(`${event.end}Z`);
-        } else {
-          end = new Date(event.end);
-        }
+        // Handle ISO strings directly without timezone manipulation
+        end = new Date(event.end);
         
         if (isNaN(end.getTime())) {
           console.error("Invalid end date:", event.end);
@@ -288,8 +292,9 @@ function processAIGeneratedEvents(events) {
       const processedEvent = {
         title: event.title || "Untitled Event",
         description: event.description || "",
-        start: start.toISOString(),
-        end: end.toISOString(),
+        // Keep the original ISO strings to preserve timezone information
+        start: event.start || start.toISOString(),
+        end: event.end || end.toISOString(),
         allDay: event.allDay || false,
         color: getRandomEventColor(),
         isAIGenerated: true,

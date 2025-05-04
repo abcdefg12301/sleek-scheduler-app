@@ -28,6 +28,8 @@ export interface Event {
   originalEventId?: string;
   // Add AI-generated flag
   isAIGenerated?: boolean;
+  // Add exception dates for recurring events
+  exceptionDates?: string[];
 }
 
 // Alias for better semantics in our calendar application

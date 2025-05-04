@@ -1,31 +1,22 @@
 
 import React from 'react';
-import { format } from 'date-fns';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Check, Clock, MapPin, Calendar, Pencil, Trash } from 'lucide-react';
-import EventForm from '@/components/event-form/EventForm';
-import { CalendarEvent } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Event } from '@/types';
+import EventForm from '@/components/EventForm';
+import EventDetails from './EventDetails';
+import RecurringEventDeleteDialog from './RecurringEventDeleteDialog';
 
 interface EventDialogsProps {
   isNewEventDialogOpen: boolean;
   setIsNewEventDialogOpen: (open: boolean) => void;
   isViewEventDialogOpen: boolean;
   setIsViewEventDialogOpen: (open: boolean) => void;
-  selectedEvent: CalendarEvent | null;
+  selectedEvent: Event | null;
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
   selectedDate: Date;
-  handleCreateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => void;
-  handleUpdateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => void;
+  handleCreateEvent: (data: Omit<Event, 'id' | 'calendarId'>) => void;
+  handleUpdateEvent: (data: Omit<Event, 'id' | 'calendarId'>) => void;
   handleDeleteEvent: () => void;
 }
 
@@ -40,183 +31,99 @@ const EventDialogs = ({
   selectedDate,
   handleCreateEvent,
   handleUpdateEvent,
-  handleDeleteEvent
+  handleDeleteEvent,
 }: EventDialogsProps) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  // Handle delete recurring event
+  const handleDeleteClick = () => {
+    if (selectedEvent?.recurrence || selectedEvent?.isRecurrenceInstance) {
+      setIsDeleteDialogOpen(true);
+    } else {
+      handleDeleteEvent();
+    }
+  };
+
+  // Handlers for the recurring event delete dialog
+  const handleDeleteSingle = () => {
+    if (!selectedEvent) return;
+    
+    // We'll implement this in our parent component
+    handleDeleteEvent();
+    setIsDeleteDialogOpen(false);
+  };
 
   return (
     <>
       {/* New Event Dialog */}
-      <Dialog open={isNewEventDialogOpen} onOpenChange={setIsNewEventDialogOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog 
+        open={isNewEventDialogOpen} 
+        onOpenChange={setIsNewEventDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>
-              Add a new event to your calendar.
-            </DialogDescription>
+            <DialogTitle>Create Event</DialogTitle>
           </DialogHeader>
-          
-          <EventForm
+          <EventForm 
             initialValues={{
-              title: '',
-              description: '',
-              allDay: false,
               start: selectedDate,
-              end: selectedDate,
-              color: '',
-              recurrence: undefined
+              end: new Date(selectedDate.getTime() + 60 * 60 * 1000),
             }}
             onSubmit={handleCreateEvent}
             onCancel={() => setIsNewEventDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
-
+      
       {/* View/Edit Event Dialog */}
-      {selectedEvent && (
-        <Dialog 
-          open={isViewEventDialogOpen} 
-          onOpenChange={(open) => {
-            if (!open) {
-              setIsEditMode(false);
-            }
-            setIsViewEventDialogOpen(open);
-          }}
-        >
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <div className="flex justify-between items-start">
-                <DialogTitle>{isEditMode ? 'Edit Event' : selectedEvent.title}</DialogTitle>
-                {selectedEvent.isHoliday && (
-                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 ml-2">
-                    Holiday
-                  </Badge>
-                )}
-              </div>
-              
-              {!isEditMode && (
-                <DialogDescription>
-                  {selectedEvent.description || 'No description'}
-                </DialogDescription>
+      <Dialog 
+        open={isViewEventDialogOpen} 
+        onOpenChange={setIsViewEventDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? 'Edit Event' : 'Event Details'}</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (
+            <>
+              {isEditMode ? (
+                <EventForm 
+                  initialValues={selectedEvent}
+                  onSubmit={handleUpdateEvent}
+                  onCancel={() => setIsEditMode(false)}
+                />
+              ) : (
+                <EventDetails 
+                  event={selectedEvent}
+                  onEdit={() => setIsEditMode(true)}
+                  onDelete={handleDeleteClick}
+                />
               )}
-            </DialogHeader>
-            
-            {isEditMode ? (
-              <EventForm
-                initialValues={{
-                  title: selectedEvent.title,
-                  description: selectedEvent.description || '',
-                  allDay: selectedEvent.allDay,
-                  start: selectedEvent.start,
-                  end: selectedEvent.end,
-                  color: selectedEvent.color || '',
-                  recurrence: selectedEvent.recurrence
-                }}
-                onSubmit={handleUpdateEvent}
-                onCancel={() => setIsEditMode(false)}
-              />
-            ) : (
-              <>
-                {!selectedEvent.isHoliday && (
-                  <div className="flex justify-end space-x-2 mb-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setIsEditMode(true)}
-                      disabled={selectedEvent.isHoliday}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={handleDeleteEvent}
-                      disabled={selectedEvent.isHoliday}
-                    >
-                      <Trash className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                )}
-                
-                <Tabs defaultValue="details">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    {selectedEvent.recurrence && (
-                      <TabsTrigger value="recurrence">Recurrence</TabsTrigger>
-                    )}
-                  </TabsList>
-                  
-                  <TabsContent value="details" className="space-y-4">
-                    <div className="grid gap-3 py-3">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        <span className="font-medium">
-                          {format(new Date(selectedEvent.start), 'EEEE, MMMM d, yyyy')}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2" />
-                        {selectedEvent.allDay ? (
-                          <span>All day</span>
-                        ) : (
-                          <span>
-                            {format(new Date(selectedEvent.start), 'h:mm a')} - 
-                            {format(new Date(selectedEvent.end), 'h:mm a')}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {selectedEvent.location && (
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>{selectedEvent.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {selectedEvent.description && (
-                      <div className="border-t pt-4">
-                        <h4 className="font-medium mb-2">Description</h4>
-                        <p className="text-sm">{selectedEvent.description}</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  {selectedEvent.recurrence && (
-                    <TabsContent value="recurrence" className="space-y-4">
-                      <div className="grid gap-3 py-3">
-                        <div className="flex items-start">
-                          <Check className="h-4 w-4 mr-2 mt-1" />
-                          <div>
-                            <p className="font-medium">Repeats every{' '}
-                              {selectedEvent.recurrence.interval > 1 && selectedEvent.recurrence.interval}{' '}
-                              {selectedEvent.recurrence.frequency}
-                              {selectedEvent.recurrence.interval > 1 && 's'}
-                            </p>
-                            
-                            {selectedEvent.recurrence.endDate && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Until {format(new Date(selectedEvent.recurrence.endDate), 'MMMM d, yyyy')}
-                              </p>
-                            )}
-                            
-                            {selectedEvent.recurrence.count && !selectedEvent.recurrence.endDate && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Repeats {selectedEvent.recurrence.count} times
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  )}
-                </Tabs>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Recurring Event Delete Dialog */}
+      {selectedEvent && (
+        <RecurringEventDeleteDialog 
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onDeleteSingle={handleDeleteSingle}
+          onDeleteAllFuture={() => {
+            if (!selectedEvent) return;
+            // We'll implement these in our parent component
+            handleDeleteEvent();
+            setIsDeleteDialogOpen(false);
+          }}
+          onDeleteAll={() => {
+            if (!selectedEvent) return;
+            handleDeleteEvent();
+            setIsDeleteDialogOpen(false);
+          }}
+          eventTitle={selectedEvent.title}
+          eventDate={selectedEvent.start instanceof Date ? selectedEvent.start : new Date(selectedEvent.start)}
+        />
       )}
     </>
   );

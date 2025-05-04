@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
 import DailyCalendarView from '@/components/DailyCalendarView';
@@ -8,6 +8,7 @@ import EventSidebar from '@/components/calendar/EventSidebar';
 import EventDialogs from '@/components/calendar/EventDialogs';
 import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
+import RecurringEventDeleteDialog from './RecurringEventDeleteDialog';
 
 type CalendarViewType = 'day' | 'month';
 
@@ -56,8 +57,11 @@ const CalendarViewContent = ({
     addEvent,
     updateEvent,
     deleteEvent,
+    deleteRecurringEvent,
     updateCalendar,
   } = useCalendarStore();
+
+  const [isRecurringDeleteDialogOpen, setIsRecurringDeleteDialogOpen] = useState(false);
 
   const handleCreateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
@@ -88,13 +92,47 @@ const CalendarViewContent = ({
   const handleDeleteEvent = () => {
     if (!selectedEvent) return;
     
+    // Check if it's a recurring event or a recurrence instance
+    if ((selectedEvent.recurrence || selectedEvent.isRecurrenceInstance) && 
+        !isRecurringDeleteDialogOpen) {
+      setIsRecurringDeleteDialogOpen(true);
+      return;
+    }
+    
     try {
       deleteEvent(calendar.id, selectedEvent.id);
       setIsViewEventDialogOpen(false);
+      setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
       toast.success('Event deleted successfully');
     } catch (error) {
       console.error('Failed to delete event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
+
+  const handleDeleteRecurringEvent = (mode: 'single' | 'future' | 'all') => {
+    if (!selectedEvent) return;
+    
+    try {
+      // Get the master event ID
+      const eventId = selectedEvent.originalEventId || selectedEvent.id;
+      
+      // Delete based on mode
+      deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
+        selectedEvent.start : new Date(selectedEvent.start));
+      
+      setIsViewEventDialogOpen(false);
+      setIsRecurringDeleteDialogOpen(false);
+      setSelectedEvent(null);
+      
+      const actionText = mode === 'single' ? 'occurrence' : 
+                        mode === 'future' ? 'future occurrences' : 
+                        'all occurrences';
+      
+      toast.success(`Event ${actionText} deleted successfully`);
+    } catch (error) {
+      console.error('Failed to delete recurring event:', error);
       toast.error('Failed to delete event');
     }
   };
@@ -155,6 +193,19 @@ const CalendarViewContent = ({
         handleUpdateEvent={handleUpdateEvent}
         handleDeleteEvent={handleDeleteEvent}
       />
+      
+      {/* Recurring Event Delete Dialog */}
+      {selectedEvent && (
+        <RecurringEventDeleteDialog 
+          isOpen={isRecurringDeleteDialogOpen}
+          onClose={() => setIsRecurringDeleteDialogOpen(false)}
+          onDeleteSingle={() => handleDeleteRecurringEvent('single')}
+          onDeleteAllFuture={() => handleDeleteRecurringEvent('future')}
+          onDeleteAll={() => handleDeleteRecurringEvent('all')}
+          eventTitle={selectedEvent.title}
+          eventDate={selectedEvent.start instanceof Date ? selectedEvent.start : new Date(selectedEvent.start)}
+        />
+      )}
     </div>
   );
 };

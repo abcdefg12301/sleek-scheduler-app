@@ -2,7 +2,8 @@
 import { Event, RecurrenceRule } from '@/types';
 import { 
   addDays, addWeeks, addMonths, addYears, 
-  isBefore, isAfter, isWithinInterval, isSameDay, differenceInDays, isValid
+  isBefore, isAfter, isWithinInterval, isSameDay, differenceInDays, isValid,
+  format
 } from 'date-fns';
 
 // Helper to get the next occurrence based on frequency
@@ -37,12 +38,22 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   const originalStart = new Date(event.start);
   const originalEnd = new Date(event.end);
   const eventDurationMs = originalEnd.getTime() - originalStart.getTime();
+  
+  // Get the exception dates if they exist
+  const exceptionDates = event.exceptionDates || [];
 
-  // Include the original event if it's within range
+  // Check if a date is an exception date
+  const isExceptionDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return exceptionDates.includes(dateStr);
+  };
+
+  // Include the original event if it's within range and not an exception date
   if ((isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
        isWithinInterval(originalEnd, { start: startDate, end: endDate }) ||
        isSameDay(originalStart, startDate) ||
-       (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate)))) {
+       (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate))) &&
+      !isExceptionDate(originalStart)) {
     events.push(event);
   }
 
@@ -50,8 +61,16 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   let currentStart = getNextOccurrence(originalStart, frequency, interval);
   
   // Generate occurrences only within the requested date range
-  // No limit on how many recurrences we generate - we only limit by the view range
-  while (isBefore(currentStart, endDate)) {
+  // Also check the recurrence end date if it exists
+  while (isBefore(currentStart, endDate) && 
+        (!event.recurrence.endDate || isBefore(currentStart, event.recurrence.endDate))) {
+    
+    // Skip this occurrence if it's an exception date
+    if (isExceptionDate(currentStart)) {
+      currentStart = getNextOccurrence(currentStart, frequency, interval);
+      continue;
+    }
+    
     // Skip if the current occurrence is before the requested range
     if (isAfter(currentStart, startDate) || isSameDay(currentStart, startDate) || 
         (isBefore(currentStart, startDate) && isAfter(new Date(currentStart.getTime() + eventDurationMs), startDate))) {
@@ -73,6 +92,12 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     
     // Move to next occurrence
     currentStart = getNextOccurrence(currentStart, frequency, interval);
+    
+    // Add a safeguard to prevent infinite loops (e.g. when using count)
+    if (events.length >= 100) {
+      console.warn('Too many recurrences generated, limiting to 100');
+      break;
+    }
   }
   
   return events;
