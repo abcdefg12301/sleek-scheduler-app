@@ -15,6 +15,8 @@ import { Separator } from '@/components/ui/separator';
 import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader';
 import EventsPreviewDialog from './ai-generator/EventsPreviewDialog';
 import EventEditingDialog from './ai-generator/EventEditingDialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -28,6 +30,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -72,6 +75,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
 
     setIsGenerating(true);
     setApiError(null);
+    setDebugInfo(null);
     console.log('Generating calendar with details:', calendarDetails);
     console.log('Using previous events for context:', generatedEvents.length > 0 ? `${generatedEvents.length} events` : 'None');
 
@@ -89,6 +93,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       if (error) {
         console.error('Error generating calendar:', error);
         setApiError(`API Error: ${error.message || 'Unknown error'}`);
+        setDebugInfo(`Function error: ${error.message || 'Unknown error'}`);
         toast.error(`Failed to generate calendar events: ${error.message || 'Unknown error'}`);
         return;
       }
@@ -96,6 +101,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       if (!data || !data.events || !Array.isArray(data.events)) {
         console.error('Invalid response format from AI:', data);
         setApiError('Invalid response format from AI');
+        setDebugInfo(`Invalid response format: ${JSON.stringify(data)}`);
         toast.error('Invalid response from AI');
         return;
       }
@@ -108,6 +114,16 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       }));
 
       console.log('Processed events from AI:', processedEvents);
+      
+      // Show debug info if events were generated using fallback mechanism
+      if (data.sourceType === 'fallback') {
+        const errorMessage = data.error || 'Unknown issue with AI generation';
+        setDebugInfo(`AI generation failed: ${errorMessage}. Using fallback events.`);
+        console.warn('AI generation failed, using fallback events:', errorMessage);
+      } else if (data.sourceType === 'ai') {
+        setDebugInfo('Events successfully generated using MistralAI');
+        console.log('Events successfully generated using MistralAI');
+      }
 
       // Add new events to existing ones instead of replacing
       const newEvents = [...generatedEvents, ...processedEvents];
@@ -129,6 +145,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
     } catch (error) {
       console.error('Error in AI calendar generation:', error);
       setApiError(`Client Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setDebugInfo(`Client error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       toast.error('An error occurred during calendar generation');
     } finally {
       setIsGenerating(false);
@@ -179,9 +196,18 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
           </div>
           
           {apiError && (
-            <div className="text-sm text-red-500 mt-2">
-              {apiError}
-            </div>
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{apiError}</AlertDescription>
+            </Alert>
+          )}
+
+          {debugInfo && (
+            <Alert className="mt-2">
+              <AlertTitle>Debug Info</AlertTitle>
+              <AlertDescription className="text-xs font-mono">{debugInfo}</AlertDescription>
+            </Alert>
           )}
 
           {generatedEvents.length > 0 && (

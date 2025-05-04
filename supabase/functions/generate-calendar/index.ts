@@ -32,11 +32,27 @@ serve(async (req) => {
     }
 
     // Use the AI model to generate calendar events based on natural language input
-    const events = await generateEventsWithAI(calendarDetails, previousEvents);
+    const { events, sourceType, error } = await generateEventsWithAI(calendarDetails, previousEvents);
+    
+    if (error) {
+      console.error("AI generation error:", error);
+      return new Response(
+        JSON.stringify({ 
+          events,
+          sourceType,
+          error 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     console.log("Generated events:", events);
+    console.log("Source type:", sourceType);
 
     return new Response(
-      JSON.stringify({ events }),
+      JSON.stringify({ events, sourceType }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
@@ -46,7 +62,9 @@ serve(async (req) => {
     console.error("Error generating calendar:", error);
     return new Response(
       JSON.stringify({ 
-        error: `Server error: ${error.message || "Unknown error"}` 
+        error: `Server error: ${error.message || "Unknown error"}`,
+        events: [createDefaultEvent("Event")],
+        sourceType: "fallback" 
       }),
       { 
         status: 500,
@@ -56,7 +74,7 @@ serve(async (req) => {
   }
 });
 
-// Use the OpenAI API to interpret and generate calendar events
+// Use OpenRouter to connect to MistralAI model
 async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
   try {
     // Current date information for context
@@ -94,7 +112,7 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
       });
     }
 
-    // IMPROVED SYSTEM PROMPT - Based on your specific requirements
+    // System prompt for MistralAI
     const systemPrompt = `
 You are an AI assistant specializing in creating calendar events from natural language instructions.
 Your ONLY task is to convert the user's input into properly structured calendar events.
@@ -106,7 +124,7 @@ For example, if the user says "I go to the gym from 5pm-7pm every day", you shou
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON array where each object represents one event with these exact fields:
-- title: String (concise, short title that captures the essence of the event)
+- title: String (concise, SHORT title that captures the essence of the event)
 - description: String (additional context if any, otherwise empty string)
 - start: String (ISO datetime with the EXACT time mentioned, e.g. "2025-05-03T17:00:00.000Z")
 - end: String (ISO datetime with the EXACT end time mentioned, e.g. "2025-05-03T19:00:00.000Z")
@@ -131,40 +149,43 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
     // User input is the calendar details provided
     const userPrompt = userInput;
 
-    console.log("Sending request to OpenAI API with system prompt length:", systemPrompt.length);
+    console.log("Sending request to OpenRouter.ai API with system prompt length:", systemPrompt.length);
     console.log("User prompt:", userPrompt);
 
-    // The hardcoded API key (in a real production app, this should come from environment variables)
-    const OPENAI_API_KEY = "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";
+    // OpenRouter API key for MistralAI
+    const OPENROUTER_API_KEY = "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";
 
-    // Make request to the OpenAI API
-    console.log("Starting OpenAI API request...");
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Make request to the OpenRouter API with MistralAI model
+    console.log("Starting OpenRouter API request...");
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://lovable.ai", // Replace with your actual domain
+        "X-Title": "Calendar AI Assistant"
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Using OpenAI's model
+        model: "mistralai/mistral-nemo:free",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.2, // Lower temperature for more consistent outputs
-        max_tokens: 2048  // Allow enough tokens for detailed calendar events
+        temperature: 0.2,
+        max_tokens: 2048
       })
     });
 
-    const data = await response.json();
-    
     if (!response.ok) {
-      console.error("OpenAI API error:", JSON.stringify(data, null, 2));
-      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
+      const errorResponse = await response.text();
+      console.error("OpenRouter API error response:", errorResponse);
+      throw new Error(`OpenRouter API error: ${errorResponse}`);
     }
 
-    console.log("OpenAI API response status:", response.status);
-    console.log("OpenAI API response headers:", Object.fromEntries(response.headers));
+    const data = await response.json();
+    
+    console.log("OpenRouter API response status:", response.status);
+    console.log("OpenRouter API response:", JSON.stringify(data, null, 2));
     
     // Extract the AI response content
     const aiResponse = data.choices[0].message.content;
@@ -182,18 +203,27 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
       console.log("Successfully parsed events:", parsedEvents);
       
       // Process the events to ensure proper formatting
-      return processAIGeneratedEvents(parsedEvents);
+      const processedEvents = processAIGeneratedEvents(parsedEvents);
+      return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
       console.error("Error parsing AI response:", error);
       console.error("AI response that couldn't be parsed:", aiResponse);
       // Fallback to simple event creation if AI parsing fails
-      return [createDefaultEvent(userInput)];
+      return { 
+        events: [createDefaultEvent(userInput)], 
+        sourceType: "fallback",
+        error: `Failed to parse AI response: ${error.message}` 
+      };
     }
   } catch (error) {
     console.error("Error in AI event generation:", error);
     console.error("Error stack:", error.stack);
     // Fallback to simple event creation
-    return [createDefaultEvent(userInput)];
+    return { 
+      events: [createDefaultEvent(userInput)], 
+      sourceType: "fallback",
+      error: `AI processing error: ${error.message}` 
+    };
   }
 }
 

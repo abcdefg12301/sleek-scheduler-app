@@ -36,7 +36,7 @@ const EventEditingDialog: React.FC<EventEditingDialogProps> = ({
       open={editingEvent !== null} 
       onOpenChange={handleDialogChange}
     >
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
           <DialogDescription>
