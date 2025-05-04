@@ -21,7 +21,20 @@ const EventEditingDialog: React.FC<EventEditingDialogProps> = ({
 }) => {
   // Handle form submission from the EventForm
   const handleSubmit = (data: Omit<Event, 'id' | 'calendarId'>) => {
-    onUpdateEvent(data);
+    // Ensure proper date handling before updating
+    try {
+      // Make sure we have valid date objects
+      const updatedData = {
+        ...data,
+        start: data.start instanceof Date ? data.start : new Date(data.start),
+        end: data.end instanceof Date ? data.end : new Date(data.end),
+      };
+      onUpdateEvent(updatedData);
+    } catch (error) {
+      console.error('Error processing dates in event update:', error, data);
+      // Still try to update with original data
+      onUpdateEvent(data);
+    }
   };
   
   // Handle dialog close

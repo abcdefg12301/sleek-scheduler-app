@@ -107,22 +107,40 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       }
 
       // Process received events to ensure all dates are properly parsed
-      const processedEvents = data.events.map((event: any) => ({
-        ...event,
-        start: new Date(event.start),
-        end: new Date(event.end),
-      }));
+      const processedEvents = data.events.map((event: any) => {
+        try {
+          // Ensure start and end are Date objects
+          const start = new Date(event.start);
+          const end = new Date(event.end);
+          
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            console.error('Invalid date in event:', event);
+            throw new Error('Invalid date in event');
+          }
+
+          return {
+            ...event,
+            start,
+            end,
+          };
+        } catch (err) {
+          console.error('Error processing event date:', err, event);
+          throw new Error(`Error processing event date: ${err.message}`);
+        }
+      });
 
       console.log('Processed events from AI:', processedEvents);
       
-      // Show debug info if events were generated using fallback mechanism
+      // Show debug info based on the source of events
       if (data.sourceType === 'fallback') {
         const errorMessage = data.error || 'Unknown issue with AI generation';
         setDebugInfo(`AI generation failed: ${errorMessage}. Using fallback events.`);
         console.warn('AI generation failed, using fallback events:', errorMessage);
+        toast.warning('AI model had trouble with your request. Using fallback events.');
       } else if (data.sourceType === 'ai') {
         setDebugInfo('Events successfully generated using MistralAI');
         console.log('Events successfully generated using MistralAI');
+        toast.success('Events successfully generated using MistralAI');
       }
 
       // Add new events to existing ones instead of replacing

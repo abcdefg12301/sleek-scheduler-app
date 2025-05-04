@@ -20,6 +20,73 @@ interface TimeGridProps {
 }
 
 const TimeGrid = ({ hours, timedEvents, eventLayouts, onEventClick }: TimeGridProps) => {
+  // Group events by their overlapping time slots to better handle their layout
+  const calculateOverlappingEvents = (events: CalendarEvent[]) => {
+    const eventsByHour: { [hour: number]: CalendarEvent[] } = {};
+    const enhancedLayouts = { ...eventLayouts };
+    
+    // Group events by starting hour
+    events.forEach(event => {
+      const startHour = new Date(event.start).getHours();
+      if (!eventsByHour[startHour]) eventsByHour[startHour] = [];
+      eventsByHour[startHour].push(event);
+    });
+    
+    // Process each hour's events to check for overlaps
+    Object.keys(eventsByHour).forEach(hourKey => {
+      const hour = parseInt(hourKey);
+      const hourEvents = eventsByHour[hour];
+      
+      // Skip if only one event in this hour
+      if (hourEvents.length <= 1) return;
+      
+      // Sort by start time
+      hourEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      
+      // Find overlapping events
+      for (let i = 0; i < hourEvents.length; i++) {
+        const currentEvent = hourEvents[i];
+        let overlappingCount = 0;
+        let eventIndex = 0;
+        
+        // Count how many events overlap with the current one
+        for (let j = 0; j < hourEvents.length; j++) {
+          if (i === j) continue; // Skip comparing with itself
+          
+          const otherEvent = hourEvents[j];
+          const currentStart = new Date(currentEvent.start).getTime();
+          const currentEnd = new Date(currentEvent.end).getTime();
+          const otherStart = new Date(otherEvent.start).getTime();
+          const otherEnd = new Date(otherEvent.end).getTime();
+          
+          // Check for overlap
+          if ((otherStart < currentEnd && otherStart >= currentStart) || 
+              (otherEnd > currentStart && otherEnd <= currentEnd) ||
+              (otherStart <= currentStart && otherEnd >= currentEnd)) {
+            overlappingCount++;
+            if (j < i) eventIndex++;
+          }
+        }
+        
+        // Update layout for better visualization
+        if (overlappingCount > 0 && enhancedLayouts[currentEvent.id]) {
+          const totalOverlapping = overlappingCount + 1; // Add 1 for the current event
+          enhancedLayouts[currentEvent.id] = {
+            ...enhancedLayouts[currentEvent.id],
+            width: Math.floor(100 / totalOverlapping),
+            left: Math.floor((100 / totalOverlapping) * eventIndex),
+            overlappingEvents: totalOverlapping
+          };
+        }
+      }
+    });
+    
+    return enhancedLayouts;
+  };
+  
+  // Calculate improved layouts to prevent event overlap
+  const optimizedLayouts = calculateOverlappingEvents(timedEvents);
+  
   return (
     <div className="relative">
       {/* Hour divisions */}
@@ -32,7 +99,7 @@ const TimeGrid = ({ hours, timedEvents, eventLayouts, onEventClick }: TimeGridPr
       
       {/* Events */}
       {timedEvents.map((event) => {
-        const layout = eventLayouts[event.id];
+        const layout = optimizedLayouts[event.id];
         if (!layout) return null;
         return (
           <EventLayout 

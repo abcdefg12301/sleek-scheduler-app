@@ -115,19 +115,14 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
     // System prompt for MistralAI
     const systemPrompt = `
 You are an AI assistant specializing in creating calendar events from natural language instructions.
-Your ONLY task is to convert the user's input into properly structured calendar events.
-
-For example, if the user says "I go to the gym from 5pm-7pm every day", you should extract:
-- Title: "Gym" (simple, concise title)
-- Time: 5pm to 7pm (17:00 to 19:00 in 24-hour format)
-- Recurrence: daily
+Your task is to convert user input into properly structured calendar events.
 
 OUTPUT REQUIREMENTS:
-Return ONLY a valid JSON array where each object represents one event with these exact fields:
-- title: String (concise, SHORT title that captures the essence of the event)
+Return a valid JSON array where each object represents one event with these exact fields:
+- title: String (concise title that captures the essence of the event)
 - description: String (additional context if any, otherwise empty string)
-- start: String (ISO datetime with the EXACT time mentioned, e.g. "2025-05-03T17:00:00.000Z")
-- end: String (ISO datetime with the EXACT end time mentioned, e.g. "2025-05-03T19:00:00.000Z")
+- start: String (ISO datetime with timezone, e.g. "2025-05-03T17:00:00.000Z")
+- end: String (ISO datetime with timezone, e.g. "2025-05-03T19:00:00.000Z")
 - allDay: Boolean (true if it's an all-day event)
 - recurrence: Object (null if not recurring) with:
   - frequency: String (daily, weekly, monthly, yearly)
@@ -135,13 +130,14 @@ Return ONLY a valid JSON array where each object represents one event with these
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
 CRITICAL RULES:
-1. CREATE SHORT, EXTREMELY CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
-2. USE THE EXACT TIMES mentioned in the input (5pm becomes 17:00, not any other time)
+1. CREATE SHORT, CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
+2. USE EXACT TIME ZONES in ISO format with Z suffix (UTC) for all datetime strings
 3. If a time range is specified (like "5pm-7pm"), use those PRECISE times
-4. CAREFULLY FIND ALL RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
-5. Do not make up times unless requested by the user. For example, if the user asks for you to make a study schedule, then you can make up times. You should avoid any schedule conflicts with the current user's schedule.
-6. When no specific time is mentioned but the user is requesting a scheduled activity (like "create a study schedule"), suggest appropriate times while avoiding conflicts with existing events
-7. If recurring patterns are mentioned (like "every day" or "weekdays" or "every Monday"), set the appropriate recurrence pattern
+4. All dates and times MUST be in ISO 8601 format with timezone (e.g., "2025-05-04T17:00:00.000Z")
+5. CAREFULLY IDENTIFY RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
+6. ALWAYS include a recurrence object for recurring events
+7. DO NOT make up times unless the user explicitly asks for suggestions
+8. If the user mentions TODAY, TOMORROW, or specific dates, use those exact dates
 
 Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${previousEventsContext}
 `;
@@ -162,7 +158,7 @@ Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://lovable.ai", // Replace with your actual domain
+        "HTTP-Referer": "https://lovable.ai",
         "X-Title": "Calendar AI Assistant"
       },
       body: JSON.stringify({
@@ -236,15 +232,20 @@ function processAIGeneratedEvents(events) {
     try {
       console.log("Processing event:", event);
       
-      // Ensure start and end are proper dates
+      // Ensure start and end are proper dates with UTC timezone
       let start, end;
       
-      // Handle different date formats or create reasonable defaults
+      // Parse dates ensuring they have proper timezone info
       if (event.start) {
-        start = new Date(event.start);
+        // Make sure we have a timezone component
+        if (!event.start.endsWith('Z') && !event.start.includes('+')) {
+          start = new Date(`${event.start}Z`);
+        } else {
+          start = new Date(event.start);
+        }
+        
         if (isNaN(start.getTime())) {
           console.error("Invalid start date:", event.start);
-          // If invalid date, create a default
           start = new Date(currentDate);
           start.setHours(9, 0, 0, 0);
         }
@@ -255,10 +256,14 @@ function processAIGeneratedEvents(events) {
       }
       
       if (event.end) {
-        end = new Date(event.end);
+        if (!event.end.endsWith('Z') && !event.end.includes('+')) {
+          end = new Date(`${event.end}Z`);
+        } else {
+          end = new Date(event.end);
+        }
+        
         if (isNaN(end.getTime())) {
           console.error("Invalid end date:", event.end);
-          // If invalid date, make it 1 hour after start
           end = new Date(start);
           end.setHours(start.getHours() + 1);
         }
