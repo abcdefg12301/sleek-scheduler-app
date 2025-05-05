@@ -150,7 +150,7 @@ const NewCalendar = () => {
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
           <AICalendarGenerator 
             standalone={true}
-            onEventsGenerated={handleAiGeneratedEvents}
+            onEventsGenerated={handleAiEventsGenerated}
           />
 
           <div className="flex justify-end mt-6">
