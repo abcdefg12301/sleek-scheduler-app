@@ -41,9 +41,9 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center w-full">
+    <div className="flex items-center justify-between w-full">
       {/* Left section: Home button & calendar title */}
-      <div className="flex items-center gap-2 max-w-[30%]">
+      <div className="flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
@@ -61,19 +61,21 @@ const CalendarHeaderCentered = ({
           </TooltipContent>
         </Tooltip>
         
-        <div className="min-w-0">
+        <div className="min-w-0 mr-4">
           <h1 className="text-xl font-semibold truncate" title={calendar.name}>{calendar.name}</h1>
           <p className="text-muted-foreground text-sm truncate" title={calendar.description}>{calendar.description}</p>
         </div>
       </div>
       
-      {/* Center section: Navigation controls & date display */}
-      <div className="flex-1 flex items-center justify-center gap-2">
-        <div className="flex items-center space-x-1">
+      {/* Center/right section: Navigation controls & date display */}
+      <div className="flex items-center gap-8">
+        {/* Navigation controls */}
+        <div className="flex items-center gap-1">
           <Button 
             onClick={handlePrevPeriod} 
             size="icon" 
             variant="outline"
+            className="h-9 w-9"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -82,7 +84,7 @@ const CalendarHeaderCentered = ({
             onClick={handleTodayClick} 
             variant="outline"
             size="sm"
-            className="whitespace-nowrap"
+            className="h-9"
           >
             Today
           </Button>
@@ -91,19 +93,18 @@ const CalendarHeaderCentered = ({
             onClick={handleNextPeriod} 
             size="icon" 
             variant="outline"
+            className="h-9 w-9"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
         
         {/* Date display */}
-        <div className="text-lg font-medium mx-2 whitespace-nowrap">
+        <div className="text-lg font-medium whitespace-nowrap min-w-[160px]">
           {getFormattedDateRange()}
         </div>
-      </div>
-      
-      {/* Right section: View mode selector */}
-      <div className="flex items-center justify-end max-w-[30%]">
+        
+        {/* View mode selector */}
         <div className="flex rounded-md border border-input overflow-hidden">
           <Button
             type="button"

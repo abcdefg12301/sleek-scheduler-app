@@ -4,7 +4,7 @@ import { Calendar } from '@/types';
 import CalendarHeaderCentered from './CalendarHeaderCentered';
 import CalendarSettings from './CalendarSettings';
 import { Button } from '../ui/button';
-import { PlusCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 type CalendarViewType = 'day' | 'month';
 
@@ -35,30 +35,29 @@ const CalendarViewHeader = ({
 }: CalendarHeaderProps) => {
   return (
     <div className="mb-6">
-      <div className="grid grid-cols-1 gap-4">
-        <div className="w-full">
-          <CalendarHeaderCentered
-            calendar={calendar}
-            currentDate={currentDate}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            handlePrevPeriod={handlePrevPeriod}
-            handleNextPeriod={handleNextPeriod}
-            handleTodayClick={handleTodayClick}
-            navigateToDashboard={() => navigate('/')}
-          />
-        </div>
+      <div className="flex items-center justify-between w-full">
+        <CalendarHeaderCentered
+          calendar={calendar}
+          currentDate={currentDate}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          handlePrevPeriod={handlePrevPeriod}
+          handleNextPeriod={handleNextPeriod}
+          handleTodayClick={handleTodayClick}
+          navigateToDashboard={() => navigate('/')}
+        />
         
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleNewEvent}
+            size="icon"
+            className="rounded-full"
             style={{
               backgroundColor: calendar.color || undefined,
               color: calendar.color ? '#ffffff' : undefined
             }}
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            New Event
+            <Plus className="h-5 w-5" />
           </Button>
           
           <CalendarSettings 

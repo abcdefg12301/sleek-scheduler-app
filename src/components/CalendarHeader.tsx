@@ -20,10 +20,10 @@ const CalendarHeader = ({
 }: CalendarHeaderProps) => {
   return (
     <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center space-x-2">
+      <div>
         <h2 className="text-2xl font-bold">{formatMonthYear(currentDate)}</h2>
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2">
         <Button variant="outline" onClick={onToday}>
           Today
         </Button>
