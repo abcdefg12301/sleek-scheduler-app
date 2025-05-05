@@ -76,9 +76,9 @@ serve(async (req) => {
 // Use OpenRouter to connect to MistralAI model
 async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
   try {
-    // Current date information for context
+    // Current date information for context - without time zones
     const now = new Date();
-    const currentDate = now.toISOString().split('T')[0];
+    const currentDate = now.toLocaleDateString('en-US');
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
@@ -96,18 +96,27 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
       
       // Format the events in a more structured way
       sortedEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
-        // Handle date formatting more consistently
+        // Handle date formatting more consistently without time zones
         const startDate = new Date(event.start);
         const endDate = new Date(event.end);
 
-        // Format as simple 24-hour time for consistency
-        const formatSimpleTime = (date: Date) => {
-          return date.toISOString().split('T')[0] + ' ' + 
-            date.getHours().toString().padStart(2, '0') + ':' + 
-            date.getMinutes().toString().padStart(2, '0');
+        // Format as simple time for consistency
+        const formatSimpleDate = (date: Date) => {
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
         };
         
-        previousEventsContext += `${index + 1}. "${event.title}" from ${formatSimpleTime(startDate)} to ${formatSimpleTime(endDate)}`;
+        const formatSimpleTime = (date: Date) => {
+          return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        };
+        
+        previousEventsContext += `${index + 1}. "${event.title}" on ${formatSimpleDate(startDate)} from ${formatSimpleTime(startDate)} to ${formatSimpleTime(endDate)}`;
         if (event.recurrence) {
           previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
         }
@@ -126,8 +135,8 @@ OUTPUT REQUIREMENTS:
 Return a valid JSON array where each object represents one event with these exact fields:
 - title: String (concise title that captures the essence of the event)
 - description: String (additional context if any, otherwise empty string)
-- start: String (ISO datetime with timezone, e.g. "2025-05-03T17:00:00.000Z")
-- end: String (ISO datetime with timezone, e.g. "2025-05-03T19:00:00.000Z")
+- start: String (ISO date string without timezone information, e.g. "2025-05-03T17:00:00")
+- end: String (ISO date string without timezone information, e.g. "2025-05-03T19:00:00")
 - allDay: Boolean (true if it's an all-day event)
 - recurrence: Object (null if not recurring) with:
   - frequency: String (daily, weekly, monthly, yearly)
@@ -135,20 +144,21 @@ Return a valid JSON array where each object represents one event with these exac
   - daysOfWeek: Array of numbers (0-6, where 0 is Sunday) if applicable
 
 CRITICAL TIME HANDLING RULES:
-1. When a specific time is mentioned (like "5pm-7pm", "5pm to 7pm", "5:00 PM"), use EXACTLY those times
-2. When users request times like "5pm" or "5:00 PM", interpret these as LOCAL times, not UTC
-3. NEVER shift or adjust times from what the user specified unless explicitly requested
-4. For dates/times that might be ambiguous, use the current date as default
+1. DO NOT USE TIMEZONES AT ALL. Work with local times only.
+2. Output all date times in ISO format WITHOUT 'Z' at the end and WITHOUT timezone offsets.
+3. When a specific time is mentioned (like "5pm-7pm"), use EXACTLY those specified times.
+4. For example, if user says "meeting at 5pm", the start time should be today at 5:00 PM local time.
+5. Times are ALWAYS based on what the user explicitly states, not adjusted for any timezone.
+6. For dates/times that might be ambiguous, use the current date as default.
 
 SCHEDULING RULES:
 1. CREATE SHORT, CONCISE TITLES that capture the essence of the activity (e.g., "Gym" instead of "go to the gym")
 2. If a time range is specified (like "5pm-7pm"), use those PRECISE times
-3. All dates and times MUST be in ISO 8601 format (e.g., "2025-05-04T17:00:00.000Z")
-4. CAREFULLY IDENTIFY RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
-5. ALWAYS include a recurrence object for recurring events
-6. If the user mentions TODAY, TOMORROW, or specific dates, use those exact dates
-7. DO NOT suggest or create events at times that conflict with existing events in the user's schedule
-8. IMPORTANT: When generating multiple events (like a study schedule), MAKE SURE they don't overlap with each other or with existing events
+3. CAREFULLY IDENTIFY RECURRENCE PATTERNS in natural language - daily, weekly, monthly, specific days, etc.
+4. ALWAYS include a recurrence object for recurring events
+5. If the user mentions TODAY, TOMORROW, or specific dates, use those exact dates
+6. DO NOT suggest or create events at times that conflict with existing events in the user's schedule
+7. IMPORTANT: When generating multiple events (like a study schedule), MAKE SURE they don't overlap with each other or with existing events
 
 Today is ${currentDate}, ${currentDay} and the current time is ${currentTime}.${previousEventsContext}
 `;
@@ -243,13 +253,20 @@ function processAIGeneratedEvents(events) {
     try {
       console.log("Processing event:", event);
       
-      // Ensure start and end are proper dates
+      // Ensure start and end are proper dates - without timezone considerations
       let start, end;
       
-      // Parse dates ensuring they have proper format
+      // Parse dates ensuring they have proper format, without time zones
       if (event.start) {
-        // Handle ISO strings directly without timezone manipulation
+        // First try to parse directly
         start = new Date(event.start);
+        
+        // If the date is invalid or has timezone info, remove any timezone indicators
+        if (isNaN(start.getTime()) || event.start.includes('Z') || event.start.includes('+')) {
+          // Try to clean up the date string
+          const cleanDateStr = event.start.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+          start = new Date(cleanDateStr);
+        }
         
         if (isNaN(start.getTime())) {
           console.error("Invalid start date:", event.start);
@@ -263,8 +280,15 @@ function processAIGeneratedEvents(events) {
       }
       
       if (event.end) {
-        // Handle ISO strings directly without timezone manipulation
+        // First try to parse directly
         end = new Date(event.end);
+        
+        // If the date is invalid or has timezone info, remove any timezone indicators
+        if (isNaN(end.getTime()) || event.end.includes('Z') || event.end.includes('+')) {
+          // Try to clean up the date string
+          const cleanDateStr = event.end.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+          end = new Date(cleanDateStr);
+        }
         
         if (isNaN(end.getTime())) {
           console.error("Invalid end date:", event.end);
@@ -292,9 +316,9 @@ function processAIGeneratedEvents(events) {
       const processedEvent = {
         title: event.title || "Untitled Event",
         description: event.description || "",
-        // Keep the original ISO strings to preserve timezone information
-        start: event.start || start.toISOString(),
-        end: event.end || end.toISOString(),
+        // Keep dates as ISO strings but WITHOUT timezone specifiers
+        start: start.toISOString().split('.')[0],
+        end: end.toISOString().split('.')[0],
         allDay: event.allDay || false,
         color: getRandomEventColor(),
         isAIGenerated: true,
@@ -327,8 +351,8 @@ function createDefaultEvent(text) {
   return {
     title,
     description: "",
-    start: startDate.toISOString(),
-    end: endDate.toISOString(),
+    start: startDate.toISOString().split('.')[0],
+    end: endDate.toISOString().split('.')[0],
     allDay: false,
     color: getRandomEventColor(),
     isAIGenerated: true

@@ -109,21 +109,13 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
       // Process received events to ensure all dates are properly parsed
       const processedEvents = data.events.map((event: any) => {
         try {
-          // Create a normalized event with proper date objects
-          const processed = {
+          // Create a normalized event with proper date objects - without timezone considerations
+          return {
             ...event,
             // Create proper Date objects from ISO strings
             start: new Date(event.start),
             end: new Date(event.end)
           };
-          
-          // Validate that these are valid dates
-          if (isNaN(processed.start.getTime()) || isNaN(processed.end.getTime())) {
-            console.error('Invalid date in event:', event);
-            throw new Error('Invalid date in event');
-          }
-          
-          return processed;
         } catch (err) {
           console.error('Error processing event date:', err, event);
           throw new Error(`Error processing event date: ${err.message}`);
