@@ -39,15 +39,14 @@ const CalendarCard = ({ calendar, onDelete }: CalendarCardProps) => {
             className="w-4 h-4 rounded-full mr-2" 
             style={{ backgroundColor: calendar.color }}
           />
-          <CardTitle className="text-lg">{calendar.name}</CardTitle>
+          <CardTitle className="text-lg truncate" title={calendar.name}>
+            {calendar.name}
+          </CardTitle>
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-muted-foreground text-sm line-clamp-2">
-          {calendar.description}
-        </p>
-        <p className="text-xs text-muted-foreground mt-2">
-          {calendar.events?.length || 0} event{calendar.events?.length !== 1 ? 's' : ''}
+        <p className="text-muted-foreground text-sm line-clamp-3" title={calendar.description}>
+          {calendar.description || "No description provided"}
         </p>
       </CardContent>
       <CardFooter className="flex justify-end gap-2">

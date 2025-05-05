@@ -139,22 +139,21 @@ const NewCalendar = () => {
         Set up a new calendar to organize your events.
       </p>
       
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
-        <AICalendarGenerator 
-          standalone={true}
-          onEventsGenerated={handleAiEventsGenerated}
-        />
-      </div>
-      
-      <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
           <CalendarBasicDetails form={form} />
-          <CalendarFeatures form={form} timeOptions={timeOptions} />
+          
+          {/* Features section is now optional */}
+          {/* <CalendarFeatures form={form} timeOptions={timeOptions} /> */}
+          
+          <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
+          <AICalendarGenerator 
+            standalone={true}
+            onEventsGenerated={handleAiGeneratedEvents}
+          />
 
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-6">
             <Button type="submit">Create Calendar</Button>
           </div>
         </form>

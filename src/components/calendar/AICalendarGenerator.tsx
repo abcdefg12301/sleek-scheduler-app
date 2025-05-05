@@ -2,21 +2,17 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Info, Calendar, Bot } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Calendar, Bot } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
-import EventForm from '@/components/EventForm';
-import { Separator } from '@/components/ui/separator';
-import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader';
 import EventsPreviewDialog from './ai-generator/EventsPreviewDialog';
 import EventEditingDialog from './ai-generator/EventEditingDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -184,6 +180,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             className="min-h-[120px]"
             value={calendarDetails}
             onChange={(e) => setCalendarDetails(e.target.value)}
+            maxLength={500}
           />
           <div className="flex gap-2">
             <Button 
@@ -195,14 +192,13 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
             </Button>
             
             {generatedEvents.length > 0 && (
-              <EventsPreviewDialog
-                isOpen={isPreviewOpen}
-                setIsOpen={setIsPreviewOpen}
-                events={generatedEvents}
-                onDeleteEvent={handleDeleteEvent}
-                onEditEvent={handleEditEvent}
-                clearAllEvents={clearAllEvents}
-              />
+              <Button 
+                variant="outline"
+                onClick={() => setIsPreviewOpen(true)}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Preview Events ({generatedEvents.length})
+              </Button>
             )}
           </div>
           
@@ -226,6 +222,15 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
               {generatedEvents.length} events generated. View or edit them using the "Preview Events" button.
             </div>
           )}
+          
+          <EventsPreviewDialog
+            isOpen={isPreviewOpen}
+            setIsOpen={setIsPreviewOpen}
+            events={generatedEvents}
+            onDeleteEvent={handleDeleteEvent}
+            onEditEvent={handleEditEvent}
+            clearAllEvents={clearAllEvents}
+          />
           
           <EventEditingDialog
             editingEvent={editingEvent}
