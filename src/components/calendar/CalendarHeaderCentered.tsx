@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarType } from '@/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 
 type CalendarViewType = 'day' | 'month';
 
@@ -42,9 +41,9 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center justify-between w-full flex-wrap gap-y-2">
-      {/* Calendar title & home button */}
-      <div className="flex items-center gap-2 min-w-0 max-w-[300px]">
+    <div className="flex items-center w-full">
+      {/* Left section: Home button & calendar title */}
+      <div className="flex items-center gap-2 max-w-[30%]">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
@@ -68,9 +67,9 @@ const CalendarHeaderCentered = ({
         </div>
       </div>
       
-      {/* Navigation controls */}
-      <div className="flex items-center gap-2 ml-auto">
-        <div className="flex items-center space-x-1 shrink-0">
+      {/* Center section: Navigation controls & date display */}
+      <div className="flex-1 flex items-center justify-center gap-2">
+        <div className="flex items-center space-x-1">
           <Button 
             onClick={handlePrevPeriod} 
             size="icon" 
@@ -83,6 +82,7 @@ const CalendarHeaderCentered = ({
             onClick={handleTodayClick} 
             variant="outline"
             size="sm"
+            className="whitespace-nowrap"
           >
             Today
           </Button>
@@ -97,40 +97,40 @@ const CalendarHeaderCentered = ({
         </div>
         
         {/* Date display */}
-        <div className="text-lg font-medium mx-2 text-center whitespace-nowrap">
+        <div className="text-lg font-medium mx-2 whitespace-nowrap">
           {getFormattedDateRange()}
         </div>
-        
-        {/* View mode selector */}
-        <div className="flex items-center shrink-0">
-          <div className="flex rounded-md border border-input overflow-hidden">
-            <Button
-              type="button"
-              variant={viewMode === 'day' ? 'default' : 'ghost'}
-              size="sm"
-              className={`rounded-none ${viewMode === 'day' ? '' : 'hover:bg-muted'}`}
-              onClick={() => setViewMode('day')}
-              style={viewMode === 'day' ? {
-                backgroundColor: calendar.color || undefined,
-                color: calendar.color ? '#ffffff' : undefined
-              } : {}}
-            >
-              Day
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === 'month' ? 'default' : 'ghost'} 
-              size="sm"
-              className={`rounded-none ${viewMode === 'month' ? '' : 'hover:bg-muted'}`}
-              onClick={() => setViewMode('month')}
-              style={viewMode === 'month' ? {
-                backgroundColor: calendar.color || undefined,
-                color: calendar.color ? '#ffffff' : undefined
-              } : {}}
-            >
-              Month
-            </Button>
-          </div>
+      </div>
+      
+      {/* Right section: View mode selector */}
+      <div className="flex items-center justify-end max-w-[30%]">
+        <div className="flex rounded-md border border-input overflow-hidden">
+          <Button
+            type="button"
+            variant={viewMode === 'day' ? 'default' : 'ghost'}
+            size="sm"
+            className="rounded-none"
+            onClick={() => setViewMode('day')}
+            style={viewMode === 'day' ? {
+              backgroundColor: calendar.color || undefined,
+              color: calendar.color ? '#ffffff' : undefined
+            } : {}}
+          >
+            Day
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === 'month' ? 'default' : 'ghost'} 
+            size="sm"
+            className="rounded-none"
+            onClick={() => setViewMode('month')}
+            style={viewMode === 'month' ? {
+              backgroundColor: calendar.color || undefined,
+              color: calendar.color ? '#ffffff' : undefined
+            } : {}}
+          >
+            Month
+          </Button>
         </div>
       </div>
     </div>
