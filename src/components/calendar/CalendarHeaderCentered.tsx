@@ -41,7 +41,7 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full gap-4">
+    <div className="flex items-center justify-between w-full gap-4">
       {/* Left section: Home button & calendar title */}
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -67,13 +67,13 @@ const CalendarHeaderCentered = ({
         </div>
       </div>
       
-      {/* Center section: Month/Year display */}
-      <div className="text-lg font-medium whitespace-nowrap mx-auto">
-        {getFormattedDateRange()}
-      </div>
-      
-      {/* Right section: Navigation controls and view mode selector */}
-      <div className="flex items-center justify-end gap-6">
+      {/* Center section: Navigation controls */}
+      <div className="flex items-center gap-6 justify-end">
+        {/* Month/Year display moved to left side of the navigation controls */}
+        <span className="text-lg font-medium whitespace-nowrap mr-3">
+          {getFormattedDateRange()}
+        </span>
+        
         {/* Navigation controls */}
         <div className="flex items-center gap-2">
           <Button 
@@ -105,7 +105,7 @@ const CalendarHeaderCentered = ({
         </div>
         
         {/* View mode selector */}
-        <div className="flex rounded-md border border-input overflow-hidden">
+        <div className="flex rounded-md border border-input overflow-hidden ml-6">
           <Button
             type="button"
             variant={viewMode === 'day' ? 'default' : 'ghost'}
