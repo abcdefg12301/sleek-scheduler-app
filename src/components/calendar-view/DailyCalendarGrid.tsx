@@ -26,7 +26,7 @@ const DailyCalendarGrid = ({
   onEventClick 
 }: DailyCalendarGridProps) => {
   return (
-    <>
+    <div className="max-w-screen-lg mx-auto">
       {/* Hour labels */}
       <HourLabels hours={hours} />
       
@@ -37,7 +37,7 @@ const DailyCalendarGrid = ({
         eventLayouts={eventLayouts}
         onEventClick={onEventClick}
       />
-    </>
+    </div>
   );
 };
 
