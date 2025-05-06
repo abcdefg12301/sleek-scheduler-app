@@ -41,7 +41,7 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center justify-between w-full">
+    <div className="grid grid-cols-3 items-center w-full">
       {/* Left section: Home button & calendar title */}
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -61,14 +61,21 @@ const CalendarHeaderCentered = ({
           </TooltipContent>
         </Tooltip>
         
-        <div className="min-w-0 mr-4">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold truncate" title={calendar.name}>{calendar.name}</h1>
           <p className="text-muted-foreground text-sm truncate" title={calendar.description}>{calendar.description}</p>
         </div>
       </div>
       
-      {/* Center/right section: Navigation controls & date display */}
-      <div className="flex items-center gap-8">
+      {/* Center section: Month/Year display */}
+      <div className="flex justify-center">
+        <div className="text-lg font-medium whitespace-nowrap">
+          {getFormattedDateRange()}
+        </div>
+      </div>
+      
+      {/* Right section: Navigation controls and view mode selector */}
+      <div className="flex items-center justify-end gap-4">
         {/* Navigation controls */}
         <div className="flex items-center gap-1">
           <Button 
@@ -97,11 +104,6 @@ const CalendarHeaderCentered = ({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
-        
-        {/* Date display */}
-        <div className="text-lg font-medium whitespace-nowrap min-w-[160px]">
-          {getFormattedDateRange()}
         </div>
         
         {/* View mode selector */}

@@ -9,7 +9,7 @@ interface DailyCalendarHeaderProps {
 const DailyCalendarHeader = ({ selectedDate }: DailyCalendarHeaderProps) => {
   return (
     <div className="text-center py-3 border-b">
-      <h2 className="text-lg font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</h2>
+      <h2 className="text-lg font-medium normal-case">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</h2>
     </div>
   );
 };
