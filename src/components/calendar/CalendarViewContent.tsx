@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
@@ -64,7 +65,10 @@ const CalendarViewContent = ({
 
   const handleCreateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
-      addEvent(calendar.id, eventData);
+      addEvent({
+        ...eventData,
+        calendarId: calendar.id
+      });
       setIsNewEventDialogOpen(false);
       toast.success('Event created successfully');
     } catch (error) {
@@ -99,7 +103,7 @@ const CalendarViewContent = ({
     }
     
     try {
-      deleteEvent(calendar.id, selectedEvent.id);
+      deleteEvent(selectedEvent);
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -120,7 +124,7 @@ const CalendarViewContent = ({
       // Delete based on mode
       if (mode === 'single') {
         // For single occurrence deletion
-        deleteEvent(calendar.id, selectedEvent.id);
+        deleteEvent(selectedEvent);
       } else {
         // For 'future' or 'all' modes
         deleteRecurringEvent(calendar.id, eventId, mode === 'all');
