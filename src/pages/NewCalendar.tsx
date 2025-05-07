@@ -75,11 +75,10 @@ const NewCalendar = () => {
                 ...event.recurrence,
                 endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
               } : undefined,
-              isAIGenerated: true,
-              calendarId: newCalendar.id
+              isAIGenerated: true
             };
 
-            addEvent(eventWithDates);
+            addEvent(newCalendar.id, eventWithDates);
             addedCount++;
           } catch (eventError) {
             console.error('Error adding AI-generated event:', eventError, event);
