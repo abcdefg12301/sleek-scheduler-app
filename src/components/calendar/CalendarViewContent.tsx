@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar, Event as CalendarEvent } from '@/types';
 import MonthlyCalendar from '@/components/MonthlyCalendar';
@@ -103,7 +102,7 @@ const CalendarViewContent = ({
     }
     
     try {
-      deleteEvent(selectedEvent);
+      deleteEvent(calendar.id, selectedEvent.id);
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -124,7 +123,7 @@ const CalendarViewContent = ({
       // Delete based on mode
       if (mode === 'single') {
         // For single occurrence deletion
-        deleteEvent(selectedEvent);
+        deleteEvent(calendar.id, selectedEvent.id);
       } else {
         // For 'future' or 'all' modes
         deleteRecurringEvent(calendar.id, eventId, mode === 'all');
