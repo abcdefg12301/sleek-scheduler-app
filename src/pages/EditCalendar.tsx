@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,11 @@ import { Form } from '@/components/ui/form';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
-import { SleepSchedule } from '@/types';
+import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
+import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface FormData {
   name: string;
@@ -21,7 +24,8 @@ interface FormData {
 const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, updateCalendar } = useCalendarStore();
+  const { calendars, updateCalendar, addEvent } = useCalendarStore();
+  const [aiGeneratedEvents, setAiGeneratedEvents] = React.useState<Event[]>([]);
   
   const calendar = calendars.find(cal => cal.id === id);
   
@@ -51,9 +55,33 @@ const EditCalendar = () => {
         showHolidays: data.showHolidays
       });
       
+      // Add any AI generated events to the calendar
+      if (aiGeneratedEvents.length > 0) {
+        aiGeneratedEvents.forEach(event => {
+          // Add calendarId to the event if it doesn't have one
+          const eventWithCalendarId = {
+            ...event,
+            calendarId: id,
+          };
+          addEvent(eventWithCalendarId);
+        });
+        
+        toast.success(`Added ${aiGeneratedEvents.length} AI generated events to the calendar`);
+        setAiGeneratedEvents([]);
+      }
+      
       toast.success('Calendar updated successfully');
       navigate(`/calendar/${id}`);
     }
+  };
+  
+  const handleEventsGenerated = (events: Event[]) => {
+    // Store generated events to be added upon form submission
+    const eventsWithCalendarId = events.map(event => ({
+      ...event,
+      calendarId: id || '',
+    }));
+    setAiGeneratedEvents(eventsWithCalendarId);
   };
   
   function generateTimeOptions() {
@@ -99,16 +127,43 @@ const EditCalendar = () => {
         </p>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <CalendarBasicDetails form={form} />
-          <CalendarFeatures form={form} timeOptions={timeOptions} />
+      <Tabs defaultValue="details">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="details">Calendar Details</TabsTrigger>
+          <TabsTrigger value="ai-generator">AI Calendar Generator</TabsTrigger>
+        </TabsList>
 
-          <div className="flex justify-end">
-            <Button type="submit">Save Changes</Button>
+        <TabsContent value="details">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <CalendarBasicDetails form={form} />
+              <CalendarFeatures form={form} timeOptions={timeOptions} />
+
+              <div className="flex justify-end">
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
+          </Form>
+        </TabsContent>
+        
+        <TabsContent value="ai-generator">
+          <AICalendarGenerator 
+            standalone={false} 
+            onEventsGenerated={handleEventsGenerated}
+          />
+          
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={aiGeneratedEvents.length === 0}
+            >
+              {aiGeneratedEvents.length > 0 
+                ? `Save & Add ${aiGeneratedEvents.length} Event${aiGeneratedEvents.length !== 1 ? 's' : ''}` 
+                : 'Generate Events First'}
+            </Button>
           </div>
-        </form>
-      </Form>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

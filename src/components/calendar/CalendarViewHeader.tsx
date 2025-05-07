@@ -36,18 +36,20 @@ const CalendarViewHeader = ({
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between w-full">
-        <CalendarHeaderCentered
-          calendar={calendar}
-          currentDate={currentDate}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          handlePrevPeriod={handlePrevPeriod}
-          handleNextPeriod={handleNextPeriod}
-          handleTodayClick={handleTodayClick}
-          navigateToDashboard={() => navigate('/')}
-        />
+        <div className="flex-grow">
+          <CalendarHeaderCentered
+            calendar={calendar}
+            currentDate={currentDate}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            handlePrevPeriod={handlePrevPeriod}
+            handleNextPeriod={handleNextPeriod}
+            handleTodayClick={handleTodayClick}
+            navigateToDashboard={() => navigate('/')}
+          />
+        </div>
         
-        <div className="flex items-center space-x-4 ml-auto">
+        <div className="flex items-center space-x-3">
           <Button
             onClick={handleNewEvent}
             size="icon"
