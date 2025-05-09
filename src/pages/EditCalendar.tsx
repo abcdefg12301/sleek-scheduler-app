@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,10 @@ import { Form } from '@/components/ui/form';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
-import { SleepSchedule } from '@/types';
+import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
+import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 
 interface FormData {
   name: string;
@@ -21,7 +23,7 @@ interface FormData {
 const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, updateCalendar } = useCalendarStore();
+  const { calendars, updateCalendar, addEvent } = useCalendarStore();
   
   const calendar = calendars.find(cal => cal.id === id);
   
@@ -75,6 +77,25 @@ const EditCalendar = () => {
     const hour = h % 12 || 12;
     return `${hour}:${minutes} ${period}`;
   }
+
+  const handleAIGeneratedEvents = (events: Event[]) => {
+    if (!id || !events.length) return;
+    
+    try {
+      events.forEach(event => {
+        // Prepare event data by omitting id and calendarId
+        const { id: eventId, calendarId, ...eventData } = event;
+        
+        // Add the event to the calendar
+        addEvent(id, eventData);
+      });
+      
+      toast.success(`Added ${events.length} AI-generated events to your calendar`);
+    } catch (error) {
+      console.error('Failed to add AI-generated events:', error);
+      toast.error('Failed to add some events');
+    }
+  };
   
   const timeOptions = generateTimeOptions();
   
@@ -109,6 +130,17 @@ const EditCalendar = () => {
           </div>
         </form>
       </Form>
+
+      <div className="mt-10">
+        <h2 className="text-xl font-bold mb-4">Generate Events with AI</h2>
+        <p className="text-muted-foreground mb-4">
+          Let AI create events for your calendar based on your description.
+        </p>
+        <AICalendarGenerator 
+          standalone={false} 
+          onEventsGenerated={handleAIGeneratedEvents}
+        />
+      </div>
     </div>
   );
 };

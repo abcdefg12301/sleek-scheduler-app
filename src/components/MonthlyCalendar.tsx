@@ -94,7 +94,7 @@ const MonthlyCalendar = ({
   
   return (
     <div>
-      <div className="calendar-grid mb-1">
+      <div className="grid grid-cols-7 mb-1">
         {daysOfWeek.map((day) => (
           <div key={day} className="text-center font-medium py-2 text-sm">
             {day}
@@ -102,7 +102,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="calendar-grid">
+      <div className="grid grid-cols-7 grid-rows-6 h-[600px]">
         {days.map((day) => (
           <Day
             key={day.toString()}
