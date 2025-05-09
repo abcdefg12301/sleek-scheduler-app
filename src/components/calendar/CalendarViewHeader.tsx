@@ -47,7 +47,7 @@ const CalendarViewHeader = ({
           navigateToDashboard={() => navigate('/')}
         />
         
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleNewEvent}
             size="icon"

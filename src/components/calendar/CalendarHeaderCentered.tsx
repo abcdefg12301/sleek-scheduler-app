@@ -41,7 +41,7 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center justify-between w-full gap-4">
+    <div className="flex items-center justify-between w-full">
       {/* Left section: Home button & calendar title */}
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -61,21 +61,16 @@ const CalendarHeaderCentered = ({
           </TooltipContent>
         </Tooltip>
         
-        <div className="min-w-0">
+        <div className="min-w-0 mr-4">
           <h1 className="text-xl font-semibold truncate" title={calendar.name}>{calendar.name}</h1>
           <p className="text-muted-foreground text-sm truncate" title={calendar.description}>{calendar.description}</p>
         </div>
       </div>
       
-      {/* Center section: Navigation controls */}
-      <div className="flex items-center gap-6 justify-end">
-        {/* Month/Year display moved to left side of the navigation controls */}
-        <span className="text-lg font-medium whitespace-nowrap mr-3">
-          {getFormattedDateRange()}
-        </span>
-        
+      {/* Center/right section: Navigation controls & date display */}
+      <div className="flex items-center gap-8">
         {/* Navigation controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button 
             onClick={handlePrevPeriod} 
             size="icon" 
@@ -104,8 +99,13 @@ const CalendarHeaderCentered = ({
           </Button>
         </div>
         
+        {/* Date display */}
+        <div className="text-lg font-medium whitespace-nowrap min-w-[160px]">
+          {getFormattedDateRange()}
+        </div>
+        
         {/* View mode selector */}
-        <div className="flex rounded-md border border-input overflow-hidden ml-6">
+        <div className="flex rounded-md border border-input overflow-hidden">
           <Button
             type="button"
             variant={viewMode === 'day' ? 'default' : 'ghost'}

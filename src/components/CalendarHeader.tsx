@@ -19,20 +19,15 @@ const CalendarHeader = ({
   viewMode = 'month',
 }: CalendarHeaderProps) => {
   return (
-    <div className="grid grid-cols-3 items-center mb-6 max-w-screen-lg mx-auto">
-      <div className="flex justify-start">
+    <div className="flex items-center justify-between mb-6">
+      <div>
         <h2 className="text-2xl font-bold">{formatMonthYear(currentDate)}</h2>
       </div>
-      
-      <div className="flex justify-center">
-        {/* Center section - empty for alignment */}
-      </div>
-      
-      <div className="flex items-center justify-end gap-4">
-        <Button variant="outline" onClick={onToday} size="sm">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={onToday}>
           Today
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={onPrevMonth}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
