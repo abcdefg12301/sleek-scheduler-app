@@ -35,13 +35,14 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border cursor-pointer',
+        'calendar-day border border-border relative',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
-        isToday(day) && 'today'
+        isToday(day) && 'today',
+        'hover:bg-muted/50 cursor-pointer transition-colors'
       )}
       onClick={handleDayClick}
     >
-      <div className="flex justify-between mb-1">
+      <div className="flex justify-between p-1">
         <div
           className={cn(
             'day-number text-xs font-medium',
@@ -51,11 +52,11 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto max-h-[80%]">
+      <div className="overflow-y-auto max-h-[80%] px-1 pb-1">
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
-            className="calendar-event text-xs truncate"
+            className="calendar-event text-xs mb-1 p-1 rounded truncate"
             style={{ backgroundColor: event.isHoliday ? '#60A5FA' : (event.color || '#8B5CF6'), color: 'white' }}
             onClick={(e) => {
               e.stopPropagation();
@@ -94,7 +95,7 @@ const MonthlyCalendar = ({
   
   return (
     <div>
-      <div className="calendar-grid mb-1">
+      <div className="grid grid-cols-7 mb-1">
         {daysOfWeek.map((day) => (
           <div key={day} className="text-center font-medium py-2 text-sm">
             {day}
@@ -102,7 +103,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="calendar-grid">
+      <div className="grid grid-cols-7 auto-rows-fr">
         {days.map((day) => (
           <Day
             key={day.toString()}

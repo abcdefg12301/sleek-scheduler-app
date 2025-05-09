@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,11 @@ import { Form } from '@/components/ui/form';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
-import { SleepSchedule } from '@/types';
+import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
+import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
+import { useState } from 'react';
 
 interface FormData {
   name: string;
@@ -21,7 +24,8 @@ interface FormData {
 const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, updateCalendar } = useCalendarStore();
+  const { calendars, updateCalendar, addEvent } = useCalendarStore();
+  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
   
   const calendar = calendars.find(cal => cal.id === id);
   
@@ -42,6 +46,10 @@ const EditCalendar = () => {
     }
   }, [calendar, id, navigate]);
   
+  const handleAiEventsGenerated = (events: Event[]) => {
+    setAiGeneratedEvents(events);
+  };
+  
   const onSubmit = (data: FormData) => {
     if (id) {
       updateCalendar(id, {
@@ -50,6 +58,35 @@ const EditCalendar = () => {
         color: data.color,
         showHolidays: data.showHolidays
       });
+      
+      // Add all AI-generated events to this calendar
+      if (aiGeneratedEvents.length > 0) {
+        let addedCount = 0;
+        
+        for (const event of aiGeneratedEvents) {
+          try {
+            const eventWithDates = {
+              ...event,
+              start: new Date(event.start),
+              end: new Date(event.end),
+              recurrence: event.recurrence ? {
+                ...event.recurrence,
+                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+              } : undefined,
+              isAIGenerated: true
+            };
+
+            addEvent(id, eventWithDates);
+            addedCount++;
+          } catch (eventError) {
+            console.error('Error adding AI-generated event:', eventError, event);
+          }
+        }
+        
+        if (addedCount > 0) {
+          toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+        }
+      }
       
       toast.success('Calendar updated successfully');
       navigate(`/calendar/${id}`);
@@ -102,6 +139,13 @@ const EditCalendar = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CalendarBasicDetails form={form} />
+          
+          <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
+          <AICalendarGenerator 
+            standalone={true}
+            onEventsGenerated={handleAiEventsGenerated}
+          />
+          
           <CalendarFeatures form={form} timeOptions={timeOptions} />
 
           <div className="flex justify-end">

@@ -68,9 +68,14 @@ const CalendarHeaderCentered = ({
       </div>
       
       {/* Center/right section: Navigation controls & date display */}
-      <div className="flex items-center gap-8">
-        {/* Navigation controls */}
-        <div className="flex items-center gap-1">
+      <div className="flex items-center">
+        {/* Date display - moved to the left */}
+        <div className="text-lg font-medium whitespace-nowrap min-w-[160px] mr-6">
+          {getFormattedDateRange()}
+        </div>
+        
+        {/* Navigation controls - moved slightly to the right */}
+        <div className="flex items-center gap-1 mr-6">
           <Button 
             onClick={handlePrevPeriod} 
             size="icon" 
@@ -99,13 +104,8 @@ const CalendarHeaderCentered = ({
           </Button>
         </div>
         
-        {/* Date display */}
-        <div className="text-lg font-medium whitespace-nowrap min-w-[160px]">
-          {getFormattedDateRange()}
-        </div>
-        
-        {/* View mode selector */}
-        <div className="flex rounded-md border border-input overflow-hidden">
+        {/* View mode selector - moved to the left */}
+        <div className="flex rounded-md border border-input overflow-hidden mr-6">
           <Button
             type="button"
             variant={viewMode === 'day' ? 'default' : 'ghost'}
