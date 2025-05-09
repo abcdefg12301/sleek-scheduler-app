@@ -123,6 +123,18 @@ const EditCalendar = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CalendarBasicDetails form={form} />
+          
+          <div className="mt-10 mb-6">
+            <h2 className="text-xl font-bold mb-4">Generate Events with AI</h2>
+            <p className="text-muted-foreground mb-4">
+              Let AI create events for your calendar based on your description.
+            </p>
+            <AICalendarGenerator 
+              standalone={false} 
+              onEventsGenerated={handleAIGeneratedEvents}
+            />
+          </div>
+          
           <CalendarFeatures form={form} timeOptions={timeOptions} />
 
           <div className="flex justify-end">
@@ -130,17 +142,6 @@ const EditCalendar = () => {
           </div>
         </form>
       </Form>
-
-      <div className="mt-10">
-        <h2 className="text-xl font-bold mb-4">Generate Events with AI</h2>
-        <p className="text-muted-foreground mb-4">
-          Let AI create events for your calendar based on your description.
-        </p>
-        <AICalendarGenerator 
-          standalone={false} 
-          onEventsGenerated={handleAIGeneratedEvents}
-        />
-      </div>
     </div>
   );
 };

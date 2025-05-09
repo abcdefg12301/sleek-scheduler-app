@@ -35,7 +35,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'relative w-full h-full border-t border-l border-border p-1',
+        'calendar-day relative h-full border-t border-l border-border p-1 hover:bg-muted/50 transition-colors',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today bg-orange-100 dark:bg-orange-900/20',
         isSelected && 'bg-primary/10'
@@ -97,7 +97,7 @@ const MonthlyCalendar = ({
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   return (
-    <div className="calendar-container w-full">
+    <div className="calendar-container w-full h-full">
       <div className="grid grid-cols-7 mb-1">
         {daysOfWeek.map((day) => (
           <div key={day} className="text-center font-medium py-2 text-sm">
@@ -106,10 +106,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div 
-        className="grid grid-cols-7 auto-rows-fr border-r border-b border-border" 
-        style={{ height: '600px' }}
-      >
+      <div className="grid grid-cols-7 grid-rows-6 border-r border-b border-border h-full">
         {days.map((day) => (
           <Day
             key={day.toString()}
