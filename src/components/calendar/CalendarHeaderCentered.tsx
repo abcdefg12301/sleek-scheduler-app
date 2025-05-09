@@ -41,9 +41,9 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center justify-between w-full">
+    <div className="flex items-center w-full">
       {/* Left section: Home button & calendar title */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
@@ -67,15 +67,17 @@ const CalendarHeaderCentered = ({
         </div>
       </div>
       
-      {/* Center/right section: Navigation controls & date display */}
-      <div className="flex items-center">
-        {/* Date display - moved to the left */}
-        <div className="text-lg font-medium whitespace-nowrap min-w-[160px] mr-6">
+      {/* Center section: Date display properly centered with calendar */}
+      <div className="flex-1 flex justify-center">
+        <div className="text-lg font-medium whitespace-nowrap">
           {getFormattedDateRange()}
         </div>
-        
-        {/* Navigation controls - moved slightly to the right */}
-        <div className="flex items-center gap-1 mr-6">
+      </div>
+      
+      {/* Right section: Controls with proper spacing */}
+      <div className="flex-1 flex items-center justify-end gap-6">
+        {/* Navigation controls */}
+        <div className="flex items-center gap-1">
           <Button 
             onClick={handlePrevPeriod} 
             size="icon" 
@@ -104,8 +106,8 @@ const CalendarHeaderCentered = ({
           </Button>
         </div>
         
-        {/* View mode selector - moved to the left */}
-        <div className="flex rounded-md border border-input overflow-hidden mr-6">
+        {/* View mode selector */}
+        <div className="flex rounded-md border border-input overflow-hidden">
           <Button
             type="button"
             variant={viewMode === 'day' ? 'default' : 'ghost'}
