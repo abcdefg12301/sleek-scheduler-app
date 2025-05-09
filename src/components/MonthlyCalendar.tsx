@@ -35,7 +35,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'border border-border relative h-full',
+        'calendar-day border border-border relative',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/50 cursor-pointer transition-colors'
@@ -94,7 +94,7 @@ const MonthlyCalendar = ({
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   return (
-    <div className="flex flex-col h-full">
+    <div>
       <div className="grid grid-cols-7 mb-1">
         {daysOfWeek.map((day) => (
           <div key={day} className="text-center font-medium py-2 text-sm">
@@ -103,7 +103,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 flex-grow" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
+      <div className="grid grid-cols-7 auto-rows-fr">
         {days.map((day) => (
           <Day
             key={day.toString()}

@@ -46,6 +46,28 @@ const CalendarViewHeader = ({
           handleTodayClick={handleTodayClick}
           navigateToDashboard={() => navigate('/')}
         />
+        
+        <div className="flex items-center gap-6">
+          <Button
+            onClick={handleNewEvent}
+            size="icon"
+            className="rounded-full"
+            style={{
+              backgroundColor: calendar.color || undefined,
+              color: calendar.color ? '#ffffff' : undefined
+            }}
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+          
+          <CalendarSettings 
+            calendarId={calendar.id}
+            showHolidays={calendar.showHolidays}
+            handleHolidaysToggle={handleHolidaysToggle}
+            showNewEventButton={false}
+            onNewEvent={handleNewEvent}
+          />
+        </div>
       </div>
     </div>
   );
