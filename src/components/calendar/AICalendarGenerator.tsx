@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar, Bot } from 'lucide-react';
@@ -17,16 +17,30 @@ import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader'
 interface AICalendarGeneratorProps {
   standalone?: boolean;
   onEventsGenerated?: (events: Event[]) => void;
+  calendarId?: string; // Add calendarId for fetching existing events
+  existingEvents?: Event[]; // Allow passing existing events
 }
 
-const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalendarGeneratorProps) => {
+const AICalendarGenerator = ({ 
+  standalone = false, 
+  onEventsGenerated,
+  calendarId,
+  existingEvents = [] 
+}: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
+  const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+
+  // Initialize with existing events if they're provided
+  useEffect(() => {
+    if (existingEvents && existingEvents.length > 0) {
+      setGeneratedEvents([...existingEvents]);
+    }
+  }, [existingEvents]);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -49,7 +63,7 @@ const AICalendarGenerator = ({ standalone = false, onEventsGenerated }: AICalend
     newEvents[editingEvent.index] = { 
       ...updatedEvent,
       id: editingEvent.event.id || '',
-      calendarId: editingEvent.event.calendarId || '',
+      calendarId: editingEvent.event.calendarId || calendarId || '',
       isAIGenerated: true
     };
 

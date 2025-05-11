@@ -38,7 +38,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
         'calendar-day border border-border relative',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
-        'hover:bg-muted/50 cursor-pointer transition-colors'
+        'hover:bg-muted/70 cursor-pointer transition-colors' // Enhanced hover effect
       )}
       onClick={handleDayClick}
     >
@@ -103,7 +103,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 auto-rows-fr">
+      <div className="grid grid-cols-7 grid-rows-[auto] auto-rows-fr">
         {days.map((day) => (
           <Day
             key={day.toString()}

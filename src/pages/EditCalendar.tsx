@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
@@ -28,6 +28,16 @@ const EditCalendar = () => {
   const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
   
   const calendar = calendars.find(cal => cal.id === id);
+  
+  // Filter calendar events to find AI-generated events
+  const existingAiEvents = calendar?.events.filter(event => event.isAIGenerated) || [];
+  
+  useEffect(() => {
+    // Initialize AI events from existing calendar events
+    if (calendar) {
+      setAiGeneratedEvents(existingAiEvents);
+    }
+  }, [calendar?.id]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -59,32 +69,42 @@ const EditCalendar = () => {
         showHolidays: data.showHolidays
       });
       
-      // Add all AI-generated events to this calendar
-      if (aiGeneratedEvents.length > 0) {
-        let addedCount = 0;
+      // Remove all existing AI-generated events
+      if (calendar) {
+        const nonAiEvents = calendar.events.filter(event => !event.isAIGenerated);
         
-        for (const event of aiGeneratedEvents) {
-          try {
-            const eventWithDates = {
-              ...event,
-              start: new Date(event.start),
-              end: new Date(event.end),
-              recurrence: event.recurrence ? {
-                ...event.recurrence,
-                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
-              } : undefined,
-              isAIGenerated: true
-            };
+        // Update calendar events to only include non-AI events
+        updateCalendar(id, {
+          events: nonAiEvents
+        });
+        
+        // Add all new AI-generated events to this calendar
+        if (aiGeneratedEvents.length > 0) {
+          let addedCount = 0;
+          
+          for (const event of aiGeneratedEvents) {
+            try {
+              const eventWithDates = {
+                ...event,
+                start: new Date(event.start),
+                end: new Date(event.end),
+                recurrence: event.recurrence ? {
+                  ...event.recurrence,
+                  endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+                } : undefined,
+                isAIGenerated: true
+              };
 
-            addEvent(id, eventWithDates);
-            addedCount++;
-          } catch (eventError) {
-            console.error('Error adding AI-generated event:', eventError, event);
+              addEvent(id, eventWithDates);
+              addedCount++;
+            } catch (eventError) {
+              console.error('Error adding AI-generated event:', eventError, event);
+            }
           }
-        }
-        
-        if (addedCount > 0) {
-          toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+          
+          if (addedCount > 0) {
+            toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+          }
         }
       }
       
@@ -144,6 +164,8 @@ const EditCalendar = () => {
           <AICalendarGenerator 
             standalone={true}
             onEventsGenerated={handleAiEventsGenerated}
+            calendarId={id}
+            existingEvents={existingAiEvents}
           />
           
           <CalendarFeatures form={form} timeOptions={timeOptions} />
