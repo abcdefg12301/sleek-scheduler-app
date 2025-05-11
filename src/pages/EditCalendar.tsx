@@ -11,7 +11,6 @@ import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
-import { useState } from 'react';
 
 interface FormData {
   name: string;
