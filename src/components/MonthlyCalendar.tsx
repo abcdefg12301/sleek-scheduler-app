@@ -38,7 +38,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
         'calendar-day border border-border relative',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
-        'hover:bg-muted/70 cursor-pointer transition-colors' // Enhanced hover effect
+        'hover:bg-muted/90 cursor-pointer transition-colors' // Darker hover effect
       )}
       onClick={handleDayClick}
     >

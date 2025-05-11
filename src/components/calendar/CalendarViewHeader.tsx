@@ -47,7 +47,7 @@ const CalendarViewHeader = ({
           navigateToDashboard={() => navigate('/')}
         />
         
-        <div className="flex items-center gap-8"> {/* Increased spacing to 8px (gap-8) */}
+        <div className="flex items-center gap-8"> {/* Using gap-8 for consistent spacing */}
           <Button
             onClick={handleNewEvent}
             size="icon"

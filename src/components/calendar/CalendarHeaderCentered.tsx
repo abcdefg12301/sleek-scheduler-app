@@ -41,7 +41,7 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center justify-between w-full">
+    <div className="flex items-center w-full">
       {/* Left section: Home button & calendar title */}
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -67,14 +67,14 @@ const CalendarHeaderCentered = ({
         </div>
       </div>
       
-      {/* Center/right section: Navigation controls & date display */}
-      <div className="flex items-center">
-        {/* Date display - moved to the left side */}
+      {/* Center/right section: Date display & Navigation controls */}
+      <div className="flex items-center justify-start ml-8">
+        {/* Date display - positioned to align with calendar */}
         <div className="text-lg font-medium whitespace-nowrap mr-8">
           {getFormattedDateRange()}
         </div>
         
-        {/* Navigation controls - increased spacing */}
+        {/* Navigation controls - with 8px spacing */}
         <div className="flex items-center gap-2 mr-8">
           <Button 
             onClick={handlePrevPeriod} 
@@ -104,7 +104,7 @@ const CalendarHeaderCentered = ({
           </Button>
         </div>
         
-        {/* View mode selector - with increased spacing */}
+        {/* View mode selector - with 8px spacing */}
         <div className="flex rounded-md border border-input overflow-hidden mr-8">
           <Button
             type="button"
