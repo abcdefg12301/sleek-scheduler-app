@@ -122,6 +122,7 @@ const CalendarViewContent = ({
       deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
         selectedEvent.start : new Date(selectedEvent.start));
       
+      // Close all dialogs and clear selection
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -194,14 +195,22 @@ const CalendarViewContent = ({
         handleDeleteEvent={handleDeleteEvent}
       />
       
-      {/* Recurring Event Delete Dialog */}
+      {/* Recurring Event Delete Dialog - Fixed to prevent double-click issue */}
       {selectedEvent && (
         <RecurringEventDeleteDialog 
           isOpen={isRecurringDeleteDialogOpen}
-          onClose={() => setIsRecurringDeleteDialogOpen(false)}
-          onDeleteSingle={() => handleDeleteRecurringEvent('single')}
-          onDeleteAllFuture={() => handleDeleteRecurringEvent('future')}
-          onDeleteAll={() => handleDeleteRecurringEvent('all')}
+          onClose={() => {
+            setIsRecurringDeleteDialogOpen(false);
+          }}
+          onDeleteSingle={() => {
+            handleDeleteRecurringEvent('single');
+          }}
+          onDeleteAllFuture={() => {
+            handleDeleteRecurringEvent('future');
+          }}
+          onDeleteAll={() => {
+            handleDeleteRecurringEvent('all');
+          }}
           eventTitle={selectedEvent.title}
           eventDate={selectedEvent.start instanceof Date ? selectedEvent.start : new Date(selectedEvent.start)}
         />

@@ -28,15 +28,21 @@ const EditCalendar = () => {
   
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Filter calendar events to find AI-generated events
-  const existingAiEvents = calendar?.events.filter(event => event.isAIGenerated) || [];
+  // Filter calendar events to find AI-generated events specific to this calendar
+  const existingAiEvents = calendar?.events.filter(event => 
+    event.isAIGenerated && event.calendarId === id
+  ) || [];
   
   useEffect(() => {
-    // Initialize AI events from existing calendar events
-    if (calendar) {
-      setAiGeneratedEvents(existingAiEvents);
+    // Initialize AI events from existing calendar events specific to this calendar
+    if (calendar && id) {
+      const calendarSpecificAiEvents = existingAiEvents.map(event => ({
+        ...event,
+        calendarId: id
+      }));
+      setAiGeneratedEvents(calendarSpecificAiEvents);
     }
-  }, [calendar?.id]);
+  }, [calendar?.id, id]);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -56,8 +62,13 @@ const EditCalendar = () => {
   }, [calendar, id, navigate]);
   
   const handleAiEventsGenerated = (events: Event[]) => {
-    // Just update local state for preview, don't save to calendar yet
-    setAiGeneratedEvents(events);
+    // Ensure all events are properly tagged with the current calendar ID
+    const eventsWithCalendarId = events.map(event => ({
+      ...event,
+      calendarId: id || '',
+      isAIGenerated: true
+    }));
+    setAiGeneratedEvents(eventsWithCalendarId);
   };
   
   const onSubmit = (data: FormData) => {
@@ -69,9 +80,11 @@ const EditCalendar = () => {
         showHolidays: data.showHolidays
       });
       
-      // Remove all existing AI-generated events
+      // Remove all existing AI-generated events for this specific calendar
       if (calendar) {
-        const nonAiEvents = calendar.events.filter(event => !event.isAIGenerated);
+        const nonAiEvents = calendar.events.filter(event => 
+          !event.isAIGenerated || event.calendarId !== id
+        );
         
         // Update calendar events to only include non-AI events
         updateCalendar(id, {
@@ -92,7 +105,8 @@ const EditCalendar = () => {
                   ...event.recurrence,
                   endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
                 } : undefined,
-                isAIGenerated: true
+                isAIGenerated: true,
+                calendarId: id
               };
 
               addEvent(id, eventWithDates);

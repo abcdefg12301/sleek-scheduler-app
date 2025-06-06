@@ -17,8 +17,8 @@ import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader'
 interface AICalendarGeneratorProps {
   standalone?: boolean;
   onEventsGenerated?: (events: Event[]) => void;
-  calendarId?: string; // Add calendarId for fetching existing events
-  existingEvents?: Event[]; // Allow passing existing events
+  calendarId?: string;
+  existingEvents?: Event[];
 }
 
 const AICalendarGenerator = ({ 
@@ -29,18 +29,21 @@ const AICalendarGenerator = ({
 }: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
+  const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // Initialize with existing events if they're provided
+  // Initialize with existing events only on mount and when calendarId changes
   useEffect(() => {
-    if (existingEvents && existingEvents.length > 0) {
+    if (calendarId && existingEvents && existingEvents.length > 0) {
       setGeneratedEvents([...existingEvents]);
+    } else if (!calendarId) {
+      // For standalone mode, start with empty events
+      setGeneratedEvents([]);
     }
-  }, [existingEvents]);
+  }, [calendarId]);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -90,11 +93,15 @@ const AICalendarGenerator = ({
     console.log('Using previous events for context:', generatedEvents.length > 0 ? `${generatedEvents.length} events` : 'None');
 
     try {
-      // Pass existing generated events to provide context to the AI
+      // Pass only the current calendar's existing events to provide context
+      const contextEvents = calendarId ? generatedEvents.filter(event => 
+        event.calendarId === calendarId || !event.calendarId
+      ) : generatedEvents;
+
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
         body: { 
           calendarDetails,
-          previousEvents: generatedEvents 
+          previousEvents: contextEvents 
         },
       });
 
@@ -119,12 +126,12 @@ const AICalendarGenerator = ({
       // Process received events to ensure all dates are properly parsed
       const processedEvents = data.events.map((event: any) => {
         try {
-          // Create a normalized event with proper date objects - without timezone considerations
           return {
             ...event,
-            // Create proper Date objects from ISO strings
             start: new Date(event.start),
-            end: new Date(event.end)
+            end: new Date(event.end),
+            calendarId: calendarId || '',
+            isAIGenerated: true
           };
         } catch (err) {
           console.error('Error processing event date:', err, event);
@@ -134,7 +141,6 @@ const AICalendarGenerator = ({
 
       console.log('Processed events from AI:', processedEvents);
       
-      // Show debug info based on the source of events
       if (data.sourceType === 'fallback') {
         const errorMessage = data.error || 'Unknown issue with AI generation';
         setDebugInfo(`AI generation failed: ${errorMessage}. Using fallback events.`);
@@ -206,13 +212,14 @@ const AICalendarGenerator = ({
             </Button>
             
             {generatedEvents.length > 0 && (
-              <Button 
-                variant="outline"
-                onClick={() => setIsPreviewOpen(true)}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                Preview Events ({generatedEvents.length})
-              </Button>
+              <EventsPreviewDialog
+                isOpen={isPreviewOpen}
+                setIsOpen={setIsPreviewOpen}
+                events={generatedEvents}
+                onDeleteEvent={handleDeleteEvent}
+                onEditEvent={handleEditEvent}
+                clearAllEvents={clearAllEvents}
+              />
             )}
           </div>
           
@@ -236,15 +243,6 @@ const AICalendarGenerator = ({
               {generatedEvents.length} events generated. View or edit them using the "Preview Events" button.
             </div>
           )}
-          
-          <EventsPreviewDialog
-            isOpen={isPreviewOpen}
-            setIsOpen={setIsPreviewOpen}
-            events={generatedEvents}
-            onDeleteEvent={handleDeleteEvent}
-            onEditEvent={handleEditEvent}
-            clearAllEvents={clearAllEvents}
-          />
           
           <EventEditingDialog
             editingEvent={editingEvent}

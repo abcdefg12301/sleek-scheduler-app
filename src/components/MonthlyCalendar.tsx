@@ -35,10 +35,10 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border relative w-full h-24', // Fixed height for consistency
+        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
-        'hover:bg-muted/90 cursor-pointer transition-colors'
+        'hover:bg-muted/90'
       )}
       onClick={handleDayClick}
     >
@@ -52,7 +52,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto max-h-[80%] px-1 pb-1">
+      <div className="overflow-y-auto flex-1 px-1 pb-1">
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
