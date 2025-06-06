@@ -108,6 +108,8 @@
   padding: 0.5rem;
   position: relative;
   transition: all 0.2s ease;
+  min-height: 6rem; /* Consistent minimum height */
+  height: 6rem; /* Fixed height for all cells */
 }
 
 .calendar-day:hover {

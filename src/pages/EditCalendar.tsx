@@ -56,6 +56,7 @@ const EditCalendar = () => {
   }, [calendar, id, navigate]);
   
   const handleAiEventsGenerated = (events: Event[]) => {
+    // Just update local state for preview, don't save to calendar yet
     setAiGeneratedEvents(events);
   };
   
@@ -161,7 +162,7 @@ const EditCalendar = () => {
           
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
           <AICalendarGenerator 
-            standalone={true}
+            standalone={false}
             onEventsGenerated={handleAiEventsGenerated}
             calendarId={id}
             existingEvents={existingAiEvents}

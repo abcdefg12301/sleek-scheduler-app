@@ -41,7 +41,7 @@ const CalendarHeaderCentered = ({
   };
   
   return (
-    <div className="flex items-center w-full">
+    <div className="flex items-center justify-between w-full">
       {/* Left section: Home button & calendar title */}
       <div className="flex items-center gap-2">
         <Tooltip>
@@ -67,45 +67,45 @@ const CalendarHeaderCentered = ({
         </div>
       </div>
       
-      {/* Center/right section: Date display & Navigation controls */}
-      <div className="flex items-center justify-start ml-8">
-        {/* Date display - positioned to align with calendar */}
-        <div className="text-lg font-medium whitespace-nowrap mr-8">
+      {/* Center section: Date display - positioned to align with calendar center */}
+      <div className="absolute left-1/2 transform -translate-x-1/2">
+        <div className="text-lg font-medium whitespace-nowrap">
           {getFormattedDateRange()}
         </div>
+      </div>
+      
+      {/* Right section: Navigation controls & View mode selector */}
+      <div className="flex items-center gap-2">
+        {/* Navigation controls */}
+        <Button 
+          onClick={handlePrevPeriod} 
+          size="icon" 
+          variant="outline"
+          className="h-9 w-9"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
         
-        {/* Navigation controls - with 8px spacing */}
-        <div className="flex items-center gap-2 mr-8">
-          <Button 
-            onClick={handlePrevPeriod} 
-            size="icon" 
-            variant="outline"
-            className="h-9 w-9"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <Button 
-            onClick={handleTodayClick} 
-            variant="outline"
-            size="sm"
-            className="h-9"
-          >
-            Today
-          </Button>
-          
-          <Button 
-            onClick={handleNextPeriod} 
-            size="icon" 
-            variant="outline"
-            className="h-9 w-9"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          onClick={handleTodayClick} 
+          variant="outline"
+          size="sm"
+          className="h-9"
+        >
+          Today
+        </Button>
         
-        {/* View mode selector - with 8px spacing */}
-        <div className="flex rounded-md border border-input overflow-hidden mr-8">
+        <Button 
+          onClick={handleNextPeriod} 
+          size="icon" 
+          variant="outline"
+          className="h-9 w-9"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        
+        {/* View mode selector */}
+        <div className="flex rounded-md border border-input overflow-hidden ml-2">
           <Button
             type="button"
             variant={viewMode === 'day' ? 'default' : 'ghost'}
