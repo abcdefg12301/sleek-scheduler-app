@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+import { processAIGeneratedEvents, createDefaultEvent } from "./processEvents.ts";
+import { buildSystemPrompt } from "./buildSystemPrompt.ts";
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -82,93 +85,8 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
-    // Create a context from previous events if any
-    let previousEventsContext = "";
-    if (previousEvents && previousEvents.length > 0) {
-      previousEventsContext = `\n\nYou MUST be aware of and avoid conflicts with the user's existing schedule:\n`;
-      
-      // Sort events by start time to make them easier to process
-      const sortedEvents = [...previousEvents].sort((a, b) => {
-        const startA = new Date(a.start).getTime();
-        const startB = new Date(b.start).getTime();
-        return startA - startB;
-      });
-      
-      // Format the events in a more structured way
-      sortedEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
-        // Handle date formatting more consistently without time zones
-        const startDate = new Date(event.start);
-        const endDate = new Date(event.end);
-
-        // Format as simple time for consistency
-        const formatSimpleDate = (date: Date) => {
-          return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          });
-        };
-        
-        const formatSimpleTime = (date: Date) => {
-          return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-        };
-        
-        previousEventsContext += `${index + 1}. "${event.title}" on ${formatSimpleDate(startDate)} from ${formatSimpleTime(startDate)} to ${formatSimpleTime(endDate)}`;
-        if (event.recurrence) {
-          previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
-        }
-        previousEventsContext += "\n";
-      });
-      
-      previousEventsContext += "\nYou MUST avoid scheduling events that overlap with these existing events.";
-    }
-
-    // ---- UPDATED SYSTEM PROMPT WITH YOUR REQUIREMENTS ----
-    const systemPrompt = `
-You are a friendly, detail-oriented AI calendar assistant.
-
-DEFAULT BEHAVIOR:
-- Interpret the user's natural language as literally as possible.
-- Unless otherwise specified, only create exactly what the user describes, as a single event or single block of events for literal requests. Do not break down or generate extra sessions.
-
-WHEN TO CREATE A PLAN/BREAKDOWN:
-- If (and ONLY if) the user's request asks for a "plan", "schedule", "routine", "breakdown", "revision plan", "study plan", "workout plan", "series", "calendar", or other multi-session/multi-step wording, then break the task into multiple events spread over days.
-
-WHEN BREAKING DOWN:
-- ALWAYS avoid scheduling conflicts with BOTH the user's *existing* events (provided below) AND with any other events you generate in this breakdown (unless strictly unavoidable!).
-- For tasks that are naturally repetitive (like study, practice, workout, sleep), prefer identical event titles for each repetition (e.g., "Study", "Workout", etc).
-- Only create distinct/specific titles if the user *explicitly* specifies different subjects or names (e.g., "Study Biology" and "Study Math").
-- Schedule repetitive events consistently (e.g., same time each day), unless the user specifies variation.
-- Make all planned sessions as non-overlapping as possible.
-  
-WHEN IN DOUBT:
-- Prefer the literal, single-event approach.
-- Do not fabricate details or invent extra sessions unless the instruction clearly asks for it.
-
-ALWAYS:
-- Avoid overlapping with the user's *existing* events (see below).
-- Never add timezone information to any datetime fields.
-- Follow the OUTPUT JSON format *exactly*.
-
-OUTPUT JSON FORMAT (MANDATORY for each event):
-- title: Short and general unless the user gave a specific title (examples: "Study", "Workout", "Practice")
-- description: Extra details for the event if helpful, but do NOT restate the title.
-- start: String, ISO format, no timezone (e.g., "2025-05-03T17:00:00")
-- end: String, ISO format, no timezone
-- allDay: true/false
-- recurrence: null (or {frequency:string, interval:number, daysOfWeek:number[]} if repeating)
-- color: leave unset or null
-
-EXISTING EVENTS (avoid scheduling conflicts with these!):
-${previousEvents && previousEvents.length > 0 ? `
-${previousEvents.map((e: any, i: number) => `  ${i + 1}. ${e.title} from ${e.start} to ${e.end}`).join('\n')}
-` : 'None'}
-
-Remember: Only output pure JSON array, never include markdown, explanations, or comments.
-`;
+    // Build system prompt from helper
+    const systemPrompt = buildSystemPrompt(userInput, previousEvents);
 
     // User input is the calendar details provided
     const userPrompt = userInput;
@@ -230,8 +148,6 @@ Remember: Only output pure JSON array, never include markdown, explanations, or 
       const processedEvents = processAIGeneratedEvents(parsedEvents);
       return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
-      console.error("Error parsing AI response:", error);
-      console.error("AI response that couldn't be parsed:", aiResponse);
       // Fallback to simple event creation if AI parsing fails
       return { 
         events: [createDefaultEvent(userInput)], 
@@ -240,8 +156,6 @@ Remember: Only output pure JSON array, never include markdown, explanations, or 
       };
     }
   } catch (error) {
-    console.error("Error in AI event generation:", error);
-    console.error("Error stack:", error.stack);
     // Fallback to simple event creation
     return { 
       events: [createDefaultEvent(userInput)], 
@@ -249,133 +163,4 @@ Remember: Only output pure JSON array, never include markdown, explanations, or 
       error: `AI processing error: ${error.message}` 
     };
   }
-}
-
-// Process and standardize AI-generated events
-function processAIGeneratedEvents(events) {
-  const currentDate = new Date();
-  console.log("Processing AI-generated events:", events);
-  
-  return events.map(event => {
-    try {
-      console.log("Processing event:", event);
-      
-      // Ensure start and end are proper dates - without timezone considerations
-      let start, end;
-      
-      // Parse dates ensuring they have proper format, without time zones
-      if (event.start) {
-        // First try to parse directly
-        start = new Date(event.start);
-        
-        // If the date is invalid or has timezone info, remove any timezone indicators
-        if (isNaN(start.getTime()) || event.start.includes('Z') || event.start.includes('+')) {
-          // Try to clean up the date string
-          const cleanDateStr = event.start.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
-          start = new Date(cleanDateStr);
-        }
-        
-        if (isNaN(start.getTime())) {
-          console.error("Invalid start date:", event.start);
-          start = new Date(currentDate);
-          start.setHours(9, 0, 0, 0);
-        }
-      } else {
-        start = new Date(currentDate);
-        start.setHours(9, 0, 0, 0);
-        console.log("No start date provided, using default:", start);
-      }
-      
-      if (event.end) {
-        // First try to parse directly
-        end = new Date(event.end);
-        
-        // If the date is invalid or has timezone info, remove any timezone indicators
-        if (isNaN(end.getTime()) || event.end.includes('Z') || event.end.includes('+')) {
-          // Try to clean up the date string
-          const cleanDateStr = event.end.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
-          end = new Date(cleanDateStr);
-        }
-        
-        if (isNaN(end.getTime())) {
-          console.error("Invalid end date:", event.end);
-          end = new Date(start);
-          end.setHours(start.getHours() + 1);
-        }
-      } else {
-        // Default to 1 hour duration
-        end = new Date(start);
-        end.setHours(start.getHours() + 1);
-        console.log("No end date provided, using default:", end);
-      }
-      
-      // Convert days of week to proper format if needed
-      let recurrence = null;
-      if (event.recurrence) {
-        console.log("Processing recurrence:", event.recurrence);
-        recurrence = {
-          frequency: event.recurrence.frequency || "weekly",
-          interval: event.recurrence.interval || 1,
-          daysOfWeek: event.recurrence.daysOfWeek || undefined
-        };
-      }
-      
-      const processedEvent = {
-        title: event.title || "Untitled Event",
-        description: event.description || "",
-        // Keep dates as ISO strings but WITHOUT timezone specifiers
-        start: start.toISOString().split('.')[0],
-        end: end.toISOString().split('.')[0],
-        allDay: event.allDay || false,
-        color: getRandomEventColor(),
-        isAIGenerated: true,
-        recurrence
-      };
-      
-      console.log("Processed event:", processedEvent);
-      return processedEvent;
-    } catch (error) {
-      console.error("Error processing AI event:", error);
-      console.error("Problematic event:", event);
-      console.error("Error stack:", error.stack);
-      return createDefaultEvent("Event");
-    }
-  });
-}
-
-// Create a default event as a fallback
-function createDefaultEvent(text) {
-  // Create a simple title from the text (first 30 chars or until first period)
-  const title = text.split('.')[0].substring(0, 30) || "Event";
-  console.log("Creating default event with title:", title);
-  
-  const startDate = new Date();
-  startDate.setHours(9, 0, 0, 0);
-  
-  const endDate = new Date();
-  endDate.setHours(10, 0, 0, 0);
-  
-  return {
-    title,
-    description: "",
-    start: startDate.toISOString().split('.')[0],
-    end: endDate.toISOString().split('.')[0],
-    allDay: false,
-    color: getRandomEventColor(),
-    isAIGenerated: true
-  };
-}
-
-function getRandomEventColor() {
-  const colors = [
-    "#4285F4", // Blue
-    "#0F9D58", // Green
-    "#F4B400", // Yellow
-    "#DB4437", // Red
-    "#9C27B0", // Purple
-    "#00ACC1", // Cyan
-    "#FF7043", // Deep Orange
-    "#3949AB"  // Indigo
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
 }
