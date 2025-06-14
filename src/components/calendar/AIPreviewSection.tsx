@@ -3,6 +3,7 @@ import React from "react";
 import { Event } from "@/types";
 import EventsPreviewDialog from "./ai-generator/EventsPreviewDialog";
 import { Button } from "../ui/button";
+import EventEditingDialog from "./ai-generator/EventEditingDialog";
 
 /**
  * Provides a unified preview button & dialog for AI events, openable by button or programmatically.
@@ -15,6 +16,7 @@ interface AIPreviewSectionProps {
   onEditEvent?: (event: Event, index: number) => void;
   clearAllEvents: () => void;
   buttonVariant?: "outline" | "default";
+  setAiEvents?: (events: Event[]) => void; // For editing
 }
 
 const AIPreviewSection: React.FC<AIPreviewSectionProps> = ({
@@ -22,11 +24,31 @@ const AIPreviewSection: React.FC<AIPreviewSectionProps> = ({
   isOpen,
   setIsOpen,
   onDeleteEvent,
-  onEditEvent,
   clearAllEvents,
   buttonVariant = "outline",
+  setAiEvents,
 }) => {
-  // Shows nothing if there are no AI events.
+  const [editingEvent, setEditingEvent] = React.useState<{ event: Event; index: number } | null>(null);
+
+  // Handler to open edit dialog
+  const handleEditEvent = (event: Event, index: number) => {
+    setEditingEvent({ event, index });
+  };
+
+  // When the edit dialog is submitted; update the aiEvents locally
+  const handleUpdateEvent = (updatedEvent: Omit<Event, "id" | "calendarId">) => {
+    if (editingEvent && setAiEvents) {
+      setAiEvents(
+        aiEvents.map((ev, idx) =>
+          idx === editingEvent.index
+            ? { ...ev, ...updatedEvent }
+            : ev
+        )
+      );
+    }
+    setEditingEvent(null);
+  };
+
   if (!aiEvents || aiEvents.length === 0) return null;
   return (
     <div className="flex w-full">
@@ -43,8 +65,13 @@ const AIPreviewSection: React.FC<AIPreviewSectionProps> = ({
         setIsOpen={setIsOpen}
         events={aiEvents}
         onDeleteEvent={onDeleteEvent}
-        onEditEvent={onEditEvent}
+        onEditEvent={handleEditEvent}
         clearAllEvents={clearAllEvents}
+      />
+      <EventEditingDialog
+        editingEvent={editingEvent}
+        setEditingEvent={setEditingEvent}
+        onUpdateEvent={handleUpdateEvent}
       />
     </div>
   );

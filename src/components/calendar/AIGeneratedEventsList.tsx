@@ -66,4 +66,3 @@ const AIGeneratedEventsList = ({
 };
 
 export default AIGeneratedEventsList;
-

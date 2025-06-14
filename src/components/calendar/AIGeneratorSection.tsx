@@ -1,3 +1,4 @@
+
 import React, { useCallback } from "react";
 import AICalendarGenerator from "./AICalendarGenerator";
 import AIPreviewSection from "./AIPreviewSection";
@@ -72,6 +73,7 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
           setIsOpen={setIsPreviewOpen}
           onDeleteEvent={deleteAiEvent}
           clearAllEvents={clearAllEvents}
+          setAiEvents={setAiEvents} // needed for event editing
         />
       )}
     </div>

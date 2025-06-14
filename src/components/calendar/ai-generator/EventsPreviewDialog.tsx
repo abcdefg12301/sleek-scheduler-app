@@ -43,7 +43,7 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
             <AIGeneratedEventsList 
               events={events} 
               onDeleteEvent={onDeleteEvent}
-              onEditEvent={onEditEvent}
+              onEditEvent={onEditEvent} // restored handler!
             />
           </div>
         </ScrollArea>
@@ -66,4 +66,3 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
 };
 
 export default EventsPreviewDialog;
-
