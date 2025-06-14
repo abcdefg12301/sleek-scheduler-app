@@ -38,19 +38,21 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 }) => {
   const { isPreviewOpen, openPreview, setIsPreviewOpen } = useAIPreviewDialog(false);
 
-  const onEventsGenerated = useCallback(
+  const onEventsGenerated = React.useCallback(
     (events: Event[]) => {
       // Instead of REPLACING, we merge new events with existing ones
-      setAiEvents(prev => [...prev, ...events.filter(e =>
-        !prev.some(ev =>
+      // ERROR FIX: setAiEvents expects Event[] not a function
+      const filteredEvents = events.filter(e =>
+        !aiEvents.some(ev =>
           ev.title === e.title &&
           new Date(ev.start).getTime() === new Date(e.start).getTime() &&
           new Date(ev.end).getTime() === new Date(e.end).getTime()
         )
-      )]);
+      );
+      setAiEvents([...aiEvents, ...filteredEvents]);
       openPreview();
     },
-    [setAiEvents, openPreview]
+    [setAiEvents, openPreview, aiEvents]
   );
 
   // Merge true existing DB events and current AI events for conflict context
