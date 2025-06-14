@@ -8,10 +8,9 @@ import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
-import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 import { Event } from '@/types';
 import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
-import AIPreviewSection from '@/components/calendar/AIPreviewSection';
+import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
 
 interface FormData {
   name: string;
@@ -28,6 +27,7 @@ interface FormData {
 const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
+
   // Use hook for AI event state (none at mount, since no calendar yet)
   const {
     aiEvents: aiGeneratedEvents,
@@ -36,8 +36,6 @@ const NewCalendar = () => {
     clearAllEvents: clearAiEvents,
   } = useAiCalendarEvents({ calendarId: undefined, initialEvents: [] });
 
-  const [isAiPreviewDialogOpen, setIsAiPreviewDialogOpen] = useState(false);
-  
   const defaultValues: FormData = {
     name: '',
     description: '',
@@ -49,31 +47,21 @@ const NewCalendar = () => {
       endTime: '06:00'
     }
   };
-  
+
   const form = useForm<FormData>({
     defaultValues,
   });
 
-  const handleAiEventsGenerated = (events: Event[]) => {
-    setAiGeneratedEvents(events);
-    setIsAiPreviewDialogOpen(true);
-  };
-
   const onSubmit = (data: FormData) => {
-    console.log('Creating new calendar with data:', data);
     try {
-      // Create the new calendar
       const newCalendar = addCalendar(
-        data.name, 
-        data.description, 
+        data.name,
+        data.description,
         data.color,
         data.showHolidays
       );
-      
-      // Add all AI-generated events to this specific calendar only
       if (aiGeneratedEvents.length > 0) {
         let addedCount = 0;
-        
         for (const event of aiGeneratedEvents) {
           try {
             const eventWithDates = {
@@ -86,22 +74,17 @@ const NewCalendar = () => {
               } : undefined,
               isAIGenerated: true
             };
-
             addEvent(newCalendar.id, eventWithDates);
             addedCount++;
           } catch (eventError) {
             console.error('Error adding AI-generated event:', eventError, event);
           }
         }
-        
         if (addedCount > 0) {
           toast.success(`Added ${addedCount} AI-generated events to your calendar`);
         }
       }
-      
-      // Clear the AI generated events after they're added to a calendar
       clearAiEvents();
-      
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);
     } catch (error) {
@@ -121,7 +104,7 @@ const NewCalendar = () => {
     }
     return options;
   }
-  
+
   function formatTimeDisplay(time: string) {
     const [hours, minutes] = time.split(':');
     const h = parseInt(hours, 10);
@@ -129,46 +112,40 @@ const NewCalendar = () => {
     const hour = h % 12 || 12;
     return `${hour}:${minutes} ${period}`;
   }
-  
+
   const timeOptions = generateTimeOptions();
 
   return (
     <div className="container max-w-xl pt-10 pb-20">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         onClick={() => navigate('/')}
         className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
-      
+
       <h1 className="text-2xl font-bold mb-2">Create New Calendar</h1>
       <p className="text-muted-foreground mb-6">
         Set up a new calendar to organize your events.
       </p>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
           <CalendarBasicDetails form={form} />
-          
+
           {/* Features section is now optional */}
           {/* <CalendarFeatures form={form} timeOptions={timeOptions} /> */}
-          
+
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
-          <AICalendarGenerator 
-            standalone={true}
-            onEventsGenerated={handleAiEventsGenerated}
-            existingEvents={aiGeneratedEvents}
-            onPreviewOpen={() => setIsAiPreviewDialogOpen(true)}
-          />
-          <AIPreviewSection
+          <AIGeneratorSection
             aiEvents={aiGeneratedEvents}
-            isOpen={isAiPreviewDialogOpen}
-            setIsOpen={setIsAiPreviewDialogOpen}
-            onDeleteEvent={deleteAiEvent}
+            setAiEvents={setAiGeneratedEvents}
+            deleteAiEvent={deleteAiEvent}
             clearAllEvents={clearAiEvents}
+            calendarId={undefined}
           />
           <div className="flex justify-end mt-6">
             <Button type="submit">Create Calendar</Button>

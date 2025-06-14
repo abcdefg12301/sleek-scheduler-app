@@ -5,7 +5,6 @@ import { CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
-// Info text updated with explicit instruction about frequency.
 const AICalendarGeneratorHeader: React.FC = () => {
   return (
     <CardTitle className="text-md flex items-center gap-2">
@@ -13,14 +12,22 @@ const AICalendarGeneratorHeader: React.FC = () => {
       Calendar Generator
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-4 w-4 p-0" tabIndex={0}>
+          {/* The button must NOT trigger submits or onClick. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-4 w-4 p-0"
+            tabIndex={0}
+            type="button"
+            aria-label="Info"
+          >
             <Info className="h-4 w-4 text-muted-foreground" />
           </Button>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm">
           <p>
-            Describe your events in natural language.<br />
-            <b>Tip: Specify how often (frequency) you want each event to occur (e.g., daily, weekly, every Tuesday).</b>
+            Please describe your events in natural language.<br />
+            <b>It is <u>required</u> that you specify how often your event occurs (the frequency): e.g., "Daily", "Weekly", "every Tuesday", etc. If not specified, events may not be generated correctly.</b>
             <br /><br />
             Examples:<br />
             • "I go to the gym <b>Monday, Wednesday, and Friday</b> from 5pm-7pm"<br />

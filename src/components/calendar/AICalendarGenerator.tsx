@@ -1,11 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, Bot } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import AIGeneratedEventsList from './AIGeneratedEventsList';
 import { Event } from '@/types';
 import EventsPreviewDialog from './ai-generator/EventsPreviewDialog';
 import EventEditingDialog from './ai-generator/EventEditingDialog';
@@ -32,23 +30,19 @@ const AICalendarGenerator = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // Use prop existingEvents only to initialize state; always relay changes to parent
   useEffect(() => {
     setGeneratedEvents(existingEvents);
   }, [calendarId, existingEvents]);
 
+  // Prevent submitting when clicking Info button; nothing for info to trigger!
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
     newEvents.splice(index, 1);
     setGeneratedEvents(newEvents);
-    
-    if (onEventsGenerated) {
-      onEventsGenerated(newEvents);
-    }
+    onEventsGenerated?.(newEvents);
   };
 
   const handleEditEvent = (event: Event, index: number) => {
@@ -57,21 +51,15 @@ const AICalendarGenerator = ({
 
   const handleUpdateEvent = (updatedEvent: Omit<Event, 'id' | 'calendarId'>) => {
     if (!editingEvent) return;
-
     const newEvents = [...generatedEvents];
-    newEvents[editingEvent.index] = { 
+    newEvents[editingEvent.index] = {
       ...updatedEvent,
       id: editingEvent.event.id || '',
       calendarId: editingEvent.event.calendarId || calendarId || '',
       isAIGenerated: true
     };
-
     setGeneratedEvents(newEvents);
-    
-    if (onEventsGenerated) {
-      onEventsGenerated(newEvents);
-    }
-
+    onEventsGenerated?.(newEvents);
     setEditingEvent(null);
     toast.success('Event updated successfully');
   };
@@ -85,7 +73,6 @@ const AICalendarGenerator = ({
     setApiError(null);
     setDebugInfo(null);
 
-    // Always use the single calendarId context for generating for this calendar only
     const contextEvents = generatedEvents.filter(
       event => event.calendarId === calendarId
     );
@@ -98,7 +85,6 @@ const AICalendarGenerator = ({
       });
 
       if (!data || !data.events || !Array.isArray(data.events)) {
-        console.error('Invalid response format from AI:', data);
         setApiError('Invalid response format from AI');
         setDebugInfo(`Invalid response format: ${JSON.stringify(data)}`);
         toast.error('Invalid response from AI');
@@ -113,19 +99,12 @@ const AICalendarGenerator = ({
       }));
 
       setGeneratedEvents(processedEvents);
-      if (onEventsGenerated) {
-        onEventsGenerated(processedEvents);
-      }
+      onEventsGenerated?.(processedEvents);
       toast.success(`Successfully generated ${processedEvents.length} events`);
-      if (onPreviewOpen) {
-        onPreviewOpen();
-      }
-      if (processedEvents.length > 0 && !onPreviewOpen) {
-        setIsPreviewOpen(true);
-      }
       setCalendarDetails('');
+      // Note: Preview dialog controlled at the parent now
+      onPreviewOpen?.();
     } catch (err) {
-      console.error('Error in AI calendar generation:', err);
       setApiError(`Client Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setDebugInfo(`Client error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       toast.error('An error occurred during calendar generation');
@@ -134,68 +113,63 @@ const AICalendarGenerator = ({
     }
   };
 
-  const clearAllEvents = () => {
-    setGeneratedEvents([]);
-    if (onEventsGenerated) {
-      onEventsGenerated([]);
-    }
-    toast.success('All generated events cleared');
-    setIsPreviewOpen(false);
-  };
-
   return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2">
+    <div>
+      <div className="mb-4">
         <AICalendarGeneratorHeader />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <Textarea
-            placeholder="Describe your calendar events here (e.g., 'I have weekly team meetings every Monday at 10 AM, a doctor's appointment next Tuesday at 3 PM, and I go to the gym Monday, Wednesday, and Friday mornings at 7 AM')"
-            className="min-h-[120px]"
-            value={calendarDetails}
-            onChange={(e) => setCalendarDetails(e.target.value)}
-            maxLength={500}
-          />
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleGenerate} 
-              disabled={isGenerating || !calendarDetails.trim()}
-              className="flex-1"
-            >
-              {isGenerating ? 'Generating...' : 'Generate Events'}
-            </Button>
-          </div>
-          
-          {apiError && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{apiError}</AlertDescription>
-            </Alert>
-          )}
-
-          {debugInfo && (
-            <Alert className="mt-2">
-              <AlertTitle>Debug Info</AlertTitle>
-              <AlertDescription className="text-xs font-mono">{debugInfo}</AlertDescription>
-            </Alert>
-          )}
-
-          {generatedEvents.length > 0 && (
-            <div className="text-sm text-muted-foreground mt-2">
-              {generatedEvents.length} events generated. View or edit them using the "Preview AI Events" button.
-            </div>
-          )}
-          
-          <EventEditingDialog
-            editingEvent={editingEvent}
-            setEditingEvent={setEditingEvent}
-            onUpdateEvent={handleUpdateEvent}
-          />
+      </div>
+      <div className="space-y-4">
+        <Textarea
+          placeholder="Describe your calendar events here (e.g., 'I have weekly team meetings every Monday at 10 AM, a doctor's appointment next Tuesday at 3 PM, and I go to the gym Monday, Wednesday, and Friday mornings at 7 AM')"
+          className="min-h-[120px]"
+          value={calendarDetails}
+          onChange={(e) => setCalendarDetails(e.target.value)}
+          maxLength={500}
+        />
+        <div className="flex gap-2">
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || !calendarDetails.trim()}
+            className="flex-1"
+            type="button"
+          >
+            {isGenerating ? 'Generating...' : 'Generate Events'}
+          </Button>
+          {/* Always show "Preview AI Events" if there are generated events */}
+          <Button
+            variant="outline"
+            className="flex-1"
+            type="button"
+            onClick={onPreviewOpen}
+            disabled={generatedEvents.length === 0}
+            tabIndex={0}
+          >
+            Preview AI Events ({generatedEvents.length})
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+
+        {apiError && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{apiError}</AlertDescription>
+          </Alert>
+        )}
+
+        {debugInfo && (
+          <Alert className="mt-2">
+            <AlertTitle>Debug Info</AlertTitle>
+            <AlertDescription className="text-xs font-mono">{debugInfo}</AlertDescription>
+          </Alert>
+        )}
+
+        <EventEditingDialog
+          editingEvent={editingEvent}
+          setEditingEvent={setEditingEvent}
+          onUpdateEvent={handleUpdateEvent}
+        />
+      </div>
+    </div>
   );
 };
 

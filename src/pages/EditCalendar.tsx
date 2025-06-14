@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
@@ -9,10 +9,8 @@ import { useCalendarStore } from '@/store/calendar-store';
 import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
-import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
-import EventsPreviewDialog from '@/components/calendar/ai-generator/EventsPreviewDialog';
 import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
-import AIPreviewSection from '@/components/calendar/AIPreviewSection';
+import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
 
 interface FormData {
   name: string;
@@ -26,7 +24,6 @@ const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { calendars, updateCalendar, addEvent } = useCalendarStore();
-  const [isAiPreviewDialogOpen, setIsAiPreviewDialogOpen] = useState(false);
 
   // Use new hook to handle AI event state (isolated per calendar)
   const {
@@ -44,19 +41,6 @@ const EditCalendar = () => {
 
   const calendar = calendars.find(cal => cal.id === id);
 
-  // Handler for new AI-generated events from generator component
-  const handleAiEventsGenerated = (events: Event[]) => {
-    setPendingAiEvents(events);
-    setIsAiPreviewDialogOpen(true);
-  };
-
-  // Toggle to open preview manually if events exist
-  const handlePreviewButtonClick = () => {
-    if (pendingAiEvents.length > 0) {
-      setIsAiPreviewDialogOpen(true);
-    }
-  };
-  
   const form = useForm<FormData>({
     defaultValues: {
       name: calendar?.name || '',
@@ -66,7 +50,7 @@ const EditCalendar = () => {
       sleepSchedule: { enabled: false, startTime: '22:00', endTime: '06:00' }
     },
   });
-  
+
   useEffect(() => {
     if (!calendar && id) {
       toast.error('Calendar not found');
@@ -74,7 +58,6 @@ const EditCalendar = () => {
     }
   }, [calendar, id, navigate]);
 
-  // When saving changes, commit AI events to calendar store
   const onSubmit = (data: FormData) => {
     if (id) {
       updateCalendar(id, {
@@ -89,7 +72,6 @@ const EditCalendar = () => {
         const nonAiEvents = calendar.events.filter(
           event => !event.isAIGenerated || event.calendarId !== id
         );
-
         updateCalendar(id, { events: nonAiEvents });
 
         // Save all previewed AI events
@@ -118,7 +100,6 @@ const EditCalendar = () => {
               console.error('Error adding AI-generated event:', err, event);
             }
           }
-
           if (addedCount > 0) {
             toast.success(`Added ${addedCount} AI-generated events to your calendar`);
           }
@@ -129,7 +110,7 @@ const EditCalendar = () => {
       navigate(`/calendar/${id}`);
     }
   };
-  
+
   function generateTimeOptions() {
     const options = [];
     for (let hour = 0; hour < 24; hour++) {
@@ -141,7 +122,7 @@ const EditCalendar = () => {
     }
     return options;
   }
-  
+
   function formatTimeDisplay(time: string) {
     const [hours, minutes] = time.split(':');
     const h = parseInt(hours, 10);
@@ -149,9 +130,9 @@ const EditCalendar = () => {
     const hour = h % 12 || 12;
     return `${hour}:${minutes} ${period}`;
   }
-  
+
   const timeOptions = generateTimeOptions();
-  
+
   if (!calendar) {
     return null;
   }
@@ -159,8 +140,8 @@ const EditCalendar = () => {
   return (
     <div className="container max-w-xl pt-10 pb-20">
       <div className="mb-6">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => navigate(`/calendar/${id}`)}
           className="mb-6"
         >
@@ -176,24 +157,16 @@ const EditCalendar = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CalendarBasicDetails form={form} />
-          
+
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
-          <AICalendarGenerator
-            standalone={false}
-            onEventsGenerated={handleAiEventsGenerated}
-            calendarId={id}
-            existingEvents={pendingAiEvents}
-            onPreviewOpen={() => setIsAiPreviewDialogOpen(true)}
-          />
-          {/* Use the refactored preview section */}
-          <AIPreviewSection
+          <AIGeneratorSection
             aiEvents={pendingAiEvents}
-            isOpen={isAiPreviewDialogOpen}
-            setIsOpen={setIsAiPreviewDialogOpen}
-            onDeleteEvent={deletePendingEvent}
+            setAiEvents={setPendingAiEvents}
+            deleteAiEvent={deletePendingEvent}
             clearAllEvents={clearPendingAiEvents}
+            calendarId={id}
           />
-          
+
           <CalendarFeatures form={form} timeOptions={timeOptions} />
 
           <div className="flex justify-end">
