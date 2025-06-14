@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Event } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -26,14 +25,6 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
 }) => {
   return (
     <>
-      <Button 
-        variant="outline" 
-        onClick={() => setIsOpen(true)}
-        className="gap-2"
-      >
-        <Calendar className="h-4 w-4" />
-        <span>Preview ({events.length})</span>
-      </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader className="pb-2">

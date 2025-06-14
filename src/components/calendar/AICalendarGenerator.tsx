@@ -18,13 +18,15 @@ interface AICalendarGeneratorProps {
   onEventsGenerated?: (events: Event[]) => void;
   calendarId?: string;
   existingEvents?: Event[];
+  onPreviewOpen?: () => void;
 }
 
 const AICalendarGenerator = ({
   standalone = false,
   onEventsGenerated,
   calendarId,
-  existingEvents = []
+  existingEvents = [],
+  onPreviewOpen,
 }: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -115,7 +117,10 @@ const AICalendarGenerator = ({
         onEventsGenerated(processedEvents);
       }
       toast.success(`Successfully generated ${processedEvents.length} events`);
-      if (processedEvents.length > 0) {
+      if (onPreviewOpen) {
+        onPreviewOpen();
+      }
+      if (processedEvents.length > 0 && !onPreviewOpen) {
         setIsPreviewOpen(true);
       }
       setCalendarDetails('');
@@ -160,17 +165,6 @@ const AICalendarGenerator = ({
             >
               {isGenerating ? 'Generating...' : 'Generate Events'}
             </Button>
-            
-            {generatedEvents.length > 0 && (
-              <EventsPreviewDialog
-                isOpen={isPreviewOpen}
-                setIsOpen={setIsPreviewOpen}
-                events={generatedEvents}
-                onDeleteEvent={handleDeleteEvent}
-                onEditEvent={handleEditEvent}
-                clearAllEvents={clearAllEvents}
-              />
-            )}
           </div>
           
           {apiError && (
@@ -190,7 +184,7 @@ const AICalendarGenerator = ({
 
           {generatedEvents.length > 0 && (
             <div className="text-sm text-muted-foreground mt-2">
-              {generatedEvents.length} events generated. View or edit them using the "Preview Events" button.
+              {generatedEvents.length} events generated. View or edit them using the "Preview AI Events" button.
             </div>
           )}
           

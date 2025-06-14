@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,8 @@ import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetail
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
 import { Event } from '@/types';
+import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
+import AIPreviewSection from '@/components/calendar/AIPreviewSection';
 
 interface FormData {
   name: string;
@@ -27,7 +28,15 @@ interface FormData {
 const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
-  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
+  // Use hook for AI event state (none at mount, since no calendar yet)
+  const {
+    aiEvents: aiGeneratedEvents,
+    setGeneratedEvents: setAiGeneratedEvents,
+    deleteEvent: deleteAiEvent,
+    clearAllEvents: clearAiEvents,
+  } = useAiCalendarEvents({ calendarId: undefined, initialEvents: [] });
+
+  const [isAiPreviewDialogOpen, setIsAiPreviewDialogOpen] = useState(false);
   
   const defaultValues: FormData = {
     name: '',
@@ -46,8 +55,8 @@ const NewCalendar = () => {
   });
 
   const handleAiEventsGenerated = (events: Event[]) => {
-    // This will completely replace any previously stored events
     setAiGeneratedEvents(events);
+    setIsAiPreviewDialogOpen(true);
   };
 
   const onSubmit = (data: FormData) => {
@@ -91,7 +100,7 @@ const NewCalendar = () => {
       }
       
       // Clear the AI generated events after they're added to a calendar
-      setAiGeneratedEvents([]);
+      clearAiEvents();
       
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);
@@ -151,8 +160,16 @@ const NewCalendar = () => {
           <AICalendarGenerator 
             standalone={true}
             onEventsGenerated={handleAiEventsGenerated}
+            existingEvents={aiGeneratedEvents}
+            onPreviewOpen={() => setIsAiPreviewDialogOpen(true)}
           />
-
+          <AIPreviewSection
+            aiEvents={aiGeneratedEvents}
+            isOpen={isAiPreviewDialogOpen}
+            setIsOpen={setIsAiPreviewDialogOpen}
+            onDeleteEvent={deleteAiEvent}
+            clearAllEvents={clearAiEvents}
+          />
           <div className="flex justify-end mt-6">
             <Button type="submit">Create Calendar</Button>
           </div>

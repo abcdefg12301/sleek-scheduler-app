@@ -5,6 +5,7 @@ import { CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
+// Info text updated with explicit instruction about frequency.
 const AICalendarGeneratorHeader: React.FC = () => {
   return (
     <CardTitle className="text-md flex items-center gap-2">
@@ -12,22 +13,24 @@ const AICalendarGeneratorHeader: React.FC = () => {
       Calendar Generator
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+          <Button variant="ghost" size="icon" className="h-4 w-4 p-0" tabIndex={0}>
             <Info className="h-4 w-4 text-muted-foreground" />
           </Button>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm">
           <p>
-            Describe your events in natural language. Examples:<br />
-            • "I go to the gym Monday, Wednesday, and Friday from 5pm-7pm"<br />
-            • "I have a team meeting every Tuesday at 10am"<br />
-            • "Generate a study schedule after 3pm before I sleep"<br />
-            • "Team lunch at 12:30pm on Fridays"
+            Describe your events in natural language.<br />
+            <b>Tip: Specify how often (frequency) you want each event to occur (e.g., daily, weekly, every Tuesday).</b>
+            <br /><br />
+            Examples:<br />
+            • "I go to the gym <b>Monday, Wednesday, and Friday</b> from 5pm-7pm"<br />
+            • "I have a team meeting <b>every Tuesday at 10am</b>"<br />
+            • "Generate a study schedule <b>after 3pm before I sleep</b>"<br />
+            • "Team lunch at <b>12:30pm on Fridays</b>"
           </p>
         </TooltipContent>
       </Tooltip>
     </CardTitle>
   );
 };
-
 export default AICalendarGeneratorHeader;
