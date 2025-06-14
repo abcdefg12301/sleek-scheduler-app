@@ -73,7 +73,7 @@ serve(async (req) => {
 // ---- KEY UPDATE: Use ONLY Mistral AI via OpenRouter, never anything else ----
 async function generateEventsWithMistralAI(userInput: string, previousEvents: any[] = [], calendarColor: string) {
   try {
-    // -- SYSTEM PROMPT: Already creative version, keep this as-is or further enhance below if needed --
+    // SYSTEM PROMPT -- leave unchanged for your creative logic!
     const now = new Date();
     let previousEventsContext = "";
     if (previousEvents && previousEvents.length > 0) {
@@ -166,10 +166,36 @@ Be as creative and helpful as possible—even for study plans, propose milestone
     console.log("MistralAI raw response:", aiResponse);
 
     let parsedEvents;
+    let parseSucceeded = false;
     try {
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
-      parsedEvents = JSON.parse(jsonStr);
+      // Try to find a JSON array in the response string
+      const arrayMatch = aiResponse.match(/\[[\s\S]*\]/);
+      if (arrayMatch && arrayMatch[0]) {
+        try {
+          parsedEvents = JSON.parse(arrayMatch[0]);
+          parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
+        } catch (err) {
+          // Fallback below
+        }
+      }
+      // If above fails, try full string parse
+      if (!parseSucceeded) {
+        try {
+          parsedEvents = JSON.parse(aiResponse);
+          parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
+        } catch (err) {
+          // Fallback below
+        }
+      }
+      // If still no valid array, log and create clear fallback
+      if (!parseSucceeded || !Array.isArray(parsedEvents)) {
+        console.error("AI returned unparseable event array. Raw response:", aiResponse);
+        return { 
+          events: [createDefaultEvent(userInput)], 
+          sourceType: "fallback",
+          error: "Could not parse any events from AI response. Full raw response logged."
+        };
+      }
       const processedEvents = processAIGeneratedEvents(parsedEvents, calendarColor);
       return { events: processedEvents, sourceType: "mistral" };
     } catch (error) {
