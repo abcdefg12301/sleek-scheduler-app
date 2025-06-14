@@ -9,21 +9,24 @@ import { calendarEventService } from './calendar-event-service';
 import { eventService } from './event-service';
 import { holidayService } from './holiday-service';
 
+// Split store logic into smaller service functions:
+import { supabaseService } from "@/services/supabase-service";
+
 interface CalendarState {
   calendars: Calendar[];
   selectedCalendarId: string | null;
   holidays: Holiday[];
   
   // Calendar actions
-  addCalendar: (name: string, description: string, color: string, showHolidays?: boolean) => Calendar;
-  updateCalendar: (id: string, data: Partial<Calendar>) => void;
-  deleteCalendar: (id: string) => void;
+  addCalendar: (name: string, description: string, color: string, showHolidays?: boolean) => Promise<Calendar>;
+  updateCalendar: (id: string, data: Partial<Calendar>) => Promise<void>;
+  deleteCalendar: (id: string) => Promise<void>;
   selectCalendar: (id: string | null) => void;
   
   // Event actions
-  addEvent: (calendarId: string, event: Omit<Event, 'id' | 'calendarId'>) => Event;
-  updateEvent: (calendarId: string, eventId: string, data: Partial<Event>) => void;
-  deleteEvent: (calendarId: string, eventId: string) => void;
+  addEvent: (calendarId: string, event: Omit<Event, 'id' | 'calendarId'>) => Promise<Event>;
+  updateEvent: (calendarId: string, eventId: string, data: Partial<Event>) => Promise<void>;
+  deleteEvent: (calendarId: string, eventId: string) => Promise<void>;
   getEventsForDate: (date: Date) => Event[];
   getEventsForDateRange: (startDate: Date, endDate: Date) => Event[];
   getExpandedEvents: (calendarId: string, startDate: Date, endDate: Date) => Event[];
@@ -31,103 +34,115 @@ interface CalendarState {
   // Enhanced recurring event actions
   deleteRecurringEvent: (calendarId: string, eventId: string, mode: 'single' | 'future' | 'all', date?: Date) => void;
   addExceptionDate: (calendarId: string, eventId: string, exceptionDate: Date) => void;
+
+  // --- Backend (Supabase) synchronization ---
+  syncCalendarsFromSupabase: () => Promise<void>;
 }
 
+// Slices for modularity:
 export const useCalendarStore = create<CalendarState>()(
   persist(
     (set, get) => ({
+      // --- Local state ---
       calendars: [],
       selectedCalendarId: null,
       holidays: HOLIDAYS,
-      
-      addCalendar: (name, description, color, showHolidays = true) => {
-        const newCalendar: Calendar = {
-          id: uuidv4(),
+
+      // --- Backend (Supabase) synchronization ---
+      async syncCalendarsFromSupabase() {
+        const calendars = await supabaseService.fetchCalendars();
+        set({ calendars });
+      },
+
+      async addCalendar(name, description, color, showHolidays = true) {
+        const calendar = await supabaseService.createCalendar({
           name,
           description,
           color,
-          events: [],
-          showHolidays
-        };
-        
+          showHolidays,
+        });
+        if (calendar) {
+          set((state) => ({
+            calendars: [...state.calendars, calendar],
+            selectedCalendarId: calendar.id,
+          }));
+          return calendar;
+        }
+        throw new Error("Failed to add calendar");
+      },
+
+      async updateCalendar(id, data) {
+        const calendar = await supabaseService.updateCalendar(id, data);
+        if (calendar) {
+          set((state) => ({
+            calendars: state.calendars.map((cal) =>
+              cal.id === id ? { ...cal, ...calendar } : cal
+            ),
+          }));
+        }
+      },
+
+      async deleteCalendar(id) {
+        await supabaseService.deleteCalendar(id);
         set((state) => ({
-          calendars: [...state.calendars, newCalendar],
-          selectedCalendarId: newCalendar.id
+          calendars: state.calendars.filter((cal) => cal.id !== id),
+          selectedCalendarId:
+            state.selectedCalendarId === id ? null : state.selectedCalendarId,
         }));
-        
-        return newCalendar;
       },
-      
-      updateCalendar: (id, data) => {
-        console.log(`Updating calendar ${id} with data:`, data);
-        
+
+      selectCalendar: (id) => set(() => ({ selectedCalendarId: id })),
+
+      // --- Events ---
+      async addEvent(calendarId, eventData) {
+        const event = await supabaseService.createEvent({
+          ...eventData,
+          calendarId,
+        });
+        if (event) {
+          set((state) => ({
+            calendars: state.calendars.map((cal) =>
+              cal.id === calendarId
+                ? { ...cal, events: [...cal.events, event] }
+                : cal
+            ),
+          }));
+          return event;
+        }
+        throw new Error("Failed to add event");
+      },
+
+      async updateEvent(calendarId, eventId, data) {
+        const event = await supabaseService.updateEvent(eventId, data);
+        if (event) {
+          set((state) => ({
+            calendars: state.calendars.map((cal) =>
+              cal.id === calendarId
+                ? {
+                    ...cal,
+                    events: cal.events.map((ev) =>
+                      ev.id === eventId ? { ...ev, ...event } : ev
+                    ),
+                  }
+                : cal
+            ),
+          }));
+        }
+      },
+
+      async deleteEvent(calendarId, eventId) {
+        await supabaseService.deleteEvent(eventId);
         set((state) => ({
-          calendars: state.calendars.map((calendar) => 
-            calendar.id === id ? { ...calendar, ...data } : calendar
-          )
-        }));
-      },
-      
-      deleteCalendar: (id) => {
-        set((state) => ({
-          calendars: state.calendars.filter((calendar) => calendar.id !== id),
-          selectedCalendarId: state.selectedCalendarId === id ? null : state.selectedCalendarId
-        }));
-      },
-      
-      selectCalendar: (id) => {
-        set(() => ({ selectedCalendarId: id }));
-      },
-      
-      addEvent: (calendarId, eventData) => {
-        console.log(`Adding event to calendar ${calendarId}:`, eventData);
-        
-        const newEvent = eventService.createEvent(calendarId, eventData);
-        
-        set((state) => ({
-          calendars: state.calendars.map((calendar) => 
-            calendar.id === calendarId 
-              ? { ...calendar, events: [...calendar.events, newEvent] } 
-              : calendar
-          )
-        }));
-        
-        return newEvent;
-      },
-      
-      updateEvent: (calendarId, eventId, data) => {
-        console.log(`Updating event ${eventId} in calendar ${calendarId} with data:`, data);
-        
-        set((state) => ({
-          calendars: state.calendars.map((calendar) => 
-            calendar.id === calendarId 
+          calendars: state.calendars.map((cal) =>
+            cal.id === calendarId
               ? {
-                  ...calendar,
-                  events: calendar.events.map((event) => 
-                    event.id === eventId ? { ...event, ...data } : event
-                  )
-                } 
-              : calendar
-          )
-        }));
-      },
-      
-      deleteEvent: (calendarId, eventId) => {
-        console.log(`Deleting event ${eventId} from calendar ${calendarId}`);
-        
-        set((state) => ({
-          calendars: state.calendars.map((calendar) => 
-            calendar.id === calendarId 
-              ? {
-                  ...calendar,
-                  events: calendar.events.filter((event) => {
-                    if (event.id === eventId) return false;
-                    if (event.originalEventId === eventId) return false;
-                    return true;
-                  })
-                } 
-              : calendar
-          )
+                  ...cal,
+                  events: cal.events.filter(
+                    (ev) => ev.id !== eventId && ev.originalEventId !== eventId
+                  ),
+                }
+              : cal
+          ),
         }));
       },
       

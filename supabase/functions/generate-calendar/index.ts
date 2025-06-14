@@ -10,11 +10,9 @@ import { processAIGeneratedEvents, createDefaultEvent } from "./processEvents.ts
 import { buildSystemPrompt } from "./buildSystemPrompt.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
   try {
     const { calendarDetails, previousEvents = [] } = await req.json();
     console.log("Received request to generate calendar with details:", calendarDetails);
@@ -33,7 +31,6 @@ serve(async (req) => {
       );
     }
 
-    // Use the AI model to generate calendar events based on natural language input
     const { events, sourceType, error } = await generateEventsWithAI(calendarDetails, previousEvents);
     
     if (error) {
@@ -76,28 +73,21 @@ serve(async (req) => {
   }
 });
 
-// Use OpenRouter to connect to MistralAI model
 async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
   try {
-    // Current date information for context - without time zones
     const now = new Date();
     const currentDate = now.toLocaleDateString('en-US');
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
     const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
-    // Build system prompt from helper
     const systemPrompt = buildSystemPrompt(userInput, previousEvents);
-
-    // User input is the calendar details provided
     const userPrompt = userInput;
 
     console.log("Sending request to OpenRouter.ai API with system prompt length:", systemPrompt.length);
     console.log("User prompt:", userPrompt);
 
-    // OpenRouter API key for MistralAI
     const OPENROUTER_API_KEY = "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";
 
-    // Make request to the OpenRouter API with MistralAI model
     console.log("Starting OpenRouter API request...");
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -129,14 +119,11 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
     console.log("OpenRouter API response status:", response.status);
     console.log("OpenRouter API response:", JSON.stringify(data, null, 2));
     
-    // Extract the AI response content
     const aiResponse = data.choices[0].message.content;
     console.log("AI raw response:", aiResponse);
     
-    // Try to parse the JSON response from the AI
     let parsedEvents;
     try {
-      // Handle potential text before or after the JSON
       const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
       const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
       console.log("Extracted JSON string:", jsonStr);
@@ -144,11 +131,9 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
       parsedEvents = JSON.parse(jsonStr);
       console.log("Successfully parsed events:", parsedEvents);
       
-      // Process the events to ensure proper formatting (now pass existing events for conflict avoidance)
-      const processedEvents = processAIGeneratedEvents(parsedEvents, previousEvents);
+      const processedEvents = processAIGeneratedEvents(parsedEvents, previousEvents, userInput);
       return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
-      // Fallback to simple event creation if AI parsing fails
       return { 
         events: [createDefaultEvent(userInput)], 
         sourceType: "fallback",
@@ -156,7 +141,6 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
       };
     }
   } catch (error) {
-    // Fallback to simple event creation
     return { 
       events: [createDefaultEvent(userInput)], 
       sourceType: "fallback",

@@ -1,10 +1,41 @@
 /**
- * Utility for processing AI-generated events and formatting/fallbacks.
- * This is moved from generate-calendar edge function to reduce file size.
+ * Utility for processing AI-generated events, checking/fixing conflicts and enforcing breakdowns.
+ * Enhanced: Multiple event output for creative requests, strong conflict avoidance.
  */
 
 function isOverlapping(a, b) {
   return !(new Date(a.end) <= new Date(b.start) || new Date(a.start) >= new Date(b.end));
+}
+
+// Helper: forces breakdown of single event to routine if expected
+function forceBreakdownIfNeeded(events, context) {
+  // If user prompt is about a routine/plan, and only one event returned, duplicate into a spread-out breakdown
+  if (events && events.length === 1) {
+    const e = events[0];
+    if (
+      typeof context === "string" &&
+      /(plan|schedule|routine|calendar|series|revision)/i.test(context)
+    ) {
+      // E.g., make 5 'Study' events for a study schedule
+      const multiple = [];
+      const baseStart = new Date(e.start);
+      const baseEnd = new Date(e.end);
+      for (let i = 0; i < 5; i++) {
+        const start = new Date(baseStart.getTime());
+        start.setDate(start.getDate() + i);
+        const end = new Date(baseEnd.getTime());
+        end.setDate(end.getDate() + i);
+        multiple.push({
+          ...e,
+          title: e.title, // forced to be same general title
+          start: start.toISOString().split('.')[0],
+          end: end.toISOString().split('.')[0],
+        });
+      }
+      return multiple;
+    }
+  }
+  return events;
 }
 
 // Create a default event as a fallback
@@ -28,16 +59,22 @@ export function createDefaultEvent(text: string) {
 // Improved: 
 // - Avoids overlaps with *all* events in same run.
 // - For creative breakdowns, will skip or reschedule if can't fit except if absolutely necessary (in that case, keep as last-resort).
-export function processAIGeneratedEvents(events: any[], prevEvents: any[] = []) {
+export function processAIGeneratedEvents(events: any[], prevEvents: any[] = [], context?: string) {
+  let e = events || [];
+  // 1. Patch: force breakdown if only 1 event for a repetitive routine/plan
+  e = forceBreakdownIfNeeded(e, context);
+
+  // 2. Stringent conflict-avoidance with both prev AND within e
   const currentDate = new Date();
-  let scheduled: any[] = prevEvents.map(ev => ({
+  let scheduled: any[] = (prevEvents || []).map(ev => ({
     ...ev,
     start: new Date(ev.start),
     end: new Date(ev.end),
   }));
   const result: any[] = [];
 
-  events.forEach((event, idx) => {
+  for (let idx = 0; idx < e.length; idx++) {
+    const event = e[idx];
     let start, end;
     if (event.start) {
       start = new Date(event.start);
@@ -80,15 +117,12 @@ export function processAIGeneratedEvents(events: any[], prevEvents: any[] = []) 
 
     // Avoid overlap with already scheduled events
     let isConflict = scheduled.some(ev => isOverlapping({ start, end }, ev));
-    if (isConflict && events.length > 1) {
-      // Try to reschedule 1 hour later, up to 10 times
-      let attempts = 0;
-      while (isConflict && attempts < 10) {
-        start = new Date(start.getTime() + 60 * 60 * 1000);
-        end = new Date(end.getTime() + 60 * 60 * 1000);
-        isConflict = scheduled.some(ev => isOverlapping({ start, end }, ev));
-        attempts++;
-      }
+    let attempts = 0;
+    while (isConflict && attempts < 24) { // Try up to a day of small shifts
+      start = new Date(start.getTime() + 60 * 60 * 1000);
+      end = new Date(end.getTime() + 60 * 60 * 1000);
+      isConflict = scheduled.some(ev => isOverlapping({ start, end }, ev));
+      attempts++;
     }
     // After attempts, if still conflict, schedule as is (worst-case: notify)
     scheduled.push({ start, end });
@@ -103,7 +137,7 @@ export function processAIGeneratedEvents(events: any[], prevEvents: any[] = []) 
       isAIGenerated: true,
       recurrence
     });
-  });
+  }
 
   return result;
 }
