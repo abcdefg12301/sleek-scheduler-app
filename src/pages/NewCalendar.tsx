@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -56,10 +57,10 @@ const NewCalendar = () => {
 
   const colorValue = form.watch('color');
 
-  // When saving new calendar, add AI events to new calendar only. Then clear preview state.
-  const onSubmit = (data: FormData) => {
+  // Make onSubmit async to resolve Promises
+  const onSubmit = async (data: FormData) => {
     try {
-      const newCalendar = addCalendar(
+      const newCalendar = await addCalendar(
         data.name,
         data.description,
         data.color,
@@ -83,7 +84,7 @@ const NewCalendar = () => {
               calendarId: newCalendar.id, // associate with new calendar only
               color: data.color // ensure color is from calendar!
             };
-            addEvent(newCalendar.id, eventWithDates);
+            await addEvent(newCalendar.id, eventWithDates); // Ensure event is added before counting
             addedCount++;
           } catch (eventError) {
             console.error('Error adding AI-generated event:', eventError, event);
