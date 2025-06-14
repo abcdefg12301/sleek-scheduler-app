@@ -78,6 +78,7 @@ const EditCalendar = () => {
           event => !event.isAIGenerated || event.calendarId !== id
         );
         updateCalendar(id, { events: nonAiEvents });
+
         // Add all previewed AI events (belonging to THIS calendar only)
         if (aiEvents.length > 0) {
           let addedCount = 0;
@@ -97,7 +98,7 @@ const EditCalendar = () => {
                   : undefined,
                 isAIGenerated: true,
                 calendarId: id,
-                color: data.color,
+                color: data.color, // assign calendar color!
               };
               addEvent(id, eventWithDates);
               addedCount++;
@@ -105,7 +106,9 @@ const EditCalendar = () => {
               console.error('Error adding AI-generated event:', err, event);
             }
           }
-          if (addedCount > 0) toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+          if (addedCount > 0) {
+            toast.success(`Added ${addedCount} AI-generated events to your calendar`);
+          }
         }
       }
 

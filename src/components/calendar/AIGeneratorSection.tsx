@@ -27,9 +27,8 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 }) => {
   const { isPreviewOpen, openPreview, setIsPreviewOpen } = useAIPreviewDialog(false);
 
-  // Only call setAiEvents with APPEND logic
-  const onEventsGenerated = (newEvents: Event[]) => {
-    setAiEvents(newEvents);
+  const onEventsGenerated = (events: Event[]) => {
+    setAiEvents(events);
     openPreview();
   };
 
@@ -55,4 +54,5 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
     </div>
   );
 };
+
 export default AIGeneratorSection;

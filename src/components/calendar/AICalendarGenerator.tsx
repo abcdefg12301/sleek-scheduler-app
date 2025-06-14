@@ -76,15 +76,13 @@ const AICalendarGenerator = ({
     setApiError(null);
     setDebugInfo(null);
 
-    // APPEND, DO NOT REPLACE new AI events
-    const contextEvents = [...(generatedEvents || [])]; // Always all "current" AI events
-
+    // Always use all AI events for this calendar (passed from parent), so backend gets full context
+    const contextEvents = existingEvents || [];
     try {
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
         body: {
           calendarDetails,
           previousEvents: contextEvents,
-          calendarColor: calendarColor || '#8B5CF6', // Pass down active color
         },
       });
 
@@ -95,18 +93,19 @@ const AICalendarGenerator = ({
         return;
       }
 
-      // Always FORCE event color to chosen calendar color
+      // Add color if not present, and ensure calendarId/isAIGenerated is correct
       const processedEvents = data.events.map((event: any) => ({
         ...event,
         start: new Date(event.start),
         end: new Date(event.end),
         calendarId: calendarId || '',
         isAIGenerated: true,
-        color: calendarColor || '#8B5CF6',
+        color: event.color || calendarColor || '#8B5CF6',
       }));
 
-      // APPEND, do not replace!
+      // Append new events, do not replace!
       const newList = [...generatedEvents, ...processedEvents];
+
       setGeneratedEvents(newList);
       onEventsGenerated?.(newList);
 
