@@ -11,6 +11,7 @@ import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import { Event } from '@/types';
 import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
 import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
+import { useStableAiEventState } from '@/hooks/useStableAiEventState';
 
 interface FormData {
   name: string;
@@ -28,13 +29,16 @@ const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
 
-  // Use hook for AI event state (none at mount, since no calendar yet)
+  // Robust AI event state: always reflects latest user changes and persists after calendar creation.
   const {
-    aiEvents: aiGeneratedEvents,
-    setGeneratedEvents: setAiGeneratedEvents,
+    events: aiEvents,
+    setEvents: setAiEvents,
     deleteEvent: deleteAiEvent,
-    clearAllEvents: clearAiEvents,
-  } = useAiCalendarEvents({ calendarId: undefined, initialEvents: [] });
+    clearEvents: clearAiEvents,
+  } = useStableAiEventState({
+    calendarId: undefined,
+    initialEvents: [],
+  });
 
   const defaultValues: FormData = {
     name: '',
@@ -60,9 +64,9 @@ const NewCalendar = () => {
         data.color,
         data.showHolidays
       );
-      if (aiGeneratedEvents.length > 0) {
+      if (aiEvents.length > 0) {
         let addedCount = 0;
-        for (const event of aiGeneratedEvents) {
+        for (const event of aiEvents) {
           try {
             const eventWithDates = {
               ...event,
@@ -141,8 +145,8 @@ const NewCalendar = () => {
 
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
           <AIGeneratorSection
-            aiEvents={aiGeneratedEvents}
-            setAiEvents={setAiGeneratedEvents}
+            aiEvents={aiEvents}
+            setAiEvents={setAiEvents}
             deleteAiEvent={deleteAiEvent}
             clearAllEvents={clearAiEvents}
             calendarId={undefined}

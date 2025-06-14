@@ -9,7 +9,7 @@ import { useCalendarStore } from '@/store/calendar-store';
 import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
-import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
+import { useStableAiEventState } from '@/hooks/useStableAiEventState';
 import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
 
 interface FormData {
@@ -25,21 +25,22 @@ const EditCalendar = () => {
   const { id } = useParams<{ id: string }>();
   const { calendars, updateCalendar, addEvent } = useCalendarStore();
 
-  // Use new hook to handle AI event state (isolated per calendar)
-  const {
-    aiEvents: pendingAiEvents,
-    setGeneratedEvents: setPendingAiEvents,
-    deleteEvent: deletePendingEvent,
-    clearAllEvents: clearPendingAiEvents,
-  } = useAiCalendarEvents({
-    calendarId: id,
-    initialEvents:
-      calendars.find(c => c.id === id)?.events.filter(
-        e => e.isAIGenerated && e.calendarId === id
-      ) || [],
-  });
-
+  // Find the right calendar and its existing AI events
   const calendar = calendars.find(cal => cal.id === id);
+  const aiInitialEvents = (calendar?.events.filter(
+    e => e.isAIGenerated && e.calendarId === id
+  ) || []);
+
+  // Robust AI events state (isolated per calendar)
+  const {
+    events: aiEvents,
+    setEvents: setAiEvents,
+    deleteEvent: deleteAiEvent,
+    clearEvents: clearAiEvents,
+  } = useStableAiEventState({
+    calendarId: id,
+    initialEvents: aiInitialEvents,
+  });
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -75,9 +76,9 @@ const EditCalendar = () => {
         updateCalendar(id, { events: nonAiEvents });
 
         // Save all previewed AI events
-        if (pendingAiEvents.length > 0) {
+        if (aiEvents.length > 0) {
           let addedCount = 0;
-          for (const event of pendingAiEvents) {
+          for (const event of aiEvents) {
             try {
               const eventWithDates = {
                 ...event,
@@ -160,10 +161,10 @@ const EditCalendar = () => {
 
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
           <AIGeneratorSection
-            aiEvents={pendingAiEvents}
-            setAiEvents={setPendingAiEvents}
-            deleteAiEvent={deletePendingEvent}
-            clearAllEvents={clearPendingAiEvents}
+            aiEvents={aiEvents}
+            setAiEvents={setAiEvents}
+            deleteAiEvent={deleteAiEvent}
+            clearAllEvents={clearAiEvents}
             calendarId={id}
           />
 

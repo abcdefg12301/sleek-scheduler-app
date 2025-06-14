@@ -26,7 +26,8 @@ const AIPreviewSection: React.FC<AIPreviewSectionProps> = ({
   clearAllEvents,
   buttonVariant = "outline",
 }) => {
-  if (!aiEvents.length) return null;
+  // Shows nothing if there are no AI events.
+  if (!aiEvents || aiEvents.length === 0) return null;
   return (
     <div className="flex w-full">
       <Button

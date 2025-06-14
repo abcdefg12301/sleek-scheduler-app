@@ -1,9 +1,9 @@
-
 import React from "react";
 import AICalendarGenerator from "./AICalendarGenerator";
 import AIPreviewSection from "./AIPreviewSection";
 import { Event } from "@/types";
 import { useAIPreviewDialog } from "@/hooks/useAIPreviewDialog";
+import { useStableAiEventState } from "@/hooks/useStableAiEventState";
 
 interface AIGeneratorSectionProps {
   aiEvents: Event[];

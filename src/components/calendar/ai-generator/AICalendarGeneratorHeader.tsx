@@ -12,7 +12,7 @@ const AICalendarGeneratorHeader: React.FC = () => {
       Calendar Generator
       <Tooltip>
         <TooltipTrigger asChild>
-          {/* The button must NOT trigger submits or onClick. */}
+          {/* Button does NOT trigger submit or preview, it's a tooltip trigger only */}
           <Button
             variant="ghost"
             size="icon"
@@ -20,6 +20,7 @@ const AICalendarGeneratorHeader: React.FC = () => {
             tabIndex={0}
             type="button"
             aria-label="Info"
+            onClick={e => { e.preventDefault(); }} // Prevent any accidental bubbling
           >
             <Info className="h-4 w-4 text-muted-foreground" />
           </Button>
@@ -27,7 +28,7 @@ const AICalendarGeneratorHeader: React.FC = () => {
         <TooltipContent className="max-w-sm">
           <p>
             Please describe your events in natural language.<br />
-            <b>It is <u>required</u> that you specify how often your event occurs (the frequency): e.g., "Daily", "Weekly", "every Tuesday", etc. If not specified, events may not be generated correctly.</b>
+            <b>It is <u>required</u> that you specify how often your event occurs (the frequency), such as <i>daily, weekly, every Tuesday</i>, etc.<br />If not specified, events may not be generated correctly.</b>
             <br /><br />
             Examples:<br />
             • "I go to the gym <b>Monday, Wednesday, and Friday</b> from 5pm-7pm"<br />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +25,7 @@ const AICalendarGenerator = ({
   existingEvents = [],
   onPreviewOpen,
 }: AICalendarGeneratorProps) => {
+  // NOTE: This component should be used INSIDE the refactored stable state context only.
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
@@ -33,11 +33,12 @@ const AICalendarGenerator = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
+  // Keep generatedEvents in sync with external props
   useEffect(() => {
     setGeneratedEvents(existingEvents);
   }, [calendarId, existingEvents]);
 
-  // Prevent submitting when clicking Info button; nothing for info to trigger!
+  // NOTE: Always call onEventsGenerated to propagate upward
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
     newEvents.splice(index, 1);
@@ -135,17 +136,18 @@ const AICalendarGenerator = ({
           >
             {isGenerating ? 'Generating...' : 'Generate Events'}
           </Button>
-          {/* Always show "Preview AI Events" if there are generated events */}
-          <Button
-            variant="outline"
-            className="flex-1"
-            type="button"
-            onClick={onPreviewOpen}
-            disabled={generatedEvents.length === 0}
-            tabIndex={0}
-          >
-            Preview AI Events ({generatedEvents.length})
-          </Button>
+          {/* PREVIEW BUTTON: Only enabled & shown if there are events */}
+          {generatedEvents.length > 0 && (
+            <Button
+              variant="outline"
+              className="flex-1"
+              type="button"
+              onClick={onPreviewOpen}
+              tabIndex={0}
+            >
+              Preview AI Events ({generatedEvents.length})
+            </Button>
+          )}
         </div>
 
         {apiError && (

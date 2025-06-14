@@ -24,6 +24,9 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
   onEditEvent,
   clearAllEvents
 }) => {
+  // Render nothing if not open or events are empty (robust fix)
+  if (!isOpen || events.length === 0) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
