@@ -162,34 +162,54 @@ Be as creative and helpful as possible—even for study plans, propose milestone
 
     const data = await response.json();
     console.log("MistralAI API response:", JSON.stringify(data, null, 2));
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.choices[0]?.message?.content;
     console.log("MistralAI raw response:", aiResponse);
 
     let parsedEvents;
     let parseSucceeded = false;
     try {
       // Try to find a JSON array in the response string
-      const arrayMatch = aiResponse.match(/\[[\s\S]*\]/);
+      const arrayMatch = aiResponse && aiResponse.match(/\[[\s\S]*\]/);
       if (arrayMatch && arrayMatch[0]) {
+        console.log("Found possible JSON array in response:", arrayMatch[0].slice(0, 100) + (arrayMatch[0].length > 100 ? '...' : ''));
         try {
           parsedEvents = JSON.parse(arrayMatch[0]);
           parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
+          if (parseSucceeded) console.log("Parsed events from arrayMatch:", parsedEvents.length);
         } catch (err) {
-          // Fallback below
+          console.error("Failed to JSON.parse from arrayMatch:", err);
         }
       }
       // If above fails, try full string parse
-      if (!parseSucceeded) {
+      if (!parseSucceeded && aiResponse) {
         try {
           parsedEvents = JSON.parse(aiResponse);
           parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
+          if (parseSucceeded) console.log("Parsed events from full response:", parsedEvents.length);
         } catch (err) {
-          // Fallback below
+          console.error("Failed to JSON.parse from full response:", err);
         }
       }
-      // If still no valid array, log and create clear fallback
+      // If still no valid array, log and create clear fallback with diagnostic info
       if (!parseSucceeded || !Array.isArray(parsedEvents)) {
         console.error("AI returned unparseable event array. Raw response:", aiResponse);
+        // If it's a non-empty string, show the entire output as one event for diagnostics
+        if (typeof aiResponse === "string" && aiResponse.trim().length > 0) {
+          return { 
+            events: [{
+              title: "AI response (diagnostic fallback)",
+              description: aiResponse.slice(0, 400),
+              start: (new Date()).toISOString().split('.')[0],
+              end: (new Date(Date.now() + 3600000)).toISOString().split('.')[0],
+              allDay: false,
+              color: "#DB4437",
+              isAIGenerated: true
+            }], 
+            sourceType: "diagnostic",
+            error: "Could not parse events from AI. Raw output returned as event for debugging."
+          };
+        }
+        // Otherwise give user fallback
         return { 
           events: [createDefaultEvent(userInput)], 
           sourceType: "fallback",
