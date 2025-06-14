@@ -2,11 +2,10 @@
 import React from 'react';
 import { Event } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import AIGeneratedEventsList from '../AIGeneratedEventsList';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Added for scroll fix
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EventsPreviewDialogProps {
   isOpen: boolean;
@@ -25,17 +24,21 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
   onEditEvent,
   clearAllEvents
 }) => {
-  // Render nothing if not open or events are empty (robust fix)
+  // For debugging -- ensure we're seeing correct events
+  React.useEffect(() => {
+    console.log("[Preview Dialog] events.length =", events.length, events);
+  }, [events, isOpen]);
+
   if (!isOpen || events.length === 0) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-2">
-          <DialogTitle>Generated Events</DialogTitle>
+          <DialogTitle>Generated Events ({events.length})</DialogTitle>
         </DialogHeader>
         <Separator />
-        <ScrollArea className="flex-1 min-h-[200px] max-h-[50vh] rounded-md p-0 overflow-y-auto"> {/* Add scroll */}
+        <ScrollArea className="flex-1 min-h-[250px] max-h-[60vh] rounded-md p-0 overflow-y-auto">
           <div className="py-2 pr-1">
             <AIGeneratedEventsList 
               events={events} 
@@ -63,3 +66,4 @@ const EventsPreviewDialog: React.FC<EventsPreviewDialogProps> = ({
 };
 
 export default EventsPreviewDialog;
+

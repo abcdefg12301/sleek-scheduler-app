@@ -4,12 +4,9 @@ import AIPreviewSection from "./AIPreviewSection";
 import { Event } from "@/types";
 import { useAIPreviewDialog } from "@/hooks/useAIPreviewDialog";
 
-// Extracted logic for enhanced modularity and testing
 // Helper for merging existing and preview AI events for context
 function getFullEventContext(currentEvents: Event[], previewedAiEvents: Event[]): Event[] {
-  // Merge, deduplicate by id if present, return full event array for context
   const all = [...(currentEvents || []), ...(previewedAiEvents || [])];
-  // De-duplication if event IDs exist
   const byId = new Map();
   all.forEach(ev => {
     if (ev.id) byId.set(ev.id, ev);
@@ -24,7 +21,7 @@ interface AIGeneratorSectionProps {
   clearAllEvents: () => void;
   calendarId?: string;
   calendarColor?: string;
-  currentEvents?: Event[]; // Real events from calendar (for full context/prevent AI conflicts)
+  currentEvents?: Event[];
 }
 
 const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
@@ -38,10 +35,9 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 }) => {
   const { isPreviewOpen, openPreview, setIsPreviewOpen } = useAIPreviewDialog(false);
 
-  const onEventsGenerated = React.useCallback(
+  const onEventsGenerated = useCallback(
     (events: Event[]) => {
-      // Instead of REPLACING, we merge new events with existing ones
-      // ERROR FIX: setAiEvents expects Event[] not a function
+      // Only append events that aren't already present - append, not replace!
       const filteredEvents = events.filter(e =>
         !aiEvents.some(ev =>
           ev.title === e.title &&
@@ -49,13 +45,14 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
           new Date(ev.end).getTime() === new Date(e.end).getTime()
         )
       );
-      setAiEvents([...aiEvents, ...filteredEvents]);
+      // Keep all previous aiEvents + new filtered (append)
+      const newEvents = [...aiEvents, ...filteredEvents];
+      setAiEvents(newEvents);
       openPreview();
     },
     [setAiEvents, openPreview, aiEvents]
   );
 
-  // Merge true existing DB events and current AI events for conflict context
   const allEventContext = getFullEventContext(currentEvents, aiEvents);
 
   return (
