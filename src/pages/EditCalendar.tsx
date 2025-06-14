@@ -10,6 +10,7 @@ import { SleepSchedule, Event } from '@/types';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
 import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import AICalendarGenerator from '@/components/calendar/AICalendarGenerator';
+import EventsPreviewDialog from '@/components/calendar/ai-generator/EventsPreviewDialog';
 
 interface FormData {
   name: string;
@@ -23,29 +24,41 @@ const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { calendars, updateCalendar, addEvent } = useCalendarStore();
-  const [aiGeneratedEventsByCalendar, setAiGeneratedEventsByCalendar] = useState<Record<string, Event[]>>({});
-  
+  const [isAiPreviewDialogOpen, setIsAiPreviewDialogOpen] = useState(false);
+
+  // Update: Persist AI events in local state only for preview, only commit on "Save Changes"
+  const [pendingAiEvents, setPendingAiEvents] = useState<Event[]>([]);
+
   const calendar = calendars.find(cal => cal.id === id);
-  
-  // Get only the AI events for this calendar
-  const aiEventsForThisCalendar = aiGeneratedEventsByCalendar[id || ""] ?? (
-    calendar?.events.filter(event =>
-      event.isAIGenerated && event.calendarId === id
-    ) || []
-  );
-  
+
+  // Always prefer pending events during preview, fallback to calendar events
+  const aiEventsForThisCalendar =
+    pendingAiEvents.length > 0
+      ? pendingAiEvents
+      : (calendar?.events.filter(event => event.isAIGenerated && event.calendarId === id) || []);
+
+  // On first mount (or when calendar changes), sync in any previously generated AI events for previewing
   useEffect(() => {
-    // Only load from calendar's stored events if not already set in state for this calendar
-    if (calendar && id && aiGeneratedEventsByCalendar[id] === undefined) {
-      const initialAiEvents = calendar.events.filter(
+    if (calendar && id) {
+      const aiEvents = calendar.events.filter(
         event => event.isAIGenerated && event.calendarId === id
       );
-      setAiGeneratedEventsByCalendar(prev => ({
-        ...prev,
-        [id]: initialAiEvents,
-      }));
+      setPendingAiEvents(aiEvents);
     }
   }, [calendar?.id, id]);
+
+  // Handler receives AI-generated events from AICalendarGenerator and sets them for preview
+  const handleAiEventsGenerated = (events: Event[]) => {
+    setPendingAiEvents(events);
+    setIsAiPreviewDialogOpen(true); // Open preview after generation
+  };
+
+  // Toggle to open preview manually if events exist
+  const handlePreviewButtonClick = () => {
+    if (pendingAiEvents.length > 0) {
+      setIsAiPreviewDialogOpen(true);
+    }
+  };
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -63,22 +76,8 @@ const EditCalendar = () => {
       navigate('/');
     }
   }, [calendar, id, navigate]);
-  
-  // Isolate by calendar id
-  const handleAiEventsGenerated = (events: Event[]) => {
-    if (id) {
-      const eventsWithCalendarId = events.map(event => ({
-        ...event,
-        calendarId: id,
-        isAIGenerated: true,
-      }));
-      setAiGeneratedEventsByCalendar(prev => ({
-        ...prev,
-        [id]: eventsWithCalendarId,
-      }));
-    }
-  };
-  
+
+  // When saving changes, commit AI events to calendar store
   const onSubmit = (data: FormData) => {
     if (id) {
       updateCalendar(id, {
@@ -87,22 +86,19 @@ const EditCalendar = () => {
         color: data.color,
         showHolidays: data.showHolidays
       });
-      
+
       if (calendar) {
+        // Remove old AI events, keep others
         const nonAiEvents = calendar.events.filter(
           event => !event.isAIGenerated || event.calendarId !== id
         );
-        
-        updateCalendar(id, {
-          events: nonAiEvents,
-        });
-        
-        // Save only this calendar's AI events
-        const calendarAiEvents = aiGeneratedEventsByCalendar[id] || [];
-        if (calendarAiEvents.length > 0) {
+
+        updateCalendar(id, { events: nonAiEvents });
+
+        // Save all previewed AI events
+        if (pendingAiEvents.length > 0) {
           let addedCount = 0;
-          
-          for (const event of calendarAiEvents) {
+          for (const event of pendingAiEvents) {
             try {
               const eventWithDates = {
                 ...event,
@@ -119,20 +115,19 @@ const EditCalendar = () => {
                 isAIGenerated: true,
                 calendarId: id,
               };
-
               addEvent(id, eventWithDates);
               addedCount++;
-            } catch (eventError) {
-              console.error('Error adding AI-generated event:', eventError, event);
+            } catch (err) {
+              console.error('Error adding AI-generated event:', err, event);
             }
           }
-          
+
           if (addedCount > 0) {
             toast.success(`Added ${addedCount} AI-generated events to your calendar`);
           }
         }
       }
-      
+
       toast.success('Calendar updated successfully');
       navigate(`/calendar/${id}`);
     }
@@ -191,6 +186,28 @@ const EditCalendar = () => {
             onEventsGenerated={handleAiEventsGenerated}
             calendarId={id}
             existingEvents={aiEventsForThisCalendar}
+          />
+          {/* Preview AI events button */}
+          {pendingAiEvents.length > 0 && (
+            <div className="flex">
+              <Button variant="outline" onClick={handlePreviewButtonClick} type="button" className="ml-auto">
+                Preview AI Events ({pendingAiEvents.length})
+              </Button>
+            </div>
+          )}
+          {/* Preview dialog */}
+          <EventsPreviewDialog 
+            isOpen={isAiPreviewDialogOpen}
+            setIsOpen={setIsAiPreviewDialogOpen}
+            events={pendingAiEvents}
+            onDeleteEvent={(idx) => {
+              const updated = pendingAiEvents.filter((_, i) => i !== idx);
+              setPendingAiEvents(updated);
+            }}
+            onEditEvent={(event, idx) => {
+              // No-op for now (editing can be wired up similarly if enabled)
+            }}
+            clearAllEvents={() => setPendingAiEvents([])}
           />
           
           <CalendarFeatures form={form} timeOptions={timeOptions} />

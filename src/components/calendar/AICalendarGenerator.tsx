@@ -34,7 +34,7 @@ const AICalendarGenerator = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // Re-setup events ONLY when calendarId or existingEvents change
+  // Use prop existingEvents only to initialize state; always relay changes to parent
   useEffect(() => {
     setGeneratedEvents(existingEvents);
   }, [calendarId, existingEvents]);
@@ -82,7 +82,8 @@ const AICalendarGenerator = ({
     setIsGenerating(true);
     setApiError(null);
     setDebugInfo(null);
-    // Only use this calendar's context for the API
+
+    // Always use the single calendarId context for generating for this calendar only
     const contextEvents = generatedEvents.filter(
       event => event.calendarId === calendarId
     );
