@@ -144,8 +144,8 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
       parsedEvents = JSON.parse(jsonStr);
       console.log("Successfully parsed events:", parsedEvents);
       
-      // Process the events to ensure proper formatting
-      const processedEvents = processAIGeneratedEvents(parsedEvents);
+      // Process the events to ensure proper formatting (now pass existing events for conflict avoidance)
+      const processedEvents = processAIGeneratedEvents(parsedEvents, previousEvents);
       return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
       // Fallback to simple event creation if AI parsing fails

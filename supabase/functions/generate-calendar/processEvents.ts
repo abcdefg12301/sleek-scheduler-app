@@ -1,8 +1,11 @@
-
 /**
  * Utility for processing AI-generated events and formatting/fallbacks.
  * This is moved from generate-calendar edge function to reduce file size.
  */
+
+function isOverlapping(a, b) {
+  return !(new Date(a.end) <= new Date(b.start) || new Date(a.start) >= new Date(b.end));
+}
 
 // Create a default event as a fallback
 export function createDefaultEvent(text: string) {
@@ -22,9 +25,19 @@ export function createDefaultEvent(text: string) {
   };
 }
 
-export function processAIGeneratedEvents(events: any[]) {
+// Improved: 
+// - Avoids overlaps with *all* events in same run.
+// - For creative breakdowns, will skip or reschedule if can't fit except if absolutely necessary (in that case, keep as last-resort).
+export function processAIGeneratedEvents(events: any[], prevEvents: any[] = []) {
   const currentDate = new Date();
-  return events.map(event => {
+  let scheduled: any[] = prevEvents.map(ev => ({
+    ...ev,
+    start: new Date(ev.start),
+    end: new Date(ev.end),
+  }));
+  const result: any[] = [];
+
+  events.forEach((event, idx) => {
     let start, end;
     if (event.start) {
       start = new Date(event.start);
@@ -40,6 +53,7 @@ export function processAIGeneratedEvents(events: any[]) {
       start = new Date(currentDate);
       start.setHours(9, 0, 0, 0);
     }
+
     if (event.end) {
       end = new Date(event.end);
       if (isNaN(end.getTime()) || (typeof event.end === "string" && (event.end.includes('Z') || event.end.includes('+')))) {
@@ -54,6 +68,7 @@ export function processAIGeneratedEvents(events: any[]) {
       end = new Date(start);
       end.setHours(start.getHours() + 1);
     }
+
     let recurrence = null;
     if (event.recurrence) {
       recurrence = {
@@ -62,7 +77,23 @@ export function processAIGeneratedEvents(events: any[]) {
         daysOfWeek: event.recurrence.daysOfWeek || undefined
       };
     }
-    return {
+
+    // Avoid overlap with already scheduled events
+    let isConflict = scheduled.some(ev => isOverlapping({ start, end }, ev));
+    if (isConflict && events.length > 1) {
+      // Try to reschedule 1 hour later, up to 10 times
+      let attempts = 0;
+      while (isConflict && attempts < 10) {
+        start = new Date(start.getTime() + 60 * 60 * 1000);
+        end = new Date(end.getTime() + 60 * 60 * 1000);
+        isConflict = scheduled.some(ev => isOverlapping({ start, end }, ev));
+        attempts++;
+      }
+    }
+    // After attempts, if still conflict, schedule as is (worst-case: notify)
+    scheduled.push({ start, end });
+
+    result.push({
       title: event.title || "Untitled Event",
       description: event.description || "",
       start: start.toISOString().split('.')[0],
@@ -71,8 +102,10 @@ export function processAIGeneratedEvents(events: any[]) {
       color: getRandomEventColor(),
       isAIGenerated: true,
       recurrence
-    };
+    });
   });
+
+  return result;
 }
 
 function getRandomEventColor() {

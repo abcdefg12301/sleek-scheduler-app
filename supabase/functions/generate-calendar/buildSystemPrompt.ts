@@ -36,11 +36,11 @@ WHEN TO CREATE A PLAN/BREAKDOWN:
 
 WHEN BREAKING DOWN:
 - ALWAYS avoid scheduling conflicts with BOTH the user's *existing* events (provided below) AND with any other events you generate in this breakdown (unless strictly unavoidable!).
-- For tasks that are naturally repetitive (like study, practice, workout, sleep), prefer identical event titles for each repetition (e.g., "Study", "Workout", etc).
+- For tasks that are naturally repetitive (like study, practice, workout, sleep), use identical, general event titles for each repetition (e.g., "Study", "Workout", etc.). 
 - Only create distinct/specific titles if the user *explicitly* specifies different subjects or names (e.g., "Study Biology" and "Study Math").
-- Schedule repetitive events consistently (e.g., same time each day), unless the user specifies variation.
+- Schedule repetitive events at consistent times, unless variation is requested.
 - Make all planned sessions as non-overlapping as possible.
-  
+
 WHEN IN DOUBT:
 - Prefer the literal, single-event approach.
 - Do not fabricate details or invent extra sessions unless the instruction clearly asks for it.
