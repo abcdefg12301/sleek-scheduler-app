@@ -136,18 +136,6 @@ const AICalendarGenerator = ({
           >
             {isGenerating ? 'Generating...' : 'Generate Events'}
           </Button>
-          {/* PREVIEW BUTTON: Only enabled & shown if there are events */}
-          {generatedEvents.length > 0 && (
-            <Button
-              variant="outline"
-              className="flex-1"
-              type="button"
-              onClick={onPreviewOpen}
-              tabIndex={0}
-            >
-              Preview AI Events ({generatedEvents.length})
-            </Button>
-          )}
         </div>
 
         {apiError && (

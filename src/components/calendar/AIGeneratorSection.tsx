@@ -1,9 +1,9 @@
+
 import React from "react";
 import AICalendarGenerator from "./AICalendarGenerator";
 import AIPreviewSection from "./AIPreviewSection";
 import { Event } from "@/types";
 import { useAIPreviewDialog } from "@/hooks/useAIPreviewDialog";
-import { useStableAiEventState } from "@/hooks/useStableAiEventState";
 
 interface AIGeneratorSectionProps {
   aiEvents: Event[];
@@ -27,6 +27,7 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
     openPreview();
   };
 
+  // Only show one preview button (remove all other preview triggers)
   return (
     <div>
       <AICalendarGenerator
@@ -36,13 +37,16 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
         onEventsGenerated={onEventsGenerated}
         onPreviewOpen={openPreview}
       />
-      <AIPreviewSection
-        aiEvents={aiEvents}
-        isOpen={isPreviewOpen}
-        setIsOpen={setIsPreviewOpen}
-        onDeleteEvent={deleteAiEvent}
-        clearAllEvents={clearAllEvents}
-      />
+      {/* Show preview section only if there are events */}
+      {aiEvents && aiEvents.length > 0 && (
+        <AIPreviewSection
+          aiEvents={aiEvents}
+          isOpen={isPreviewOpen}
+          setIsOpen={setIsPreviewOpen}
+          onDeleteEvent={deleteAiEvent}
+          clearAllEvents={clearAllEvents}
+        />
+      )}
     </div>
   );
 };

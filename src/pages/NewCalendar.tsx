@@ -76,7 +76,8 @@ const NewCalendar = () => {
                 ...event.recurrence,
                 endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
               } : undefined,
-              isAIGenerated: true
+              isAIGenerated: true,
+              calendarId: newCalendar.id // <-- ensure calendarId is set
             };
             addEvent(newCalendar.id, eventWithDates);
             addedCount++;

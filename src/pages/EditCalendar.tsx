@@ -27,6 +27,7 @@ const EditCalendar = () => {
 
   // Find the right calendar and its existing AI events
   const calendar = calendars.find(cal => cal.id === id);
+  // AI initial events: Pick up latest AI events for this calendar on each edit session
   const aiInitialEvents = (calendar?.events.filter(
     e => e.isAIGenerated && e.calendarId === id
   ) || []);
