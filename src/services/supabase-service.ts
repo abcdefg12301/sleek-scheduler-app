@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar, Event, RecurrenceRule } from '@/types';
 import { toast } from 'sonner';

@@ -1,4 +1,3 @@
-
 import React, { useCallback } from "react";
 import AICalendarGenerator from "./AICalendarGenerator";
 import AIPreviewSection from "./AIPreviewSection";
@@ -41,7 +40,14 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 
   const onEventsGenerated = useCallback(
     (events: Event[]) => {
-      setAiEvents(events);
+      // Instead of REPLACING, we merge new events with existing ones
+      setAiEvents(prev => [...prev, ...events.filter(e =>
+        !prev.some(ev =>
+          ev.title === e.title &&
+          new Date(ev.start).getTime() === new Date(e.start).getTime() &&
+          new Date(ev.end).getTime() === new Date(e.end).getTime()
+        )
+      )]);
       openPreview();
     },
     [setAiEvents, openPreview]

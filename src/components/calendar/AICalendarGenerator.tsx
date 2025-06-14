@@ -76,7 +76,6 @@ const AICalendarGenerator = ({
     setApiError(null);
     setDebugInfo(null);
 
-    // Always use all AI events for this calendar (passed from parent), so backend gets full context
     const contextEvents = existingEvents || [];
     try {
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
@@ -93,7 +92,7 @@ const AICalendarGenerator = ({
         return;
       }
 
-      // Add color if not present, and ensure calendarId/isAIGenerated is correct
+      // Add color, ensure format
       const processedEvents = data.events.map((event: any) => ({
         ...event,
         start: new Date(event.start),
@@ -103,11 +102,20 @@ const AICalendarGenerator = ({
         color: event.color || calendarColor || '#8B5CF6',
       }));
 
-      // Append new events, do not replace!
-      const newList = [...generatedEvents, ...processedEvents];
+      // Instead of replacing, append non-duplicates to generatedEvents
+      const newList = [...generatedEvents];
+      processedEvents.forEach(ev => {
+        if (!newList.some(e2 =>
+          e2.title === ev.title &&
+          new Date(e2.start).getTime() === new Date(ev.start).getTime() &&
+          new Date(e2.end).getTime() === new Date(ev.end).getTime()
+        )) {
+          newList.push(ev);
+        }
+      });
 
       setGeneratedEvents(newList);
-      onEventsGenerated?.(newList);
+      onEventsGenerated?.(processedEvents);
 
       toast.success(`Successfully generated ${processedEvents.length} event${processedEvents.length !== 1 ? 's' : ''}`);
       setCalendarDetails('');
