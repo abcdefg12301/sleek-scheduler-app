@@ -5,6 +5,9 @@ import AIPreviewSection from "./AIPreviewSection";
 import { Event } from "@/types";
 import { useAIPreviewDialog } from "@/hooks/useAIPreviewDialog";
 
+/**
+ * Main section giving preview+generation logic, always isolated per calendarId.
+ */
 interface AIGeneratorSectionProps {
   aiEvents: Event[];
   setAiEvents: (events: Event[]) => void;
@@ -22,12 +25,13 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 }) => {
   const { isPreviewOpen, openPreview, setIsPreviewOpen } = useAIPreviewDialog(false);
 
+  // Pass all existing AI events for the calendar both as source and as context to generator
   const onEventsGenerated = (events: Event[]) => {
+    // Always replace with the newly generated list (preview mode)
     setAiEvents(events);
     openPreview();
   };
 
-  // Only show one preview button (remove all other preview triggers)
   return (
     <div>
       <AICalendarGenerator
@@ -37,7 +41,7 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
         onEventsGenerated={onEventsGenerated}
         onPreviewOpen={openPreview}
       />
-      {/* Show preview section only if there are events */}
+      {/* Only show the preview button and dialog if there are previewed OR saved aiEvents */}
       {aiEvents && aiEvents.length > 0 && (
         <AIPreviewSection
           aiEvents={aiEvents}

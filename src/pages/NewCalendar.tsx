@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
@@ -7,11 +8,9 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCalendarStore } from '@/store/calendar-store';
 import CalendarBasicDetails from '@/components/calendar-form/CalendarBasicDetails';
-import CalendarFeatures from '@/components/calendar-form/CalendarFeatures';
 import { Event } from '@/types';
-import { useAiCalendarEvents } from '@/hooks/useAiCalendarEvents';
-import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
 import { useStableAiEventState } from '@/hooks/useStableAiEventState';
+import AIGeneratorSection from '@/components/calendar/AIGeneratorSection';
 
 interface FormData {
   name: string;
@@ -29,7 +28,7 @@ const NewCalendar = () => {
   const navigate = useNavigate();
   const { addCalendar, addEvent } = useCalendarStore();
 
-  // Robust AI event state: always reflects latest user changes and persists after calendar creation.
+  // AI event state, ONLY for this new calendar. They are not added anywhere until save.
   const {
     events: aiEvents,
     setEvents: setAiEvents,
@@ -56,6 +55,7 @@ const NewCalendar = () => {
     defaultValues,
   });
 
+  // When saving new calendar, add AI events to new calendar only. Then clear preview state.
   const onSubmit = (data: FormData) => {
     try {
       const newCalendar = addCalendar(
@@ -74,10 +74,12 @@ const NewCalendar = () => {
               end: new Date(event.end),
               recurrence: event.recurrence ? {
                 ...event.recurrence,
-                endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
+                endDate: event.recurrence.endDate
+                  ? new Date(event.recurrence.endDate)
+                  : undefined
               } : undefined,
               isAIGenerated: true,
-              calendarId: newCalendar.id // <-- ensure calendarId is set
+              calendarId: newCalendar.id // associate with new calendar only
             };
             addEvent(newCalendar.id, eventWithDates);
             addedCount++;
@@ -89,7 +91,7 @@ const NewCalendar = () => {
           toast.success(`Added ${addedCount} AI-generated events to your calendar`);
         }
       }
-      clearAiEvents();
+      clearAiEvents(); // ONLY clear after saving
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);
     } catch (error) {
@@ -97,28 +99,6 @@ const NewCalendar = () => {
       toast.error('Failed to create calendar');
     }
   };
-
-  function generateTimeOptions() {
-    const options = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let min = 0; min < 60; min += 30) {
-        const h = hour.toString().padStart(2, '0');
-        const m = min.toString().padStart(2, '0');
-        options.push({ value: `${h}:${m}`, label: formatTimeDisplay(`${h}:${m}`) });
-      }
-    }
-    return options;
-  }
-
-  function formatTimeDisplay(time: string) {
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours, 10);
-    const period = h < 12 ? 'AM' : 'PM';
-    const hour = h % 12 || 12;
-    return `${hour}:${minutes} ${period}`;
-  }
-
-  const timeOptions = generateTimeOptions();
 
   return (
     <div className="container max-w-xl pt-10 pb-20">
@@ -130,20 +110,14 @@ const NewCalendar = () => {
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
-
       <h1 className="text-2xl font-bold mb-2">Create New Calendar</h1>
       <p className="text-muted-foreground mb-6">
         Set up a new calendar to organize your events.
       </p>
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <h2 className="text-lg font-semibold mb-3">Calendar Details</h2>
           <CalendarBasicDetails form={form} />
-
-          {/* Features section is now optional */}
-          {/* <CalendarFeatures form={form} timeOptions={timeOptions} /> */}
-
           <h2 className="text-lg font-semibold mb-3">Quick Start with AI</h2>
           <AIGeneratorSection
             aiEvents={aiEvents}
@@ -162,3 +136,4 @@ const NewCalendar = () => {
 };
 
 export default NewCalendar;
+// no features block, no extra code, all AI events only in local state until saved

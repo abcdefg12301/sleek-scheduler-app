@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +26,7 @@ const AICalendarGenerator = ({
   existingEvents = [],
   onPreviewOpen,
 }: AICalendarGeneratorProps) => {
-  // NOTE: This component should be used INSIDE the refactored stable state context only.
+  // The state below only affects the "current preview" before saving
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
@@ -33,12 +34,11 @@ const AICalendarGenerator = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // Keep generatedEvents in sync with external props
   useEffect(() => {
     setGeneratedEvents(existingEvents);
   }, [calendarId, existingEvents]);
 
-  // NOTE: Always call onEventsGenerated to propagate upward
+  // Deleting or updating always syncs up to parent
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
     newEvents.splice(index, 1);
@@ -57,7 +57,7 @@ const AICalendarGenerator = ({
       ...updatedEvent,
       id: editingEvent.event.id || '',
       calendarId: editingEvent.event.calendarId || calendarId || '',
-      isAIGenerated: true
+      isAIGenerated: true,
     };
     setGeneratedEvents(newEvents);
     onEventsGenerated?.(newEvents);
@@ -65,6 +65,9 @@ const AICalendarGenerator = ({
     toast.success('Event updated successfully');
   };
 
+  /**
+   * Always submit both saved and previewed AI events for current calendar as context!
+   */
   const handleGenerate = async () => {
     if (!calendarDetails.trim()) {
       toast.error('Please enter calendar details');
@@ -74,9 +77,8 @@ const AICalendarGenerator = ({
     setApiError(null);
     setDebugInfo(null);
 
-    const contextEvents = generatedEvents.filter(
-      event => event.calendarId === calendarId
-    );
+    // Always use all AI events for this calendar (passed from parent), so backend gets full context
+    const contextEvents = existingEvents || [];
     try {
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
         body: {
@@ -99,12 +101,15 @@ const AICalendarGenerator = ({
         isAIGenerated: true,
       }));
 
+      // Combine the new AI events and any existing ones not just replaced (if you want additive)
       setGeneratedEvents(processedEvents);
+
+      // Pass up for preview, replacing only on explicit Save (not on preview)
       onEventsGenerated?.(processedEvents);
+
       toast.success(`Successfully generated ${processedEvents.length} events`);
       setCalendarDetails('');
-      // Note: Preview dialog controlled at the parent now
-      onPreviewOpen?.();
+      if (onPreviewOpen) onPreviewOpen();
     } catch (err) {
       setApiError(`Client Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setDebugInfo(`Client error: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -121,7 +126,7 @@ const AICalendarGenerator = ({
       </div>
       <div className="space-y-4">
         <Textarea
-          placeholder="Describe your calendar events here (e.g., 'I have weekly team meetings every Monday at 10 AM, a doctor's appointment next Tuesday at 3 PM, and I go to the gym Monday, Wednesday, and Friday mornings at 7 AM')"
+          placeholder="Describe your calendar events here..."
           className="min-h-[120px]"
           value={calendarDetails}
           onChange={(e) => setCalendarDetails(e.target.value)}
@@ -137,7 +142,6 @@ const AICalendarGenerator = ({
             {isGenerating ? 'Generating...' : 'Generate Events'}
           </Button>
         </div>
-
         {apiError && (
           <Alert variant="destructive" className="mt-2">
             <AlertTriangle className="h-4 w-4" />
@@ -145,14 +149,12 @@ const AICalendarGenerator = ({
             <AlertDescription>{apiError}</AlertDescription>
           </Alert>
         )}
-
         {debugInfo && (
           <Alert className="mt-2">
             <AlertTitle>Debug Info</AlertTitle>
             <AlertDescription className="text-xs font-mono">{debugInfo}</AlertDescription>
           </Alert>
         )}
-
         <EventEditingDialog
           editingEvent={editingEvent}
           setEditingEvent={setEditingEvent}
