@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -55,6 +54,8 @@ const NewCalendar = () => {
     defaultValues,
   });
 
+  const colorValue = form.watch('color');
+
   // When saving new calendar, add AI events to new calendar only. Then clear preview state.
   const onSubmit = (data: FormData) => {
     try {
@@ -79,7 +80,8 @@ const NewCalendar = () => {
                   : undefined
               } : undefined,
               isAIGenerated: true,
-              calendarId: newCalendar.id // associate with new calendar only
+              calendarId: newCalendar.id, // associate with new calendar only
+              color: data.color // ensure color is from calendar!
             };
             addEvent(newCalendar.id, eventWithDates);
             addedCount++;
@@ -125,6 +127,7 @@ const NewCalendar = () => {
             deleteAiEvent={deleteAiEvent}
             clearAllEvents={clearAiEvents}
             calendarId={undefined}
+            calendarColor={colorValue}
           />
           <div className="flex justify-end mt-6">
             <Button type="submit">Create Calendar</Button>

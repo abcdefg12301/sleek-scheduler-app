@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,8 +24,8 @@ const AICalendarGenerator = ({
   calendarId,
   existingEvents = [],
   onPreviewOpen,
-}: AICalendarGeneratorProps) => {
-  // The state below only affects the "current preview" before saving
+  calendarColor,
+}: AICalendarGeneratorProps & { calendarColor?: string }) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
@@ -93,21 +92,24 @@ const AICalendarGenerator = ({
         toast.error('Invalid response from AI');
         return;
       }
+
+      // Add color if not present, and ensure calendarId/isAIGenerated is correct
       const processedEvents = data.events.map((event: any) => ({
         ...event,
         start: new Date(event.start),
         end: new Date(event.end),
         calendarId: calendarId || '',
         isAIGenerated: true,
+        color: event.color || calendarColor || '#8B5CF6',
       }));
 
-      // Combine the new AI events and any existing ones not just replaced (if you want additive)
-      setGeneratedEvents(processedEvents);
+      // Append new events, do not replace!
+      const newList = [...generatedEvents, ...processedEvents];
 
-      // Pass up for preview, replacing only on explicit Save (not on preview)
-      onEventsGenerated?.(processedEvents);
+      setGeneratedEvents(newList);
+      onEventsGenerated?.(newList);
 
-      toast.success(`Successfully generated ${processedEvents.length} events`);
+      toast.success(`Successfully generated ${processedEvents.length} event${processedEvents.length !== 1 ? 's' : ''}`);
       setCalendarDetails('');
       if (onPreviewOpen) onPreviewOpen();
     } catch (err) {

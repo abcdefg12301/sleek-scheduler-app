@@ -61,7 +61,8 @@ const EditCalendar = () => {
     }
   }, [calendar, id, navigate]);
 
-  // Save operation: persist aiEvents only for this calendar, replacing only AI-generated (keep manual ones)
+  const colorValue = form.watch('color');
+
   const onSubmit = (data: FormData) => {
     if (id) {
       updateCalendar(id, {
@@ -97,6 +98,7 @@ const EditCalendar = () => {
                   : undefined,
                 isAIGenerated: true,
                 calendarId: id,
+                color: data.color, // assign calendar color!
               };
               addEvent(id, eventWithDates);
               addedCount++;
@@ -167,6 +169,7 @@ const EditCalendar = () => {
             deleteAiEvent={deleteAiEvent}
             clearAllEvents={clearAiEvents}
             calendarId={id}
+            calendarColor={colorValue}
           />
           <CalendarFeatures form={form} timeOptions={timeOptions} />
           <div className="flex justify-end">

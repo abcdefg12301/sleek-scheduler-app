@@ -14,6 +14,7 @@ interface AIGeneratorSectionProps {
   deleteAiEvent: (index: number) => void;
   clearAllEvents: () => void;
   calendarId?: string;
+  calendarColor?: string;
 }
 
 const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
@@ -21,13 +22,12 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
   setAiEvents,
   deleteAiEvent,
   clearAllEvents,
-  calendarId
+  calendarId,
+  calendarColor,
 }) => {
   const { isPreviewOpen, openPreview, setIsPreviewOpen } = useAIPreviewDialog(false);
 
-  // Pass all existing AI events for the calendar both as source and as context to generator
   const onEventsGenerated = (events: Event[]) => {
-    // Always replace with the newly generated list (preview mode)
     setAiEvents(events);
     openPreview();
   };
@@ -40,8 +40,8 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
         existingEvents={aiEvents}
         onEventsGenerated={onEventsGenerated}
         onPreviewOpen={openPreview}
+        calendarColor={calendarColor}
       />
-      {/* Only show the preview button and dialog if there are previewed OR saved aiEvents */}
       {aiEvents && aiEvents.length > 0 && (
         <AIPreviewSection
           aiEvents={aiEvents}
