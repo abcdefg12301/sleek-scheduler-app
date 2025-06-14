@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -24,23 +23,27 @@ const EditCalendar = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { calendars, updateCalendar, addEvent } = useCalendarStore();
-  const [aiGeneratedEvents, setAiGeneratedEvents] = useState<Event[]>([]);
+  const [aiGeneratedEventsByCalendar, setAiGeneratedEventsByCalendar] = useState<Record<string, Event[]>>({});
   
   const calendar = calendars.find(cal => cal.id === id);
   
-  // Filter calendar events to find AI-generated events specific to this calendar
-  const existingAiEvents = calendar?.events.filter(event => 
-    event.isAIGenerated && event.calendarId === id
-  ) || [];
+  // Get only the AI events for this calendar
+  const aiEventsForThisCalendar = aiGeneratedEventsByCalendar[id || ""] ?? (
+    calendar?.events.filter(event =>
+      event.isAIGenerated && event.calendarId === id
+    ) || []
+  );
   
   useEffect(() => {
-    // Initialize AI events from existing calendar events specific to this calendar
-    if (calendar && id) {
-      const calendarSpecificAiEvents = existingAiEvents.map(event => ({
-        ...event,
-        calendarId: id
+    // Only load from calendar's stored events if not already set in state for this calendar
+    if (calendar && id && aiGeneratedEventsByCalendar[id] === undefined) {
+      const initialAiEvents = calendar.events.filter(
+        event => event.isAIGenerated && event.calendarId === id
+      );
+      setAiGeneratedEventsByCalendar(prev => ({
+        ...prev,
+        [id]: initialAiEvents,
       }));
-      setAiGeneratedEvents(calendarSpecificAiEvents);
     }
   }, [calendar?.id, id]);
   
@@ -61,14 +64,19 @@ const EditCalendar = () => {
     }
   }, [calendar, id, navigate]);
   
+  // Isolate by calendar id
   const handleAiEventsGenerated = (events: Event[]) => {
-    // Ensure all events are properly tagged with the current calendar ID
-    const eventsWithCalendarId = events.map(event => ({
-      ...event,
-      calendarId: id || '',
-      isAIGenerated: true
-    }));
-    setAiGeneratedEvents(eventsWithCalendarId);
+    if (id) {
+      const eventsWithCalendarId = events.map(event => ({
+        ...event,
+        calendarId: id,
+        isAIGenerated: true,
+      }));
+      setAiGeneratedEventsByCalendar(prev => ({
+        ...prev,
+        [id]: eventsWithCalendarId,
+      }));
+    }
   };
   
   const onSubmit = (data: FormData) => {
@@ -80,33 +88,36 @@ const EditCalendar = () => {
         showHolidays: data.showHolidays
       });
       
-      // Remove all existing AI-generated events for this specific calendar
       if (calendar) {
-        const nonAiEvents = calendar.events.filter(event => 
-          !event.isAIGenerated || event.calendarId !== id
+        const nonAiEvents = calendar.events.filter(
+          event => !event.isAIGenerated || event.calendarId !== id
         );
         
-        // Update calendar events to only include non-AI events
         updateCalendar(id, {
-          events: nonAiEvents
+          events: nonAiEvents,
         });
         
-        // Add all new AI-generated events to this calendar
-        if (aiGeneratedEvents.length > 0) {
+        // Save only this calendar's AI events
+        const calendarAiEvents = aiGeneratedEventsByCalendar[id] || [];
+        if (calendarAiEvents.length > 0) {
           let addedCount = 0;
           
-          for (const event of aiGeneratedEvents) {
+          for (const event of calendarAiEvents) {
             try {
               const eventWithDates = {
                 ...event,
                 start: new Date(event.start),
                 end: new Date(event.end),
-                recurrence: event.recurrence ? {
-                  ...event.recurrence,
-                  endDate: event.recurrence.endDate ? new Date(event.recurrence.endDate) : undefined
-                } : undefined,
+                recurrence: event.recurrence
+                  ? {
+                      ...event.recurrence,
+                      endDate: event.recurrence.endDate
+                        ? new Date(event.recurrence.endDate)
+                        : undefined,
+                    }
+                  : undefined,
                 isAIGenerated: true,
-                calendarId: id
+                calendarId: id,
               };
 
               addEvent(id, eventWithDates);
@@ -179,7 +190,7 @@ const EditCalendar = () => {
             standalone={false}
             onEventsGenerated={handleAiEventsGenerated}
             calendarId={id}
-            existingEvents={existingAiEvents}
+            existingEvents={aiEventsForThisCalendar}
           />
           
           <CalendarFeatures form={form} timeOptions={timeOptions} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,29 +20,24 @@ interface AICalendarGeneratorProps {
   existingEvents?: Event[];
 }
 
-const AICalendarGenerator = ({ 
-  standalone = false, 
+const AICalendarGenerator = ({
+  standalone = false,
   onEventsGenerated,
   calendarId,
-  existingEvents = [] 
+  existingEvents = []
 }: AICalendarGeneratorProps) => {
   const [calendarDetails, setCalendarDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedEvents, setGeneratedEvents] = useState<Event[]>([]);
+  const [generatedEvents, setGeneratedEvents] = useState<Event[]>(existingEvents);
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // Initialize with existing events only on mount and when calendarId changes
+  // Re-setup events ONLY when calendarId or existingEvents change
   useEffect(() => {
-    if (calendarId && existingEvents && existingEvents.length > 0) {
-      setGeneratedEvents([...existingEvents]);
-    } else if (!calendarId) {
-      // For standalone mode, start with empty events
-      setGeneratedEvents([]);
-    }
-  }, [calendarId]);
+    setGeneratedEvents(existingEvents);
+  }, [calendarId, existingEvents]);
 
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
@@ -85,35 +79,20 @@ const AICalendarGenerator = ({
       toast.error('Please enter calendar details');
       return;
     }
-
     setIsGenerating(true);
     setApiError(null);
     setDebugInfo(null);
-    console.log('Generating calendar with details:', calendarDetails);
-    console.log('Using previous events for context:', generatedEvents.length > 0 ? `${generatedEvents.length} events` : 'None');
-
+    // Only use this calendar's context for the API
+    const contextEvents = generatedEvents.filter(
+      event => event.calendarId === calendarId
+    );
     try {
-      // Pass only the current calendar's existing events to provide context
-      const contextEvents = calendarId ? generatedEvents.filter(event => 
-        event.calendarId === calendarId || !event.calendarId
-      ) : generatedEvents;
-
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
-        body: { 
+        body: {
           calendarDetails,
-          previousEvents: contextEvents 
+          previousEvents: contextEvents,
         },
       });
-
-      console.log('Response from generate-calendar function:', data, error);
-
-      if (error) {
-        console.error('Error generating calendar:', error);
-        setApiError(`API Error: ${error.message || 'Unknown error'}`);
-        setDebugInfo(`Function error: ${error.message || 'Unknown error'}`);
-        toast.error(`Failed to generate calendar events: ${error.message || 'Unknown error'}`);
-        return;
-      }
 
       if (!data || !data.events || !Array.isArray(data.events)) {
         console.error('Invalid response format from AI:', data);
@@ -122,57 +101,27 @@ const AICalendarGenerator = ({
         toast.error('Invalid response from AI');
         return;
       }
+      const processedEvents = data.events.map((event: any) => ({
+        ...event,
+        start: new Date(event.start),
+        end: new Date(event.end),
+        calendarId: calendarId || '',
+        isAIGenerated: true,
+      }));
 
-      // Process received events to ensure all dates are properly parsed
-      const processedEvents = data.events.map((event: any) => {
-        try {
-          return {
-            ...event,
-            start: new Date(event.start),
-            end: new Date(event.end),
-            calendarId: calendarId || '',
-            isAIGenerated: true
-          };
-        } catch (err) {
-          console.error('Error processing event date:', err, event);
-          throw new Error(`Error processing event date: ${err.message}`);
-        }
-      });
-
-      console.log('Processed events from AI:', processedEvents);
-      
-      if (data.sourceType === 'fallback') {
-        const errorMessage = data.error || 'Unknown issue with AI generation';
-        setDebugInfo(`AI generation failed: ${errorMessage}. Using fallback events.`);
-        console.warn('AI generation failed, using fallback events:', errorMessage);
-        toast.warning('AI model had trouble with your request. Using fallback events.');
-      } else if (data.sourceType === 'ai') {
-        setDebugInfo('Events successfully generated using MistralAI');
-        console.log('Events successfully generated using MistralAI');
-        toast.success('Events successfully generated using MistralAI');
-      }
-
-      // Add new events to existing ones instead of replacing
-      const newEvents = [...generatedEvents, ...processedEvents];
-      setGeneratedEvents(newEvents);
-      
+      setGeneratedEvents(processedEvents);
       if (onEventsGenerated) {
-        onEventsGenerated(newEvents);
+        onEventsGenerated(processedEvents);
       }
-
       toast.success(`Successfully generated ${processedEvents.length} events`);
-      
-      // Auto-open the preview if we generated events
       if (processedEvents.length > 0) {
         setIsPreviewOpen(true);
       }
-      
-      // Clear the input only if successful
       setCalendarDetails('');
-    } catch (error) {
-      console.error('Error in AI calendar generation:', error);
-      setApiError(`Client Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setDebugInfo(`Client error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (err) {
+      console.error('Error in AI calendar generation:', err);
+      setApiError(`Client Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setDebugInfo(`Client error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       toast.error('An error occurred during calendar generation');
     } finally {
       setIsGenerating(false);
