@@ -80,8 +80,8 @@ const NewCalendar = () => {
                   : undefined
               } : undefined,
               isAIGenerated: true,
-              calendarId: newCalendar.id, // associate with new calendar only
-              color: data.color // ensure color is from calendar!
+              calendarId: newCalendar.id,
+              color: data.color
             };
             addEvent(newCalendar.id, eventWithDates);
             addedCount++;
@@ -89,11 +89,9 @@ const NewCalendar = () => {
             console.error('Error adding AI-generated event:', eventError, event);
           }
         }
-        if (addedCount > 0) {
-          toast.success(`Added ${addedCount} AI-generated events to your calendar`);
-        }
+        if (addedCount > 0) toast.success(`Added ${addedCount} AI-generated events to your calendar`);
       }
-      clearAiEvents(); // ONLY clear after saving
+      clearAiEvents();
       toast.success('Calendar created successfully');
       navigate(`/calendar/${newCalendar.id}`);
     } catch (error) {

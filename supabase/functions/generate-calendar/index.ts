@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { calendarDetails, previousEvents = [] } = await req.json();
+    const { calendarDetails, previousEvents = [], calendarColor } = await req.json();
     console.log("Received request to generate calendar with details:", calendarDetails);
     console.log("Previous events context:", previousEvents.length > 0 ? `${previousEvents.length} events` : "None");
 
@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     // Use the AI model to generate calendar events based on natural language input
-    const { events, sourceType, error } = await generateEventsWithAI(calendarDetails, previousEvents);
+    const { events, sourceType, error } = await generateEventsWithAI(calendarDetails, previousEvents, calendarColor);
     
     if (error) {
       console.error("AI generation error:", error);
@@ -74,7 +74,7 @@ serve(async (req) => {
 });
 
 // Use OpenRouter to connect to MistralAI model
-async function generateEventsWithAI(userInput: string, previousEvents: any[] = []) {
+async function generateEventsWithAI(userInput: string, previousEvents: any[] = [], calendarColor: string) {
   try {
     // Current date information for context - without time zones
     const now = new Date();
@@ -128,35 +128,32 @@ async function generateEventsWithAI(userInput: string, previousEvents: any[] = [
 
     // ---- NEW: Rewrite system prompt for creative plans ----
     const systemPrompt = `
-You are a friendly, super-creative, detail-oriented AI calendar assistant. Your job:
-Given the user's natural language instructions, generate a thoughtfully structured calendar by splitting tasks into smart, non-overlapping events—especially for things like study schedules, revision plans, practice routines, exam timetables, and goal-based breakdowns.
+You are a friendly, ultra-creative, detail-oriented AI calendar coach. 
+Given the user's natural language instructions, your job is to SPLIT big or vague requests into SMART, non-overlapping, multi-session events.
 
-YOUR GOALS:
-- For assignments like "build a study schedule" or "plan my week", break down the work into many realistic, achievable sessions spaced *creatively* through the available time.
-- Prefer variety, avoid monotonous repetition, and suggest ideal times for focus, rest, review, and healthy activity distribution.
-- Suggest ideal event spacing rather than bunching everything together. If allowed, use mornings for creative or intense work, afternoons for lighter activities, and leave gaps for breaks.
-- For multi-day plans, spread out learning logically so related tasks build on each other.
-- ALWAYS avoid overlapping with the user's *existing* events.
-
-OUTPUT JSON FORMAT (MANDATORY for each event):
-- title: Short, descriptive (e.g. "Biology: Cell Division" or "Math Practice 2")
-- description: Details for the session or what to cover
-- start: String, ISO format, no timezone (e.g. "2025-05-03T17:00:00")
-- end: String, ISO format, no timezone
-- allDay: true/false
-- recurrence: null (or: {frequency:string, interval:number, daysOfWeek:number[]} if repeating)
-- color: leave unset or null; the system will assign one.
-
-RULES:
-- Do NOT add timezone indicators to start/end.
-- Events must NEVER overlap with existing ones in the provided schedule:
+GOALS:
+- If the user asks for a study schedule, revision timetable, exam plan, or anything long-term, BREAK IT INTO MANY connected, achievable sessions across multiple days or weeks.
+- For spaced repetition, revision, or learning routines, spread sessions logically and leave breaks for rest or review.
+- VARY times and days where possible; do NOT always pick the same time slot.
+- Add milestone sessions and goals where useful!
+- FOR EACH event, output:
+  * title (short and clear)
+  * description (detailed guidance or what to do in session)
+  * start (ISO string, e.g., "2025-05-03T17:00:00")
+  * end (ISO string)
+  * allDay: true/false
+  * recurrence: null (or recurrence object if it truly recurs)
+  * color (leave null)
+- NEVER overlap any "previousEvents" below; avoid all conflicts!
 ${previousEvents && previousEvents.length > 0 ? `
-EXISTING EVENTS (avoid conflicts!):
+EXISTING EVENTS TO AVOID OVERLAPPING:
 ${previousEvents.map((e: any, i: number) => `  ${i + 1}. ${e.title} from ${e.start} to ${e.end}`).join('\n')}
 ` : 'None'}
-- If the user requests a multi-step plan (ex: study schedule, revision, practice over several days, or spaced repetition), split the work into *thoughtful daily chunks*, schedule at varied times, and leave ample breaks.
-- Creativity and variety are better than rigid repetition. Suggest helpful breaks & milestone goals if appropriate.
-- Only output pure JSON (no comments, no markdown, no extra explanation).
+RULES:
+- NO time zone info, only date/times in ISO format.
+- Output ONLY pure JSON array of events, nothing else (no markdown, comments).
+
+Be as creative and helpful as possible—even for study plans, propose milestone reviews, restful breaks, and logical learning progress!
 `;
 
     // User input is the calendar details provided
@@ -216,7 +213,7 @@ ${previousEvents.map((e: any, i: number) => `  ${i + 1}. ${e.title} from ${e.sta
       console.log("Successfully parsed events:", parsedEvents);
       
       // Process the events to ensure proper formatting
-      const processedEvents = processAIGeneratedEvents(parsedEvents);
+      const processedEvents = processAIGeneratedEvents(parsedEvents, calendarColor);
       return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
       console.error("Error parsing AI response:", error);
@@ -241,10 +238,8 @@ ${previousEvents.map((e: any, i: number) => `  ${i + 1}. ${e.title} from ${e.sta
 }
 
 // Process and standardize AI-generated events
-function processAIGeneratedEvents(events) {
+function processAIGeneratedEvents(events, calendarColor) {
   const currentDate = new Date();
-  console.log("Processing AI-generated events:", events);
-  
   return events.map(event => {
     try {
       console.log("Processing event:", event);
@@ -312,11 +307,10 @@ function processAIGeneratedEvents(events) {
       const processedEvent = {
         title: event.title || "Untitled Event",
         description: event.description || "",
-        // Keep dates as ISO strings but WITHOUT timezone specifiers
         start: start.toISOString().split('.')[0],
         end: end.toISOString().split('.')[0],
         allDay: event.allDay || false,
-        color: getRandomEventColor(),
+        color: calendarColor || event.color || getRandomEventColor(),
         isAIGenerated: true,
         recurrence
       };
