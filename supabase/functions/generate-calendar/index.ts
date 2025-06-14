@@ -1,18 +1,12 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// ABSOLUTE TOP-LEVEL LOG for function cold start and every reload.
-console.log("🟢 Edge function 'generate-calendar' loaded and ready."); 
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
-  // FORCE LOG for EVERY request seen
-  console.log("🟠 Edge function 'generate-calendar' received a request. Method:", req.method);
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -36,9 +30,11 @@ serve(async (req) => {
       );
     }
 
-    const { events, sourceType, error } = await generateEventsWithMistralAI(calendarDetails, previousEvents, calendarColor);
+    // Use the AI model to generate calendar events based on natural language input
+    const { events, sourceType, error } = await generateEventsWithAI(calendarDetails, previousEvents, calendarColor);
+    
     if (error) {
-      console.error("Mistral AI generation error:", error);
+      console.error("AI generation error:", error);
       return new Response(
         JSON.stringify({ 
           events,
@@ -50,6 +46,7 @@ serve(async (req) => {
         }
       );
     }
+    
     console.log("Generated events:", events);
     console.log("Source type:", sourceType);
 
@@ -76,28 +73,60 @@ serve(async (req) => {
   }
 });
 
-// ---- KEY UPDATE: Use ONLY Mistral AI via OpenRouter, never anything else ----
-async function generateEventsWithMistralAI(userInput: string, previousEvents: any[] = [], calendarColor: string) {
+// Use OpenRouter to connect to MistralAI model
+async function generateEventsWithAI(userInput: string, previousEvents: any[] = [], calendarColor: string) {
   try {
-    // SYSTEM PROMPT -- leave unchanged for your creative logic!
+    // Current date information for context - without time zones
     const now = new Date();
+    const currentDate = now.toLocaleDateString('en-US');
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    // Create a context from previous events if any
     let previousEventsContext = "";
     if (previousEvents && previousEvents.length > 0) {
-      previousEventsContext += "\n\nYou MUST be aware of and avoid conflicts with the user's existing schedule:\n";
-      const sortedEvents = [...previousEvents].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-      sortedEvents.slice(0, 20).forEach((event, index) => {
+      previousEventsContext = `\n\nYou MUST be aware of and avoid conflicts with the user's existing schedule:\n`;
+      
+      // Sort events by start time to make them easier to process
+      const sortedEvents = [...previousEvents].sort((a, b) => {
+        const startA = new Date(a.start).getTime();
+        const startB = new Date(b.start).getTime();
+        return startA - startB;
+      });
+      
+      // Format the events in a more structured way
+      sortedEvents.slice(0, 20).forEach((event, index) => { // Limit to 20 events to avoid token limits
+        // Handle date formatting more consistently without time zones
         const startDate = new Date(event.start);
         const endDate = new Date(event.end);
-        const formatSimpleDate = (date: Date) => date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const formatSimpleTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        // Format as simple time for consistency
+        const formatSimpleDate = (date: Date) => {
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+        };
+        
+        const formatSimpleTime = (date: Date) => {
+          return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        };
+        
         previousEventsContext += `${index + 1}. "${event.title}" on ${formatSimpleDate(startDate)} from ${formatSimpleTime(startDate)} to ${formatSimpleTime(endDate)}`;
-        if (event.recurrence) previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
+        if (event.recurrence) {
+          previousEventsContext += ` (repeats ${event.recurrence.frequency})`;
+        }
         previousEventsContext += "\n";
       });
+      
       previousEventsContext += "\nYou MUST avoid scheduling events that overlap with these existing events.";
     }
 
-    // --- HIGHLY CREATIVE SYSTEM PROMPT (as before) ---
+    // ---- NEW: Rewrite system prompt for creative plans ----
     const systemPrompt = `
 You are a friendly, ultra-creative, detail-oriented AI calendar coach. 
 Given the user's natural language instructions, your job is to SPLIT big or vague requests into SMART, non-overlapping, multi-session events.
@@ -127,20 +156,17 @@ RULES:
 Be as creative and helpful as possible—even for study plans, propose milestone reviews, restful breaks, and logical learning progress!
 `;
 
+    // User input is the calendar details provided
     const userPrompt = userInput;
 
-    // ----- API KEY PULL: Only proceed if key exists -----
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.trim() === "") {
-      console.error("Missing OPENROUTER_API_KEY - cannot call Mistral API!");
-      return {
-        events: [],
-        sourceType: "error",
-        error: "Server misconfigured: Missing OpenRouter API key for Mistral."
-      };
-    }
+    console.log("Sending request to OpenRouter.ai API with system prompt length:", systemPrompt.length);
+    console.log("User prompt:", userPrompt);
 
-    // --- Mistral AI via OpenRouter API, and ONLY this model ---
+    // OpenRouter API key for MistralAI
+    const OPENROUTER_API_KEY = "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";
+
+    // Make request to the OpenRouter API with MistralAI model
+    console.log("Starting OpenRouter API request...");
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -162,82 +188,51 @@ Be as creative and helpful as possible—even for study plans, propose milestone
 
     if (!response.ok) {
       const errorResponse = await response.text();
-      console.error("MistralAI API error response:", errorResponse);
-      throw new Error(`MistralAI (OpenRouter) API error: ${errorResponse}`);
+      console.error("OpenRouter API error response:", errorResponse);
+      throw new Error(`OpenRouter API error: ${errorResponse}`);
     }
 
     const data = await response.json();
-    console.log("MistralAI API response:", JSON.stringify(data, null, 2));
-    const aiResponse = data.choices[0]?.message?.content;
-    console.log("MistralAI raw response:", aiResponse);
-
+    
+    console.log("OpenRouter API response status:", response.status);
+    console.log("OpenRouter API response:", JSON.stringify(data, null, 2));
+    
+    // Extract the AI response content
+    const aiResponse = data.choices[0].message.content;
+    console.log("AI raw response:", aiResponse);
+    
+    // Try to parse the JSON response from the AI
     let parsedEvents;
-    let parseSucceeded = false;
     try {
-      // Try to find a JSON array in the response string
-      const arrayMatch = aiResponse && aiResponse.match(/\[[\s\S]*\]/);
-      if (arrayMatch && arrayMatch[0]) {
-        console.log("Found possible JSON array in response:", arrayMatch[0].slice(0, 100) + (arrayMatch[0].length > 100 ? '...' : ''));
-        try {
-          parsedEvents = JSON.parse(arrayMatch[0]);
-          parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
-          if (parseSucceeded) console.log("Parsed events from arrayMatch:", parsedEvents.length);
-        } catch (err) {
-          console.error("Failed to JSON.parse from arrayMatch:", err);
-        }
-      }
-      // If above fails, try full string parse
-      if (!parseSucceeded && aiResponse) {
-        try {
-          parsedEvents = JSON.parse(aiResponse);
-          parseSucceeded = Array.isArray(parsedEvents) && parsedEvents.length > 0;
-          if (parseSucceeded) console.log("Parsed events from full response:", parsedEvents.length);
-        } catch (err) {
-          console.error("Failed to JSON.parse from full response:", err);
-        }
-      }
-      // If still no valid array, log and create clear fallback with diagnostic info
-      if (!parseSucceeded || !Array.isArray(parsedEvents)) {
-        console.error("AI returned unparseable event array. Raw response:", aiResponse);
-        // If it's a non-empty string, show the entire output as one event for diagnostics
-        if (typeof aiResponse === "string" && aiResponse.trim().length > 0) {
-          return { 
-            events: [{
-              title: "AI response (diagnostic fallback)",
-              description: aiResponse.slice(0, 400),
-              start: (new Date()).toISOString().split('.')[0],
-              end: (new Date(Date.now() + 3600000)).toISOString().split('.')[0],
-              allDay: false,
-              color: "#DB4437",
-              isAIGenerated: true
-            }], 
-            sourceType: "diagnostic",
-            error: "Could not parse events from AI. Raw output returned as event for debugging."
-          };
-        }
-        // Otherwise give user fallback
-        return { 
-          events: [createDefaultEvent(userInput)], 
-          sourceType: "fallback",
-          error: "Could not parse any events from AI response. Full raw response logged."
-        };
-      }
+      // Handle potential text before or after the JSON
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
+      console.log("Extracted JSON string:", jsonStr);
+      
+      parsedEvents = JSON.parse(jsonStr);
+      console.log("Successfully parsed events:", parsedEvents);
+      
+      // Process the events to ensure proper formatting
       const processedEvents = processAIGeneratedEvents(parsedEvents, calendarColor);
-      return { events: processedEvents, sourceType: "mistral" };
+      return { events: processedEvents, sourceType: "ai" };
     } catch (error) {
-      console.error("Parse error for AI response:", error, "Raw AI response:", aiResponse);
+      console.error("Error parsing AI response:", error);
+      console.error("AI response that couldn't be parsed:", aiResponse);
+      // Fallback to simple event creation if AI parsing fails
       return { 
         events: [createDefaultEvent(userInput)], 
         sourceType: "fallback",
-        error: `Failed to parse Mistral AI response: ${error.message}` 
+        error: `Failed to parse AI response: ${error.message}` 
       };
     }
   } catch (error) {
-    console.error("Error in Mistral AI event generation:", error);
+    console.error("Error in AI event generation:", error);
+    console.error("Error stack:", error.stack);
+    // Fallback to simple event creation
     return { 
       events: [createDefaultEvent(userInput)], 
       sourceType: "fallback",
-      error: `Mistral AI processing error: ${error.message}` 
+      error: `AI processing error: ${error.message}` 
     };
   }
 }
