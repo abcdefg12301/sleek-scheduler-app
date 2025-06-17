@@ -35,7 +35,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden',
+        'calendar-day relative w-full cursor-pointer transition-colors overflow-hidden flex flex-col',
         'h-32 min-h-32 max-h-32', // Fixed height for all cells
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
@@ -98,23 +98,31 @@ const MonthlyCalendar = ({
     <div className="w-full">
       <div className="grid grid-cols-7 mb-1">
         {daysOfWeek.map((day) => (
-          <div key={day} className="text-center font-medium py-2 text-sm">
+          <div key={day} className="text-center font-medium py-2 text-sm border-b border-border">
             {day}
           </div>
         ))}
       </div>
       
-      <div className="grid grid-cols-7 gap-0 w-full h-[768px]">
-        {days.map((day) => (
-          <Day
+      <div className="grid grid-cols-7 border border-border" style={{ height: '768px' }}>
+        {days.map((day, index) => (
+          <div
             key={day.toString()}
-            day={day}
-            currentMonth={currentDate}
-            selectedDate={currentDate}
-            events={events}
-            onClick={onDateSelect}
-            onEventClick={onEventClick}
-          />
+            className={cn(
+              'border-r border-b border-border',
+              index % 7 === 6 && 'border-r-0', // Remove right border on last column
+              index >= days.length - 7 && 'border-b-0' // Remove bottom border on last row
+            )}
+          >
+            <Day
+              day={day}
+              currentMonth={currentDate}
+              selectedDate={currentDate}
+              events={events}
+              onClick={onDateSelect}
+              onEventClick={onEventClick}
+            />
+          </div>
         ))}
       </div>
     </div>
