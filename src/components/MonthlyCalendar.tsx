@@ -35,7 +35,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden',
+        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden h-32 min-h-32',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/90'
@@ -52,7 +52,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto flex-1 px-1 pb-1">
+      <div className="overflow-y-auto flex-1 px-1 pb-1 max-h-24">
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
@@ -103,7 +103,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 gap-0 w-full">
+      <div className="grid grid-cols-7 gap-0 w-full min-h-[768px]">
         {days.map((day) => (
           <Day
             key={day.toString()}

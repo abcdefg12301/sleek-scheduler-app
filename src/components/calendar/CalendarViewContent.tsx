@@ -62,6 +62,7 @@ const CalendarViewContent = ({
   } = useCalendarStore();
 
   const [isRecurringDeleteDialogOpen, setIsRecurringDeleteDialogOpen] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
   const handleCreateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
@@ -89,8 +90,8 @@ const CalendarViewContent = ({
     }
   };
   
-  const handleDeleteEvent = () => {
-    if (!selectedEvent) return;
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent || isDeletingEvent) return;
     
     // Check if it's a recurring event or a recurrence instance
     if ((selectedEvent.recurrence || selectedEvent.isRecurrenceInstance) && 
@@ -99,8 +100,10 @@ const CalendarViewContent = ({
       return;
     }
     
+    setIsDeletingEvent(true);
+    
     try {
-      deleteEvent(calendar.id, selectedEvent.id);
+      await deleteEvent(calendar.id, selectedEvent.id);
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -108,21 +111,22 @@ const CalendarViewContent = ({
     } catch (error) {
       console.error('Failed to delete event:', error);
       toast.error('Failed to delete event');
+    } finally {
+      setIsDeletingEvent(false);
     }
   };
 
-  const handleDeleteRecurringEvent = (mode: 'single' | 'future' | 'all') => {
-    if (!selectedEvent) return;
+  const handleDeleteRecurringEvent = async (mode: 'single' | 'future' | 'all') => {
+    if (!selectedEvent || isDeletingEvent) return;
+    
+    setIsDeletingEvent(true);
     
     try {
-      // Get the master event ID
       const eventId = selectedEvent.originalEventId || selectedEvent.id;
       
-      // Delete based on mode
-      deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
+      await deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
         selectedEvent.start : new Date(selectedEvent.start));
       
-      // Close all dialogs and clear selection
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -135,6 +139,8 @@ const CalendarViewContent = ({
     } catch (error) {
       console.error('Failed to delete recurring event:', error);
       toast.error('Failed to delete event');
+    } finally {
+      setIsDeletingEvent(false);
     }
   };
   
@@ -195,7 +201,6 @@ const CalendarViewContent = ({
         handleDeleteEvent={handleDeleteEvent}
       />
       
-      {/* Recurring Event Delete Dialog - Fixed to prevent double-click issue */}
       {selectedEvent && (
         <RecurringEventDeleteDialog 
           isOpen={isRecurringDeleteDialogOpen}

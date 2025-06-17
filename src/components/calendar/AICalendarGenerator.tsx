@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +10,8 @@ import EventEditingDialog from './ai-generator/EventEditingDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import AICalendarGeneratorHeader from './ai-generator/AICalendarGeneratorHeader';
+import { securityService } from '@/services/security-service';
+import { useSecureInput } from '@/hooks/useSecureInput';
 
 interface AICalendarGeneratorProps {
   standalone?: boolean;
@@ -32,12 +35,12 @@ const AICalendarGenerator = ({
   const [editingEvent, setEditingEvent] = useState<{ event: Event; index: number } | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const { sanitizeAndValidate } = useSecureInput();
 
   useEffect(() => {
     setGeneratedEvents(existingEvents);
   }, [calendarId, existingEvents]);
 
-  // Deleting or updating always syncs up to parent
   const handleDeleteEvent = (index: number) => {
     const newEvents = [...generatedEvents];
     newEvents.splice(index, 1);
@@ -51,12 +54,22 @@ const AICalendarGenerator = ({
 
   const handleUpdateEvent = (updatedEvent: Omit<Event, 'id' | 'calendarId'>) => {
     if (!editingEvent) return;
+    
+    // Validate and sanitize the updated event
+    const validation = securityService.validateEventData(updatedEvent);
+    if (!validation.isValid) {
+      toast.error(validation.errors[0]);
+      return;
+    }
+    
     const newEvents = [...generatedEvents];
     newEvents[editingEvent.index] = {
       ...updatedEvent,
       id: editingEvent.event.id || '',
       calendarId: editingEvent.event.calendarId || calendarId || '',
       isAIGenerated: true,
+      title: securityService.sanitizeInput(updatedEvent.title),
+      description: updatedEvent.description ? securityService.sanitizeInput(updatedEvent.description) : undefined,
     };
     setGeneratedEvents(newEvents);
     onEventsGenerated?.(newEvents);
@@ -64,23 +77,35 @@ const AICalendarGenerator = ({
     toast.success('Event updated successfully');
   };
 
-  /**
-   * Always submit both saved and previewed AI events for current calendar as context!
-   */
   const handleGenerate = async () => {
-    if (!calendarDetails.trim()) {
+    // Validate and sanitize input
+    const { sanitized, isValid, error } = sanitizeAndValidate(calendarDetails, 500);
+    if (!isValid) {
+      toast.error(error || 'Invalid input');
+      return;
+    }
+    
+    if (!sanitized.trim()) {
       toast.error('Please enter calendar details');
       return;
     }
+    
+    // Rate limiting check
+    if (!securityService.rateLimiter.isAllowed()) {
+      toast.error('Too many requests. Please wait a minute before trying again.');
+      return;
+    }
+    
     setIsGenerating(true);
     setApiError(null);
     setDebugInfo(null);
 
     const contextEvents = existingEvents || [];
+    
     try {
       const { data, error } = await supabase.functions.invoke('generate-calendar', {
         body: {
-          calendarDetails,
+          calendarDetails: sanitized,
           previousEvents: contextEvents,
         },
       });
@@ -92,17 +117,28 @@ const AICalendarGenerator = ({
         return;
       }
 
-      // Add color, ensure format
-      const processedEvents = data.events.map((event: any) => ({
-        ...event,
-        start: new Date(event.start),
-        end: new Date(event.end),
-        calendarId: calendarId || '',
-        isAIGenerated: true,
-        color: event.color || calendarColor || '#8B5CF6',
-      }));
+      // Validate and sanitize AI-generated events
+      const processedEvents = data.events
+        .map((event: any) => {
+          const validation = securityService.validateEventData(event);
+          if (!validation.isValid) {
+            console.warn('Invalid AI event:', validation.errors);
+            return null;
+          }
+          
+          return {
+            ...event,
+            start: new Date(event.start),
+            end: new Date(event.end),
+            calendarId: calendarId || '',
+            isAIGenerated: true,
+            color: event.color || calendarColor || '#8B5CF6',
+            title: securityService.sanitizeInput(event.title),
+            description: event.description ? securityService.sanitizeInput(event.description) : undefined,
+          };
+        })
+        .filter(Boolean);
 
-      // Instead of replacing, append non-duplicates to generatedEvents
       const newList = [...generatedEvents];
       processedEvents.forEach(ev => {
         if (!newList.some(e2 =>
@@ -129,6 +165,11 @@ const AICalendarGenerator = ({
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { sanitized } = sanitizeAndValidate(e.target.value, 500);
+    setCalendarDetails(sanitized);
+  };
+
   return (
     <div>
       <div className="mb-4">
@@ -136,12 +177,15 @@ const AICalendarGenerator = ({
       </div>
       <div className="space-y-4">
         <Textarea
-          placeholder="Describe your calendar events here..."
+          placeholder="Describe your calendar events here... (max 500 characters)"
           className="min-h-[120px]"
           value={calendarDetails}
-          onChange={(e) => setCalendarDetails(e.target.value)}
+          onChange={handleInputChange}
           maxLength={500}
         />
+        <div className="text-xs text-muted-foreground text-right">
+          {calendarDetails.length}/500 characters
+        </div>
         <div className="flex gap-2">
           <Button
             onClick={handleGenerate}

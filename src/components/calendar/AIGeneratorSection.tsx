@@ -6,8 +6,16 @@ import { Event } from "@/types";
 import { useAIPreviewDialog } from "@/hooks/useAIPreviewDialog";
 
 // Helper for merging existing and preview AI events for context
-function getFullEventContext(currentEvents: Event[], previewedAiEvents: Event[]): Event[] {
-  const all = [...(currentEvents || []), ...(previewedAiEvents || [])];
+function getFullEventContext(currentEvents: Event[], previewedAiEvents: Event[], calendarId?: string): Event[] {
+  // Filter events by calendar ID to prevent cross-calendar contamination
+  const filteredCurrentEvents = currentEvents.filter(e => 
+    !calendarId || e.calendarId === calendarId
+  );
+  const filteredPreviewEvents = previewedAiEvents.filter(e => 
+    !calendarId || !e.calendarId || e.calendarId === calendarId
+  );
+  
+  const all = [...filteredCurrentEvents, ...filteredPreviewEvents];
   const byId = new Map();
   all.forEach(ev => {
     if (ev.id) byId.set(ev.id, ev);
@@ -38,7 +46,7 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
 
   const onEventsGenerated = useCallback(
     (events: Event[]) => {
-      // Only append events that aren't already present - append, not replace!
+      // Filter out events that already exist in aiEvents to prevent duplicates
       const filteredEvents = events.filter(e =>
         !aiEvents.some(ev =>
           ev.title === e.title &&
@@ -46,15 +54,22 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
           new Date(ev.end).getTime() === new Date(e.end).getTime()
         )
       );
-      // Keep all previous aiEvents + new filtered (append)
-      const newEvents = [...aiEvents, ...filteredEvents];
+      
+      // Ensure all new events have the correct calendar ID
+      const eventsWithCalendarId = filteredEvents.map(event => ({
+        ...event,
+        calendarId: calendarId || '',
+      }));
+      
+      // Append to existing aiEvents instead of replacing
+      const newEvents = [...aiEvents, ...eventsWithCalendarId];
       setAiEvents(newEvents);
       openPreview();
     },
-    [setAiEvents, openPreview, aiEvents]
+    [setAiEvents, openPreview, aiEvents, calendarId]
   );
 
-  const allEventContext = getFullEventContext(currentEvents, aiEvents);
+  const allEventContext = getFullEventContext(currentEvents, aiEvents, calendarId);
 
   return (
     <div>
@@ -73,7 +88,7 @@ const AIGeneratorSection: React.FC<AIGeneratorSectionProps> = ({
           setIsOpen={setIsPreviewOpen}
           onDeleteEvent={deleteAiEvent}
           clearAllEvents={clearAllEvents}
-          setAiEvents={setAiEvents} // needed for event editing
+          setAiEvents={setAiEvents}
         />
       )}
     </div>
