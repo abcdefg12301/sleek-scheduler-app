@@ -1,4 +1,3 @@
-
 /**
  * Security utilities and validation functions
  */
@@ -27,7 +26,8 @@ export const securityService = {
       sanitized = sanitized.replace(pattern, '');
     });
     
-    return sanitized.trim();
+    // Keep spaces and newlines, just trim excess whitespace
+    return sanitized.replace(/\s+/g, ' ').trim();
   },
 
   /**

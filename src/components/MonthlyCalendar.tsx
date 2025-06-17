@@ -35,7 +35,8 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden h-32 min-h-32',
+        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden',
+        'h-32 min-h-32 max-h-32', // Fixed height for all cells
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/90'
@@ -103,7 +104,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 gap-0 w-full min-h-[768px]">
+      <div className="grid grid-cols-7 gap-0 w-full h-[768px]">
         {days.map((day) => (
           <Day
             key={day.toString()}
