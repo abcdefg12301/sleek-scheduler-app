@@ -35,15 +35,15 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day border border-border relative w-full cursor-pointer transition-colors overflow-hidden',
-        'h-32 min-h-32 max-h-32', // Fixed height for all cells
+        'calendar-day border-r border-b border-border relative w-full cursor-pointer transition-colors overflow-hidden',
+        'h-[109.71px] flex flex-col', // Fixed height calculation: 768px / 7 rows = 109.71px
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/90'
       )}
       onClick={handleDayClick}
     >
-      <div className="flex justify-between p-1">
+      <div className="flex justify-between p-1 flex-shrink-0">
         <div
           className={cn(
             'day-number text-xs font-medium',
@@ -53,7 +53,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto flex-1 px-1 pb-1 max-h-24">
+      <div className="overflow-y-auto flex-1 px-1 pb-1">
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
@@ -96,16 +96,16 @@ const MonthlyCalendar = ({
   
   return (
     <div className="w-full">
-      <div className="grid grid-cols-7 mb-1">
+      <div className="grid grid-cols-7 border-t border-l border-border">
         {daysOfWeek.map((day) => (
-          <div key={day} className="text-center font-medium py-2 text-sm">
+          <div key={day} className="text-center font-medium py-2 text-sm border-r border-b border-border bg-muted/20">
             {day}
           </div>
         ))}
       </div>
       
-      <div className="grid grid-cols-7 gap-0 w-full h-[768px]">
-        {days.map((day) => (
+      <div className="grid grid-cols-7 border-l border-border h-[768px]">
+        {days.map((day, index) => (
           <Day
             key={day.toString()}
             day={day}
