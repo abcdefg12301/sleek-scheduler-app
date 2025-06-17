@@ -9,16 +9,17 @@ export function buildSystemPrompt(userInput: string, previousEvents: any[] = [])
   return `You are a calendar event generator. Create events based on user input and return ONLY a JSON array.
 
 CRITICAL RULES:
-1. For non-creative events (work meetings, appointments, regular tasks), preserve the EXACT event names/titles from user input
-2. Only modify event names for creative/entertainment events where creativity adds value
-3. Each event must have: title, start, end, description, allDay, color
-4. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
-5. Avoid duplicating existing events unless specifically requested
-6. For recurring events, add recurrence object with frequency, interval, endDate/count
+1. For ALL events, preserve the EXACT event names/titles from user input - do not modify them unless the user explicitly asks for creative alternatives
+2. Examples: "i go to the gym" → title: "Gym", "meeting with john" → title: "Meeting with John", "doctor appointment" → title: "Doctor Appointment"
+3. Only add creative modifications to titles if the user specifically requests creative/fun naming or if the context is clearly entertainment-focused
+4. Each event must have: title, start, end, description, allDay, color
+5. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
+6. Avoid duplicating existing events unless specifically requested
+7. For recurring events, add recurrence object with frequency, interval, endDate/count
 
 Event format:
 {
-  "title": "string (preserve exact names for work/appointments)",
+  "title": "string (preserve exact names from user input)",
   "start": "ISO date string",
   "end": "ISO date string", 
   "description": "string",
