@@ -26,8 +26,8 @@ export const securityService = {
       sanitized = sanitized.replace(pattern, '');
     });
     
-    // Preserve normal spaces and newlines, just normalize excessive whitespace
-    return sanitized.replace(/\s{2,}/g, ' ').trim();
+    // Keep spaces and newlines, just trim excess whitespace
+    return sanitized.replace(/\s+/g, ' ').trim();
   },
 
   /**
