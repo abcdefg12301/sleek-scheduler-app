@@ -103,7 +103,7 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 grid-rows-6 border border-border h-[768px]">
+      <div className="grid grid-cols-7 border border-border" style={{ height: '768px', gridTemplateRows: 'repeat(6, 1fr)' }}>
         {days.map((day, index) => (
           <div
             key={day.toString()}
