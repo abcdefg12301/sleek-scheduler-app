@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format, isToday, isSameMonth, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -34,15 +35,21 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day relative w-full cursor-pointer transition-colors flex flex-col',
+        'calendar-day relative w-full h-full cursor-pointer transition-colors',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/90'
       )}
-      style={{ height: '128px' }}
+      style={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        boxSizing: 'border-box',
+        minHeight: '128px',
+        maxHeight: '128px'
+      }}
       onClick={handleDayClick}
     >
-      <div className="flex justify-between p-1 flex-shrink-0">
+      <div className="flex justify-between p-1" style={{ flexShrink: 0 }}>
         <div
           className={cn(
             'day-number text-xs font-medium',
@@ -52,7 +59,13 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto flex-1 px-1 pb-1" style={{ minHeight: 0 }}>
+      <div 
+        className="overflow-y-auto px-1 pb-1" 
+        style={{ 
+          flex: '1 1 0',
+          minHeight: 0
+        }}
+      >
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
@@ -103,12 +116,22 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 border border-border" style={{ height: '768px', gridTemplateRows: 'repeat(6, 128px)' }}>
+      <div 
+        className="grid grid-cols-7 border border-border" 
+        style={{ 
+          height: '768px',
+          gridTemplateRows: 'repeat(6, 1fr)'
+        }}
+      >
         {days.map((day, index) => (
           <div
             key={day.toString()}
             className="border-r border-b border-border last:border-r-0"
-            style={{ height: '128px', boxSizing: 'border-box' }}
+            style={{ 
+              boxSizing: 'border-box',
+              minHeight: '128px',
+              maxHeight: '128px'
+            }}
           >
             <Day
               day={day}
