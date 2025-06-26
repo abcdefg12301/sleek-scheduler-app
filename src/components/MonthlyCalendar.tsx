@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, isToday, isSameMonth, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -35,11 +34,12 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
   return (
     <div
       className={cn(
-        'calendar-day relative w-full h-full cursor-pointer transition-colors overflow-hidden flex flex-col',
+        'calendar-day relative w-full cursor-pointer transition-colors flex flex-col',
         !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
         isToday(day) && 'today',
         'hover:bg-muted/90'
       )}
+      style={{ height: '128px' }}
       onClick={handleDayClick}
     >
       <div className="flex justify-between p-1 flex-shrink-0">
@@ -52,7 +52,7 @@ const Day = ({ day, currentMonth, selectedDate, events, onClick, onEventClick }:
           {format(day, 'd')}
         </div>
       </div>
-      <div className="overflow-y-auto flex-1 px-1 pb-1">
+      <div className="overflow-y-auto flex-1 px-1 pb-1" style={{ minHeight: 0 }}>
         {dayEvents.slice(0, 3).map((event) => (
           <div
             key={event.id}
@@ -103,15 +103,12 @@ const MonthlyCalendar = ({
         ))}
       </div>
       
-      <div className="grid grid-cols-7 border border-border" style={{ height: '768px', gridTemplateRows: 'repeat(6, 1fr)' }}>
+      <div className="grid grid-cols-7 border border-border" style={{ height: '768px', gridTemplateRows: 'repeat(6, 128px)' }}>
         {days.map((day, index) => (
           <div
             key={day.toString()}
-            className={cn(
-              'border-r border-b border-border',
-              index % 7 === 6 && 'border-r-0',
-              index >= days.length - 7 && 'border-b-0'
-            )}
+            className="border-r border-b border-border last:border-r-0"
+            style={{ height: '128px', boxSizing: 'border-box' }}
           >
             <Day
               day={day}
