@@ -3,20 +3,18 @@ import { useCalendarStore } from '@/store/calendar-store';
 import { toast } from 'sonner';
 import { Event } from '@/types';
 import { calendarService } from '@/services/calendar-service';
-import { eventServiceRepo } from '@/services/event-service-repo';
 
 export function useCalendarOperations(calendarId: string) {
   const {
     addEvent,
     updateEvent,
     deleteEvent,
-    deleteRecurringEvent,
-    updateCalendar
+    deleteRecurringEvent
   } = useCalendarStore();
 
   const handleCreateEvent = async (eventData: Omit<Event, 'id' | 'calendarId'>) => {
     try {
-      await eventServiceRepo.createEvent(calendarId, eventData);
+      await addEvent(calendarId, eventData);
       toast.success('Event created successfully');
       return true;
     } catch (error) {
@@ -28,7 +26,7 @@ export function useCalendarOperations(calendarId: string) {
 
   const handleUpdateEvent = async (eventId: string, eventData: Omit<Event, 'id' | 'calendarId'>) => {
     try {
-      await eventServiceRepo.updateEvent(eventId, eventData);
+      await updateEvent(calendarId, eventId, eventData);
       toast.success('Event updated successfully');
       return true;
     } catch (error) {
@@ -40,7 +38,7 @@ export function useCalendarOperations(calendarId: string) {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      await eventServiceRepo.deleteEvent(eventId);
+      await deleteEvent(calendarId, eventId);
       toast.success('Event deleted successfully');
       return true;
     } catch (error) {
