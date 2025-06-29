@@ -4,6 +4,8 @@ import { Event } from '@/types';
 import { Calendar } from '@/types';
 import { startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { useCalendarStore } from '@/store/calendar-store';
+import { calendarEventService } from '@/store/calendar-event-service';
+import { HOLIDAYS } from '@/store/holiday-service';
 
 type CalendarViewType = 'day' | 'month';
 
@@ -16,7 +18,6 @@ export function useCalendarEvents(
 ) {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
-  const { getEventsForDateRange } = useCalendarStore();
 
   // Fetch calendar events
   useEffect(() => {
@@ -34,11 +35,24 @@ export function useCalendarEvents(
       ? endOfDay(currentDate)
       : endOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
     
-    // Get all events for the date range
-    const allEvents = getEventsForDateRange(start, end);
-    setEvents(allEvents);
+    // Get events only for this specific calendar
+    const calendarEvents = calendarEventService.getEventsForCalendarAndDateRange(
+      calendar, 
+      start, 
+      end, 
+      HOLIDAYS
+    );
     
-  }, [calendarId, calendars, currentDate, viewMode, getEventsForDateRange]);
+    // Double-check filtering to ensure only events for this calendar
+    const filteredEvents = calendarEvents.filter(event => 
+      event.calendarId === calendarId
+    );
+    
+    setEvents(filteredEvents);
+    
+    console.log(`Loaded ${filteredEvents.length} events for calendar ${calendarId}`);
+    
+  }, [calendarId, calendars, currentDate, viewMode]);
   
   // Update selected date events
   useEffect(() => {
@@ -56,6 +70,9 @@ export function useCalendarEvents(
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
+      // Ensure the event belongs to the current calendar
+      if (event.calendarId !== calendarId) return false;
+      
       return (
         isSameDayFn(selectedDate, eventStart) || 
         isSameDayFn(selectedDate, eventEnd) ||
@@ -71,7 +88,7 @@ export function useCalendarEvents(
     });
     
     setSelectedDateEvents(filteredEvents);
-  }, [events, selectedDate]);
+  }, [events, selectedDate, calendarId]);
   
   return { events, selectedDateEvents };
 }

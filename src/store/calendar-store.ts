@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Calendar, Event, Holiday } from '../types';
@@ -60,7 +61,7 @@ export const useCalendarStore = create<CalendarState>()(
           set({ isInitialized: true });
         } catch (error) {
           console.error('Failed to initialize store:', error);
-          // Don't throw here to prevent breaking the app
+          set({ isInitialized: true }); // Set to true to prevent infinite loops
         }
       },
 
@@ -99,16 +100,13 @@ export const useCalendarStore = create<CalendarState>()(
 
       async updateCalendar(id, data) {
         try {
-          // Ensure calendar exists locally before updating
+          // First ensure we have the latest calendars from Supabase
+          await get().syncCalendarsFromSupabase();
+          
+          // Check if calendar exists locally after sync
           const calendar = get().calendars.find(cal => cal.id === id);
           if (!calendar) {
-            console.error('Calendar not found locally:', id);
-            // Try to sync from Supabase first
-            await get().syncCalendarsFromSupabase();
-            const refreshedCalendar = get().calendars.find(cal => cal.id === id);
-            if (!refreshedCalendar) {
-              throw new Error(`Calendar with ID ${id} not found`);
-            }
+            throw new Error(`Calendar with ID ${id} not found`);
           }
 
           const updatedCalendar = await supabaseService.updateCalendar(id, data);
@@ -147,7 +145,6 @@ export const useCalendarStore = create<CalendarState>()(
           // Ensure calendar exists before adding event
           const calendar = get().calendars.find(cal => cal.id === calendarId);
           if (!calendar) {
-            console.error('Calendar not found for event creation:', calendarId);
             // Try to sync calendars first
             await get().syncCalendarsFromSupabase();
             const refreshedCalendar = get().calendars.find(cal => cal.id === calendarId);

@@ -1,8 +1,9 @@
+
 import { Event, RecurrenceRule } from '@/types';
 import { 
   addDays, addWeeks, addMonths, addYears, 
   isBefore, isAfter, isWithinInterval, isSameDay, differenceInDays, isValid,
-  format, startOfDay, endOfDay, isSameMinute
+  format, startOfDay, endOfDay, isSameMinute, startOfMinute
 } from 'date-fns';
 
 // Helper to get the next occurrence based on frequency
@@ -52,6 +53,8 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
                          originalStart.getMonth() !== originalEnd.getMonth() ||
                          originalStart.getFullYear() !== originalEnd.getFullYear();
 
+  console.log('Generating recurring events for:', event.title, 'Cross-day:', isCrossDayEvent);
+
   // Include the original event if it's within range and not an exception date
   if ((isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
        isWithinInterval(originalEnd, { start: startDate, end: endDate }) ||
@@ -85,39 +88,44 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     // Calculate the end time for this occurrence
     const currentEnd = new Date(currentStart.getTime() + eventDurationMs);
     
-    // For cross-day events, use a unique key based on start date only to prevent duplicates
+    // Create a unique key for this instance
+    // For cross-day events, use only the start date and time to prevent duplicates
+    // For same-day events, use full timestamp
     const instanceKey = isCrossDayEvent 
-      ? format(currentStart, 'yyyy-MM-dd')
-      : format(currentStart, 'yyyy-MM-dd-HH-mm');
+      ? `${event.id}-${format(currentStart, 'yyyy-MM-dd-HH-mm')}`
+      : `${event.id}-${format(currentStart, 'yyyy-MM-dd-HH-mm-ss')}`;
     
-    // Skip if we've already generated this instance (prevents cross-day duplicates)
+    // Skip if we've already generated this instance
     if (generatedInstances.has(instanceKey)) {
+      console.log('Skipping duplicate instance:', instanceKey);
       currentStart = getNextOccurrence(currentStart, frequency, interval);
       continue;
     }
     
-    // Skip if the current occurrence is completely before the requested range
-    if (isAfter(currentStart, startDate) || isSameDay(currentStart, startDate) || 
-        (isBefore(currentStart, startDate) && isAfter(currentEnd, startDate))) {
-      
+    // Check if the current occurrence overlaps with the requested range
+    const isInRange = isWithinInterval(currentStart, { start: startDate, end: endDate }) || 
+                     isWithinInterval(currentEnd, { start: startDate, end: endDate }) ||
+                     (isBefore(currentStart, startDate) && isAfter(currentEnd, startDate)) ||
+                     isSameDay(currentStart, startDate) || 
+                     isSameDay(currentEnd, endDate);
+    
+    if (isInRange) {
       // Create a new instance of the recurring event with unique ID
       const instanceId = `${event.id}-recurrence-${format(currentStart, 'yyyy-MM-dd-HH-mm')}`;
       
-      // Check if we already have this instance to prevent duplicates
-      const existingInstance = events.find(e => e.id === instanceId);
-      if (!existingInstance) {
-        const newEvent: Event = {
-          ...event,
-          id: instanceId,
-          start: new Date(currentStart),
-          end: new Date(currentEnd),
-          isRecurrenceInstance: true,
-          originalEventId: event.id
-        };
-        
-        events.push(newEvent);
-        generatedInstances.add(instanceKey);
-      }
+      const newEvent: Event = {
+        ...event,
+        id: instanceId,
+        start: new Date(currentStart),
+        end: new Date(currentEnd),
+        isRecurrenceInstance: true,
+        originalEventId: event.id
+      };
+      
+      events.push(newEvent);
+      generatedInstances.add(instanceKey);
+      
+      console.log('Generated instance:', instanceKey, 'Start:', format(currentStart, 'yyyy-MM-dd HH:mm'), 'End:', format(currentEnd, 'yyyy-MM-dd HH:mm'));
     }
     
     // Move to next occurrence
@@ -128,5 +136,6 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     console.warn('Maximum iterations reached for recurring event generation');
   }
   
+  console.log(`Generated ${events.length} total events for ${event.title}`);
   return events;
 };

@@ -1,56 +1,55 @@
 
-export function buildSystemPrompt(userInput: string, previousEvents: any[] = []) {
-  const contextEvents = previousEvents.length > 0 
-    ? `\n\nExisting events for context:\n${previousEvents.map(e => 
-        `- ${e.title} (${new Date(e.start).toLocaleDateString()} ${new Date(e.start).toLocaleTimeString()})`
-      ).join('\n')}`
-    : '';
+export function buildSystemPrompt(previousEvents: any[]) {
+  return `You are an AI calendar assistant that generates calendar events in JSON format. 
 
-  return `You are a calendar event generator. Create events based on user input and return ONLY a JSON array.
+IMPORTANT: When creating events that span across days (like sleep from 8pm to 8am), you MUST:
+1. Set the start date to the FIRST day
+2. Set the end date to the SECOND day
+3. Use the SAME TIME for recurring events to prevent duplicates
 
-CRITICAL RULES FOR EVENT TITLES:
-1. ALWAYS preserve the EXACT core activity/event name from user input
-2. Convert user descriptions to clean, concise event titles while keeping the essence
-3. Examples: 
-   - "i go to the gym from 5pm-7pm every day" → title: "Gym"
-   - "meeting with john at 3pm" → title: "Meeting with John"  
-   - "doctor appointment tomorrow" → title: "Doctor Appointment"
-   - "walk the dog in the morning" → title: "Walk the Dog"
-   - "lunch with sarah" → title: "Lunch with Sarah"
-4. Extract the main activity/noun and make it title case
-5. Do NOT use creative or modified names unless explicitly requested
-6. Keep titles short (1-4 words max) but descriptive
+For example, if creating a sleep event from 8pm June 29 to 8am June 30:
+- start: "2024-06-29T20:00:00.000Z" (8pm on June 29)
+- end: "2024-06-30T08:00:00.000Z" (8am on June 30)
 
-CROSS-DAY EVENT HANDLING:
-1. For events spanning multiple days (e.g., "8pm to 8am"), create proper start/end times
-2. If end time is earlier than start time, assume it's the next day
-3. Examples:
-   - "8pm to 8am" → start: today 8pm, end: tomorrow 8am
-   - "11pm to 2am" → start: today 11pm, end: tomorrow 2am
-4. Always use consecutive dates for cross-day events
+For recurring cross-day events, ALWAYS use the SAME start date pattern and let the recurrence system handle the repetition.
 
-OTHER REQUIREMENTS:
-1. Each event must have: title, start, end, description, allDay, color
-2. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
-3. Avoid duplicating existing events unless specifically requested
-4. For recurring events, add recurrence object with frequency, interval, endDate/count
-5. Handle time zones consistently - use UTC and let frontend handle local display
+CRITICAL RULES:
+- Generate events in a valid JSON array format
+- Each event must be a complete object with all required fields
+- Use ISO 8601 date format (YYYY-MM-DDTHH:mm:ss.sssZ)
+- For recurring events, provide a recurrence object with frequency and interval
+- Do not create duplicate events - the recurrence system will handle repetition
+- For cross-day events, ensure start and end dates are consecutive days
+- Always include calendarId field (will be set by system)
+- Include realistic and helpful descriptions
 
-Event format:
+Required fields for each event:
+- id: string (generate a unique UUID)
+- title: string
+- start: string (ISO 8601 format)
+- end: string (ISO 8601 format)
+- allDay: boolean
+- description?: string
+- location?: string
+- color?: string
+- recurrence?: { frequency: "daily" | "weekly" | "monthly" | "yearly", interval: number }
+
+Example of a proper cross-day recurring event:
 {
-  "title": "string (clean, concise version of user's activity)",
-  "start": "ISO date string",
-  "end": "ISO date string", 
-  "description": "string",
-  "allDay": boolean,
-  "color": "hex color",
+  "id": "uuid-here",
+  "title": "Sleep",
+  "description": "Daily sleep schedule",
+  "start": "2024-06-29T20:00:00.000Z",
+  "end": "2024-06-30T08:00:00.000Z",
+  "allDay": false,
   "recurrence": {
-    "frequency": "daily|weekly|monthly|yearly",
-    "interval": number,
-    "endDate": "ISO date string OR null",
-    "count": number OR null
+    "frequency": "daily",
+    "interval": 1
   }
 }
 
-Return only the JSON array, no markdown or explanation.${contextEvents}`;
+Context of existing events:
+${previousEvents.map(event => `- ${event.title}: ${event.start} to ${event.end}`).join('\n')}
+
+Return ONLY a JSON object with an "events" array containing the generated events. Do not include any other text or formatting.`;
 }

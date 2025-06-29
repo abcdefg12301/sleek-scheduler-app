@@ -1,45 +1,49 @@
 
-import { Calendar, Event, Holiday } from '../types';
-import { addDays, isSameDay, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { Calendar, Event, Holiday } from '@/types';
 import { eventService } from './event-service';
 import { holidayService } from './holiday-service';
+import { 
+  isWithinInterval, isBefore, isAfter, 
+  startOfDay, endOfDay, isSameDay 
+} from 'date-fns';
 
 /**
- * Service to consolidate event gathering logic from calendar-store
+ * Service to handle calendar-wide event operations
  */
 export const calendarEventService = {
   /**
    * Get all events for a specific date across all calendars
    */
   getEventsForDate: (calendars: Calendar[], date: Date, holidays: Holiday[]): Event[] => {
-    let allEvents: Event[] = [];
-    const processedHolidays = new Set<string>();
+    const allEvents: Event[] = [];
     
-    // First collect regular events from all calendars
     calendars.forEach(calendar => {
-      // Get regular events (including recurring)
-      const expandedEvents = eventService.getExpandedEvents(calendar.events, date, date);
-      allEvents.push(...expandedEvents);
-    });
-    
-    // Then collect holiday events (only once per holiday)
-    calendars.forEach(calendar => {
-      // Add holiday events if enabled
+      // Get expanded events for this specific calendar only
+      const calendarEvents = eventService.getExpandedEvents(
+        calendar.events, 
+        startOfDay(date), 
+        endOfDay(date)
+      );
+      
+      // Filter events to only include those for this calendar
+      const filteredEvents = calendarEvents.filter(event => 
+        event.calendarId === calendar.id
+      );
+      
+      allEvents.push(...filteredEvents);
+      
+      // Add holidays if enabled for this calendar
       if (calendar.showHolidays) {
-        const holidaysForDate = holidayService.getHolidaysForDate(holidays, date);
-        
-        holidaysForDate.forEach(holiday => {
-          // Only add each holiday once
-          if (!processedHolidays.has(holiday.id)) {
-            processedHolidays.add(holiday.id);
-            const holidayEvent = holidayService.holidayToEvent(holiday, calendar.id);
-            allEvents.push(holidayEvent);
-          }
-        });
+        const holidayEvents = holidayService.getHolidaysForDate(date, holidays);
+        // Ensure holiday events have the correct calendar ID
+        const calendarHolidays = holidayEvents.map(holiday => ({
+          ...holiday,
+          calendarId: calendar.id
+        }));
+        allEvents.push(...calendarHolidays);
       }
     });
     
-    // Sort events
     return eventService.sortEvents(allEvents);
   },
   
@@ -47,42 +51,68 @@ export const calendarEventService = {
    * Get all events for a date range across all calendars
    */
   getEventsForDateRange: (calendars: Calendar[], startDate: Date, endDate: Date, holidays: Holiday[]): Event[] => {
-    let allEvents: Event[] = [];
-    const processedHolidays = new Set<string>();
+    const allEvents: Event[] = [];
     
-    // First collect regular events from all calendars
     calendars.forEach(calendar => {
-      // Get regular events (including recurring)
-      const expandedEvents = eventService.getExpandedEvents(calendar.events, startDate, endDate);
-      allEvents.push(...expandedEvents);
-    });
-    
-    // Then collect holiday events (only once per holiday)
-    calendars.forEach(calendar => {
-      // Add holiday events if enabled
+      // Get expanded events for this specific calendar only
+      const calendarEvents = eventService.getExpandedEvents(
+        calendar.events, 
+        startDate, 
+        endDate
+      );
+      
+      // Filter events to only include those for this calendar
+      const filteredEvents = calendarEvents.filter(event => 
+        event.calendarId === calendar.id
+      );
+      
+      allEvents.push(...filteredEvents);
+      
+      // Add holidays if enabled for this calendar
       if (calendar.showHolidays) {
-        // For each day in the range, check for holidays
-        let currentDate = startOfDay(new Date(startDate));
-        const rangeEndDate = endOfDay(new Date(endDate));
-        
-        while (currentDate <= rangeEndDate) {
-          const holidaysForDate = holidayService.getHolidaysForDate(holidays, currentDate);
-          
-          holidaysForDate.forEach(holiday => {
-            // Only add each holiday once
-            if (!processedHolidays.has(holiday.id)) {
-              processedHolidays.add(holiday.id);
-              const holidayEvent = holidayService.holidayToEvent(holiday, calendar.id);
-              allEvents.push(holidayEvent);
-            }
-          });
-          
-          currentDate = addDays(currentDate, 1);
-        }
+        const holidayEvents = holidayService.getHolidaysForDateRange(startDate, endDate, holidays);
+        // Ensure holiday events have the correct calendar ID
+        const calendarHolidays = holidayEvents.map(holiday => ({
+          ...holiday,
+          calendarId: calendar.id
+        }));
+        allEvents.push(...calendarHolidays);
       }
     });
     
-    // Sort events
     return eventService.sortEvents(allEvents);
+  },
+
+  /**
+   * Get events for a specific calendar and date range
+   */
+  getEventsForCalendarAndDateRange: (calendar: Calendar, startDate: Date, endDate: Date, holidays: Holiday[]): Event[] => {
+    const events: Event[] = [];
+    
+    // Get expanded events for this calendar
+    const calendarEvents = eventService.getExpandedEvents(
+      calendar.events, 
+      startDate, 
+      endDate
+    );
+    
+    // Filter to ensure only events for this calendar
+    const filteredEvents = calendarEvents.filter(event => 
+      event.calendarId === calendar.id
+    );
+    
+    events.push(...filteredEvents);
+    
+    // Add holidays if enabled
+    if (calendar.showHolidays) {
+      const holidayEvents = holidayService.getHolidaysForDateRange(startDate, endDate, holidays);
+      const calendarHolidays = holidayEvents.map(holiday => ({
+        ...holiday,
+        calendarId: calendar.id
+      }));
+      events.push(...calendarHolidays);
+    }
+    
+    return eventService.sortEvents(events);
   }
 };
