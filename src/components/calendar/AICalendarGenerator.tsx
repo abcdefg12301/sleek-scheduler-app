@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -79,7 +78,7 @@ const AICalendarGenerator = ({
 
   const handleGenerate = async () => {
     // Validate and sanitize input
-    const { sanitized, isValid, error } = sanitizeAndValidate(calendarDetails, 500);
+    const { sanitized, isValid, error } = sanitizeAndValidate(calendarDetails, 1000);
     if (!isValid) {
       toast.error(error || 'Invalid input');
       return;
@@ -166,7 +165,7 @@ const AICalendarGenerator = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const { sanitized } = sanitizeAndValidate(e.target.value, 500);
+    const { sanitized } = sanitizeAndValidate(e.target.value, 1000);
     setCalendarDetails(sanitized);
   };
 
@@ -177,14 +176,14 @@ const AICalendarGenerator = ({
       </div>
       <div className="space-y-4">
         <Textarea
-          placeholder="Describe your calendar events here... (max 500 characters)"
+          placeholder="Describe your calendar events here... (max 1000 characters)"
           className="min-h-[120px]"
           value={calendarDetails}
           onChange={handleInputChange}
-          maxLength={500}
+          maxLength={1000}
         />
         <div className="text-xs text-muted-foreground text-right">
-          {calendarDetails.length}/500 characters
+          {calendarDetails.length}/1000 characters
         </div>
         <div className="flex gap-2">
           <Button

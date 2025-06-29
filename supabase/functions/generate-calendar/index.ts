@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -84,10 +83,10 @@ serve(async (req) => {
       );
     }
     
-    if (sanitizedDetails.length > 500) {
+    if (sanitizedDetails.length > 1000) {
       return new Response(
         JSON.stringify({ 
-          error: 'Calendar details too long (max 500 characters)' 
+          error: 'Calendar details too long (max 1000 characters)' 
         }),
         { 
           status: 400,

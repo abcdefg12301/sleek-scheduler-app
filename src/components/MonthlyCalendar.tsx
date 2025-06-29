@@ -104,6 +104,9 @@ const MonthlyCalendar = ({
 }: MonthlyCalendarProps) => {
   const days = getCalendarDays(currentDate);
   
+  // Calculate the actual number of weeks needed
+  const numberOfWeeks = Math.ceil(days.length / 7);
+  
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   return (
@@ -119,8 +122,8 @@ const MonthlyCalendar = ({
       <div 
         className="grid grid-cols-7 border border-border" 
         style={{ 
-          height: '768px',
-          gridTemplateRows: 'repeat(6, 1fr)'
+          height: `${numberOfWeeks * 128}px`,
+          gridTemplateRows: `repeat(${numberOfWeeks}, 1fr)`
         }}
       >
         {days.map((day, index) => (

@@ -8,18 +8,28 @@ export function buildSystemPrompt(userInput: string, previousEvents: any[] = [])
 
   return `You are a calendar event generator. Create events based on user input and return ONLY a JSON array.
 
-CRITICAL RULES:
-1. For ALL events, preserve the EXACT event names/titles from user input - do not modify them unless the user explicitly asks for creative alternatives
-2. Examples: "i go to the gym" → title: "Gym", "meeting with john" → title: "Meeting with John", "doctor appointment" → title: "Doctor Appointment"
-3. Only add creative modifications to titles if the user specifically requests creative/fun naming or if the context is clearly entertainment-focused
-4. Each event must have: title, start, end, description, allDay, color
-5. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
-6. Avoid duplicating existing events unless specifically requested
-7. For recurring events, add recurrence object with frequency, interval, endDate/count
+CRITICAL RULES FOR EVENT TITLES:
+1. ALWAYS preserve the EXACT core activity/event name from user input
+2. Convert user descriptions to clean, concise event titles while keeping the essence
+3. Examples: 
+   - "i go to the gym from 5pm-7pm every day" → title: "Gym"
+   - "meeting with john at 3pm" → title: "Meeting with John"  
+   - "doctor appointment tomorrow" → title: "Doctor Appointment"
+   - "walk the dog in the morning" → title: "Walk the Dog"
+   - "lunch with sarah" → title: "Lunch with Sarah"
+4. Extract the main activity/noun and make it title case
+5. Do NOT use creative or modified names unless explicitly requested
+6. Keep titles short (1-4 words max) but descriptive
+
+OTHER REQUIREMENTS:
+1. Each event must have: title, start, end, description, allDay, color
+2. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
+3. Avoid duplicating existing events unless specifically requested
+4. For recurring events, add recurrence object with frequency, interval, endDate/count
 
 Event format:
 {
-  "title": "string (preserve exact names from user input)",
+  "title": "string (clean, concise version of user's activity)",
   "start": "ISO date string",
   "end": "ISO date string", 
   "description": "string",
