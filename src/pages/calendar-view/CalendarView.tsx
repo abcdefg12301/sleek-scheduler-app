@@ -15,7 +15,7 @@ type CalendarViewType = 'day' | 'month';
 const CalendarView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, initializeStore, isInitialized } = useCalendarStore();
+  const { calendars, initializeStore, isInitialized, deleteRecurringEvent } = useCalendarStore();
   
   const [viewMode, setViewMode] = React.useState<CalendarViewType>('month');
   
@@ -62,7 +62,6 @@ const CalendarView = () => {
     handleCreateEvent,
     handleUpdateEvent,
     handleDeleteEvent,
-    handleDeleteRecurringEvent,
     handleHolidaysToggle
   } = useCalendarOperations(id || '');
   
@@ -122,6 +121,18 @@ const CalendarView = () => {
       setSelectedEvent(null);
     }
   };
+
+  const onDeleteRecurringEvent = async (mode: 'single' | 'future' | 'all') => {
+    if (!selectedEvent) return;
+    
+    try {
+      await deleteRecurringEvent(id, selectedEvent.id, mode, new Date(selectedEvent.start));
+      setIsViewEventDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to delete recurring event:', error);
+    }
+  };
   
   return (
     <div className="container py-8 animate-fade-in">
@@ -160,7 +171,7 @@ const CalendarView = () => {
         onCreateEvent={onCreateEvent}
         onUpdateEvent={onUpdateEvent}
         onDeleteEvent={onDeleteEvent}
-        onDeleteRecurringEvent={handleDeleteRecurringEvent}
+        onDeleteRecurringEvent={onDeleteRecurringEvent}
       />
     </div>
   );

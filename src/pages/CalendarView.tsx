@@ -16,7 +16,11 @@ const CalendarView = () => {
     calendars, 
     getEventsForDateRange,
     getEventsForDate,
-    updateCalendar
+    updateCalendar,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    deleteRecurringEvent
   } = useCalendarStore();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -167,6 +171,60 @@ const CalendarView = () => {
       toast.error('Failed to update settings');
     }
   };
+
+  const onCreateEvent = async (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+    try {
+      await addEvent(id, eventData);
+      toast.success('Event created successfully');
+      setIsNewEventDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      toast.error('Failed to create event');
+    }
+  };
+
+  const onUpdateEvent = async (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+    if (!selectedEvent) return;
+    try {
+      await updateEvent(id, selectedEvent.id, eventData);
+      toast.success('Event updated successfully');
+      setIsViewEventDialogOpen(false);
+      setIsEditMode(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      toast.error('Failed to update event');
+    }
+  };
+
+  const onDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    try {
+      await deleteEvent(id, selectedEvent.id);
+      toast.success('Event deleted successfully');
+      setIsViewEventDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
+
+  const onDeleteRecurringEvent = async (mode: 'single' | 'future' | 'all') => {
+    if (!selectedEvent) return;
+    try {
+      await deleteRecurringEvent(id, selectedEvent.id, mode, new Date(selectedEvent.start));
+      const actionText = mode === 'single' ? 'occurrence' : 
+                        mode === 'future' ? 'future occurrences' : 
+                        'all occurrences';
+      toast.success(`Event ${actionText} deleted successfully`);
+      setIsViewEventDialogOpen(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Failed to delete recurring event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
   
   return (
     <div className="container py-8 animate-fade-in">
@@ -202,6 +260,10 @@ const CalendarView = () => {
         setSelectedEvent={setSelectedEvent}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
+        onCreateEvent={onCreateEvent}
+        onUpdateEvent={onUpdateEvent}
+        onDeleteEvent={onDeleteEvent}
+        onDeleteRecurringEvent={onDeleteRecurringEvent}
       />
     </div>
   );

@@ -48,17 +48,10 @@ export function useCalendarOperations(calendarId: string) {
     }
   };
 
-  const handleDeleteRecurringEvent = async (
-    eventId: string, 
-    mode: 'single' | 'future' | 'all', 
-    date?: Date
-  ) => {
+  const handleDeleteRecurringEvent = async (mode: 'single' | 'future' | 'all') => {
     try {
-      await deleteRecurringEvent(calendarId, eventId, mode, date);
-      const actionText = mode === 'single' ? 'occurrence' : 
-                        mode === 'future' ? 'future occurrences' : 
-                        'all occurrences';
-      toast.success(`Event ${actionText} deleted successfully`);
+      // This will be called with the selected event's ID and date from the component
+      // For now, we'll handle this at the component level since we need access to selectedEvent
       return true;
     } catch (error) {
       console.error('Failed to delete recurring event:', error);
