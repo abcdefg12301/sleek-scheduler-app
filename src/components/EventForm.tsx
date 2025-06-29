@@ -11,6 +11,7 @@ import EventRecurrence from './event-form/EventRecurrence';
 import { parseTimeToDate } from '@/lib/date-utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { eventFormSchema } from './event-form/eventFormSchema';
+import { addDays, isBefore } from 'date-fns';
 
 interface EventFormProps {
   initialValues?: Partial<Event>;
@@ -64,9 +65,19 @@ const EventForm = ({ initialValues, onSubmit, onCancel }: EventFormProps) => {
       processedStartDate = parseTimeToDate(data.startTime, startDate);
       processedEndDate = parseTimeToDate(data.endTime, endDate);
       
-      // Ensure end date is after start date
+      // Handle cross-day events: if end time is before start time, assume it's next day
       if (processedEndDate <= processedStartDate) {
-        processedEndDate = new Date(processedStartDate.getTime() + 60 * 60 * 1000); // 1 hour later
+        // If the times suggest a cross-day event, move end to next day
+        const startTime = data.startTime.split(':').map(Number);
+        const endTime = data.endTime.split(':').map(Number);
+        
+        // If end time is significantly earlier than start time, it's likely cross-day
+        if (endTime[0] < startTime[0] || (endTime[0] === startTime[0] && endTime[1] < startTime[1])) {
+          processedEndDate = addDays(processedEndDate, 1);
+        } else {
+          // Otherwise, just add an hour as fallback
+          processedEndDate = new Date(processedStartDate.getTime() + 60 * 60 * 1000);
+        }
       }
     } else {
       // For all-day events, set to start/end of day

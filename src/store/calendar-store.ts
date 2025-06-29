@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Calendar, Event, Holiday } from '../types';
@@ -32,7 +33,7 @@ interface CalendarState {
   getExpandedEvents: (calendarId: string, startDate: Date, endDate: Date) => Event[];
   
   // Enhanced recurring event actions
-  deleteRecurringEvent: (calendarId: string, eventId: string, mode: 'single' | 'future' | 'all', date?: Date) => void;
+  deleteRecurringEvent: (calendarId: string, eventId: string, mode: 'single' | 'future' | 'all', date?: Date) => Promise<void>;
   addExceptionDate: (calendarId: string, eventId: string, exceptionDate: Date) => void;
 
   // --- Backend (Supabase) synchronization ---
@@ -50,100 +51,135 @@ export const useCalendarStore = create<CalendarState>()(
 
       // --- Backend (Supabase) synchronization ---
       async syncCalendarsFromSupabase() {
-        const calendars = await supabaseService.fetchCalendars();
-        set({ calendars });
+        try {
+          const calendars = await supabaseService.fetchCalendars();
+          set({ calendars });
+        } catch (error) {
+          console.error('Failed to sync calendars:', error);
+          throw error;
+        }
       },
 
       async addCalendar(name, description, color, showHolidays = true) {
-        const calendar = await supabaseService.createCalendar({
-          name,
-          description,
-          color,
-          showHolidays,
-        });
-        if (calendar) {
-          set((state) => ({
-            calendars: [...state.calendars, calendar],
-            selectedCalendarId: calendar.id,
-          }));
-          return calendar;
+        try {
+          const calendar = await supabaseService.createCalendar({
+            name,
+            description,
+            color,
+            showHolidays,
+          });
+          if (calendar) {
+            set((state) => ({
+              calendars: [...state.calendars, calendar],
+              selectedCalendarId: calendar.id,
+            }));
+            return calendar;
+          }
+          throw new Error("Failed to add calendar");
+        } catch (error) {
+          console.error('Failed to add calendar:', error);
+          throw error;
         }
-        throw new Error("Failed to add calendar");
       },
 
       async updateCalendar(id, data) {
-        const calendar = await supabaseService.updateCalendar(id, data);
-        if (calendar) {
-          set((state) => ({
-            calendars: state.calendars.map((cal) =>
-              cal.id === id ? { ...cal, ...calendar } : cal
-            ),
-          }));
+        try {
+          const updatedCalendar = await supabaseService.updateCalendar(id, data);
+          if (updatedCalendar) {
+            set((state) => ({
+              calendars: state.calendars.map((cal) =>
+                cal.id === id ? { ...cal, ...updatedCalendar } : cal
+              ),
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to update calendar:', error);
+          throw error;
         }
       },
 
       async deleteCalendar(id) {
-        await supabaseService.deleteCalendar(id);
-        set((state) => ({
-          calendars: state.calendars.filter((cal) => cal.id !== id),
-          selectedCalendarId:
-            state.selectedCalendarId === id ? null : state.selectedCalendarId,
-        }));
+        try {
+          await supabaseService.deleteCalendar(id);
+          set((state) => ({
+            calendars: state.calendars.filter((cal) => cal.id !== id),
+            selectedCalendarId:
+              state.selectedCalendarId === id ? null : state.selectedCalendarId,
+          }));
+        } catch (error) {
+          console.error('Failed to delete calendar:', error);
+          throw error;
+        }
       },
 
       selectCalendar: (id) => set(() => ({ selectedCalendarId: id })),
 
       // --- Events ---
       async addEvent(calendarId, eventData) {
-        const event = await supabaseService.createEvent({
-          ...eventData,
-          calendarId,
-        });
-        if (event) {
-          set((state) => ({
-            calendars: state.calendars.map((cal) =>
-              cal.id === calendarId
-                ? { ...cal, events: [...cal.events, event] }
-                : cal
-            ),
-          }));
-          return event;
+        try {
+          const event = await supabaseService.createEvent({
+            ...eventData,
+            calendarId,
+          });
+          if (event) {
+            set((state) => ({
+              calendars: state.calendars.map((cal) =>
+                cal.id === calendarId
+                  ? { ...cal, events: [...cal.events, event] }
+                  : cal
+              ),
+            }));
+            return event;
+          }
+          throw new Error("Failed to add event");
+        } catch (error) {
+          console.error('Failed to add event:', error);
+          throw error;
         }
-        throw new Error("Failed to add event");
       },
 
       async updateEvent(calendarId, eventId, data) {
-        const event = await supabaseService.updateEvent(eventId, data);
-        if (event) {
+        try {
+          const updatedEvent = await supabaseService.updateEvent(eventId, data);
+          if (updatedEvent) {
+            set((state) => ({
+              calendars: state.calendars.map((cal) =>
+                cal.id === calendarId
+                  ? {
+                      ...cal,
+                      events: cal.events.map((ev) =>
+                        ev.id === eventId ? { ...ev, ...updatedEvent } : ev
+                      ),
+                    }
+                  : cal
+              ),
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to update event:', error);
+          throw error;
+        }
+      },
+
+      async deleteEvent(calendarId, eventId) {
+        try {
+          await supabaseService.deleteEvent(eventId);
           set((state) => ({
             calendars: state.calendars.map((cal) =>
               cal.id === calendarId
                 ? {
                     ...cal,
-                    events: cal.events.map((ev) =>
-                      ev.id === eventId ? { ...ev, ...event } : ev
+                    events: cal.events.filter(
+                      (ev) => ev.id !== eventId && ev.originalEventId !== eventId
                     ),
                   }
                 : cal
             ),
           }));
+        } catch (error) {
+          console.error('Failed to delete event:', error);
+          throw error;
         }
-      },
-
-      async deleteEvent(calendarId, eventId) {
-        await supabaseService.deleteEvent(eventId);
-        set((state) => ({
-          calendars: state.calendars.map((cal) =>
-            cal.id === calendarId
-              ? {
-                  ...cal,
-                  events: cal.events.filter(
-                    (ev) => ev.id !== eventId && ev.originalEventId !== eventId
-                  ),
-                }
-              : cal
-          ),
-        }));
       },
       
       getEventsForDate: (date) => {
@@ -169,113 +205,121 @@ export const useCalendarStore = create<CalendarState>()(
         return eventService.getExpandedEvents(calendar.events, startDate, endDate);
       },
       
-      deleteRecurringEvent: (calendarId, eventId, mode, date) => {
+      deleteRecurringEvent: async (calendarId, eventId, mode, date) => {
         console.log(`Deleting recurring event ${eventId} from calendar ${calendarId}, mode: ${mode}`);
         
-        set((state) => {
-          const calendar = state.calendars.find(cal => cal.id === calendarId);
-          if (!calendar) return state;
+        try {
+          // Handle deletion via supabase service
+          await supabaseService.deleteEvent(eventId);
           
-          // Find the original event
-          const originalEvent = calendar.events.find(event => event.id === eventId);
-          if (!originalEvent) return state;
-          
-          // If it's an instance, we need to find the master event
-          const masterId = originalEvent.originalEventId || originalEvent.id;
-          const masterEvent = calendar.events.find(event => event.id === masterId);
-          
-          if (!masterEvent || !masterEvent.recurrence) {
-            // If not a recurring event, just delete normally
-            return {
-              ...state,
-              calendars: state.calendars.map(cal => 
-                cal.id === calendarId 
-                  ? {
-                      ...cal,
-                      events: cal.events.filter(event => event.id !== eventId && event.originalEventId !== eventId)
-                    }
-                  : cal
-              )
-            };
-          }
-          
-          switch (mode) {
-            case 'single': {
-              if (!date) return state;
-              
-              // For single deletion, we add an exception date to the master event
-              const updatedEvents = calendar.events.map(event => {
-                if (event.id === masterId) {
-                  // Add the exception date
-                  return {
-                    ...event,
-                    exceptionDates: [
-                      ...(event.exceptionDates || []),
-                      date.toISOString().split('T')[0] // Store as YYYY-MM-DD
-                    ]
-                  };
-                }
-                return event;
-              });
-              
-              return {
-                ...state,
-                calendars: state.calendars.map(cal => 
-                  cal.id === calendarId ? { ...cal, events: updatedEvents } : cal
-                )
-              };
-            }
-              
-            case 'future': {
-              if (!date) return state;
-              
-              // For future deletion, we update the end date of the recurrence
-              const updatedEvents = calendar.events.map(event => {
-                if (event.id === masterId && event.recurrence) {
-                  // Set the end date to the day before the selected date
-                  const endDate = new Date(date);
-                  endDate.setDate(endDate.getDate() - 1);
-                  
-                  return {
-                    ...event,
-                    recurrence: {
-                      ...event.recurrence,
-                      endDate: endDate
-                    }
-                  };
-                }
-                return event;
-              });
-              
-              return {
-                ...state,
-                calendars: state.calendars.map(cal => 
-                  cal.id === calendarId ? { ...cal, events: updatedEvents } : cal
-                )
-              };
-            }
-              
-            case 'all': {
-              // For all deletion, we remove the original event and all instances
+          set((state) => {
+            const calendar = state.calendars.find(cal => cal.id === calendarId);
+            if (!calendar) return state;
+            
+            // Find the original event
+            const originalEvent = calendar.events.find(event => event.id === eventId);
+            if (!originalEvent) return state;
+            
+            // If it's an instance, we need to find the master event
+            const masterId = originalEvent.originalEventId || originalEvent.id;
+            const masterEvent = calendar.events.find(event => event.id === masterId);
+            
+            if (!masterEvent || !masterEvent.recurrence) {
+              // If not a recurring event, just delete normally
               return {
                 ...state,
                 calendars: state.calendars.map(cal => 
                   cal.id === calendarId 
                     ? {
                         ...cal,
-                        events: cal.events.filter(event => 
-                          event.id !== masterId && event.originalEventId !== masterId
-                        )
+                        events: cal.events.filter(event => event.id !== eventId && event.originalEventId !== eventId)
                       }
                     : cal
                 )
               };
             }
-              
-            default:
-              return state;
-          }
-        });
+            
+            switch (mode) {
+              case 'single': {
+                if (!date) return state;
+                
+                // For single deletion, we add an exception date to the master event
+                const updatedEvents = calendar.events.map(event => {
+                  if (event.id === masterId) {
+                    // Add the exception date
+                    return {
+                      ...event,
+                      exceptionDates: [
+                        ...(event.exceptionDates || []),
+                        date.toISOString().split('T')[0] // Store as YYYY-MM-DD
+                      ]
+                    };
+                  }
+                  return event;
+                });
+                
+                return {
+                  ...state,
+                  calendars: state.calendars.map(cal => 
+                    cal.id === calendarId ? { ...cal, events: updatedEvents } : cal
+                  )
+                };
+              }
+                
+              case 'future': {
+                if (!date) return state;
+                
+                // For future deletion, we update the end date of the recurrence
+                const updatedEvents = calendar.events.map(event => {
+                  if (event.id === masterId && event.recurrence) {
+                    // Set the end date to the day before the selected date
+                    const endDate = new Date(date);
+                    endDate.setDate(endDate.getDate() - 1);
+                    
+                    return {
+                      ...event,
+                      recurrence: {
+                        ...event.recurrence,
+                        endDate: endDate
+                      }
+                    };
+                  }
+                  return event;
+                });
+                
+                return {
+                  ...state,
+                  calendars: state.calendars.map(cal => 
+                    cal.id === calendarId ? { ...cal, events: updatedEvents } : cal
+                  )
+                };
+              }
+                
+              case 'all': {
+                // For all deletion, we remove the original event and all instances
+                return {
+                  ...state,
+                  calendars: state.calendars.map(cal => 
+                    cal.id === calendarId 
+                      ? {
+                          ...cal,
+                          events: cal.events.filter(event => 
+                            event.id !== masterId && event.originalEventId !== masterId
+                          )
+                        }
+                      : cal
+                  )
+                };
+              }
+                
+              default:
+                return state;
+            }
+          });
+        } catch (error) {
+          console.error('Failed to delete recurring event:', error);
+          throw error;
+        }
       },
       
       addExceptionDate: (calendarId, eventId, exceptionDate) => {

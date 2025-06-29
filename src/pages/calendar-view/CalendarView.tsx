@@ -3,19 +3,19 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Event } from '@/types';
 import { useCalendarStore } from '@/store/calendar-store';
-import { toast } from 'sonner';
 import CalendarViewContent from '@/components/calendar/CalendarViewContent';
 import CalendarHeader from '@/components/calendar/CalendarViewHeader';
 import { useDateNavigation } from './hooks/useDateNavigation';
 import { useEventDialogs } from './hooks/useEventDialogs';
 import { useCalendarEvents } from './hooks/useCalendarEvents';
+import { useCalendarOperations } from './hooks/useCalendarOperations';
 
 type CalendarViewType = 'day' | 'month';
 
 const CalendarView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars, updateCalendar } = useCalendarStore();
+  const { calendars } = useCalendarStore();
   
   const [viewMode, setViewMode] = React.useState<CalendarViewType>('month');
   
@@ -48,6 +48,14 @@ const CalendarView = () => {
     selectedDate,
     viewMode
   );
+
+  const {
+    handleCreateEvent,
+    handleUpdateEvent,
+    handleDeleteEvent,
+    handleDeleteRecurringEvent,
+    handleHolidaysToggle
+  } = useCalendarOperations(id || '');
   
   const calendar = calendars.find(cal => cal.id === id);
   
@@ -68,13 +76,29 @@ const CalendarView = () => {
     setIsEditMode(false);
   };
 
-  const handleHolidaysToggle = (enabled: boolean) => {
-    try {
-      updateCalendar(calendar.id, { showHolidays: enabled });
-      toast.success(enabled ? 'Holidays enabled' : 'Holidays disabled');
-    } catch (error) {
-      console.error('Failed to update holiday settings:', error);
-      toast.error('Failed to update settings');
+  const onCreateEvent = async (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+    const success = await handleCreateEvent(eventData);
+    if (success) {
+      setIsNewEventDialogOpen(false);
+    }
+  };
+
+  const onUpdateEvent = async (eventData: Omit<Event, 'id' | 'calendarId'>) => {
+    if (!selectedEvent) return;
+    const success = await handleUpdateEvent(selectedEvent.id, eventData);
+    if (success) {
+      setIsViewEventDialogOpen(false);
+      setIsEditMode(false);
+      setSelectedEvent(null);
+    }
+  };
+
+  const onDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    const success = await handleDeleteEvent(selectedEvent.id);
+    if (success) {
+      setIsViewEventDialogOpen(false);
+      setSelectedEvent(null);
     }
   };
   

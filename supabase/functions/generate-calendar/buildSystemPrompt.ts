@@ -21,11 +21,20 @@ CRITICAL RULES FOR EVENT TITLES:
 5. Do NOT use creative or modified names unless explicitly requested
 6. Keep titles short (1-4 words max) but descriptive
 
+CROSS-DAY EVENT HANDLING:
+1. For events spanning multiple days (e.g., "8pm to 8am"), create proper start/end times
+2. If end time is earlier than start time, assume it's the next day
+3. Examples:
+   - "8pm to 8am" → start: today 8pm, end: tomorrow 8am
+   - "11pm to 2am" → start: today 11pm, end: tomorrow 2am
+4. Always use consecutive dates for cross-day events
+
 OTHER REQUIREMENTS:
 1. Each event must have: title, start, end, description, allDay, color
 2. Use ISO 8601 format for dates (e.g., "2024-12-17T09:00:00.000Z")
 3. Avoid duplicating existing events unless specifically requested
 4. For recurring events, add recurrence object with frequency, interval, endDate/count
+5. Handle time zones consistently - use UTC and let frontend handle local display
 
 Event format:
 {

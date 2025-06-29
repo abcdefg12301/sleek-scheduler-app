@@ -64,9 +64,9 @@ const CalendarViewContent = ({
   const [isRecurringDeleteDialogOpen, setIsRecurringDeleteDialogOpen] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
-  const handleCreateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
+  const handleCreateEvent = async (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
-      addEvent(calendar.id, eventData);
+      await addEvent(calendar.id, eventData);
       setIsNewEventDialogOpen(false);
       toast.success('Event created successfully');
     } catch (error) {
@@ -75,11 +75,11 @@ const CalendarViewContent = ({
     }
   };
   
-  const handleUpdateEvent = (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
+  const handleUpdateEvent = async (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     if (!selectedEvent) return;
     
     try {
-      updateEvent(calendar.id, selectedEvent.id, eventData);
+      await updateEvent(calendar.id, selectedEvent.id, eventData);
       setIsViewEventDialogOpen(false);
       setIsEditMode(false);
       setSelectedEvent(null);
@@ -104,6 +104,7 @@ const CalendarViewContent = ({
     
     try {
       await deleteEvent(calendar.id, selectedEvent.id);
+      // Close all dialogs immediately after successful deletion
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -127,6 +128,7 @@ const CalendarViewContent = ({
       await deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
         selectedEvent.start : new Date(selectedEvent.start));
       
+      // Close all dialogs immediately after successful deletion
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
@@ -144,9 +146,9 @@ const CalendarViewContent = ({
     }
   };
   
-  const handleHolidaysToggle = (enabled: boolean) => {
+  const handleHolidaysToggle = async (enabled: boolean) => {
     try {
-      updateCalendar(calendar.id, { showHolidays: enabled });
+      await updateCalendar(calendar.id, { showHolidays: enabled });
       toast.success(enabled ? 'Holidays enabled' : 'Holidays disabled');
     } catch (error) {
       console.error('Failed to update holiday settings:', error);
