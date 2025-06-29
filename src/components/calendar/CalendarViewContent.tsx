@@ -31,6 +31,11 @@ interface CalendarViewContentProps {
   setSelectedEvent: (event: CalendarEvent | null) => void;
   isEditMode: boolean;
   setIsEditMode: (edit: boolean) => void;
+  // Event operation handlers
+  onCreateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => Promise<void>;
+  onUpdateEvent: (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => Promise<void>;
+  onDeleteEvent: () => Promise<void>;
+  onDeleteRecurringEvent: (mode: 'single' | 'future' | 'all') => Promise<void>;
 }
 
 const CalendarViewContent = ({
@@ -51,42 +56,34 @@ const CalendarViewContent = ({
   selectedEvent,
   setSelectedEvent,
   isEditMode,
-  setIsEditMode
+  setIsEditMode,
+  onCreateEvent,
+  onUpdateEvent,
+  onDeleteEvent,
+  onDeleteRecurringEvent
 }: CalendarViewContentProps) => {
-  const { 
-    addEvent,
-    updateEvent,
-    deleteEvent,
-    deleteRecurringEvent,
-    updateCalendar,
-  } = useCalendarStore();
-
   const [isRecurringDeleteDialogOpen, setIsRecurringDeleteDialogOpen] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
   const handleCreateEvent = async (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
     try {
-      await addEvent(calendar.id, eventData);
+      await onCreateEvent(eventData);
       setIsNewEventDialogOpen(false);
-      toast.success('Event created successfully');
     } catch (error) {
       console.error('Failed to create event:', error);
-      toast.error('Failed to create event');
+      // Error already handled by parent
     }
   };
   
   const handleUpdateEvent = async (eventData: Omit<CalendarEvent, 'id' | 'calendarId'>) => {
-    if (!selectedEvent) return;
-    
     try {
-      await updateEvent(calendar.id, selectedEvent.id, eventData);
+      await onUpdateEvent(eventData);
       setIsViewEventDialogOpen(false);
       setIsEditMode(false);
       setSelectedEvent(null);
-      toast.success('Event updated successfully');
     } catch (error) {
       console.error('Failed to update event:', error);
-      toast.error('Failed to update event');
+      // Error already handled by parent
     }
   };
   
@@ -103,15 +100,14 @@ const CalendarViewContent = ({
     setIsDeletingEvent(true);
     
     try {
-      await deleteEvent(calendar.id, selectedEvent.id);
+      await onDeleteEvent();
       // Close all dialogs immediately after successful deletion
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
-      toast.success('Event deleted successfully');
     } catch (error) {
       console.error('Failed to delete event:', error);
-      toast.error('Failed to delete event');
+      // Error already handled by parent
     } finally {
       setIsDeletingEvent(false);
     }
@@ -123,36 +119,17 @@ const CalendarViewContent = ({
     setIsDeletingEvent(true);
     
     try {
-      const eventId = selectedEvent.originalEventId || selectedEvent.id;
-      
-      await deleteRecurringEvent(calendar.id, eventId, mode, selectedEvent.start instanceof Date ? 
-        selectedEvent.start : new Date(selectedEvent.start));
+      await onDeleteRecurringEvent(mode);
       
       // Close all dialogs immediately after successful deletion
       setIsViewEventDialogOpen(false);
       setIsRecurringDeleteDialogOpen(false);
       setSelectedEvent(null);
-      
-      const actionText = mode === 'single' ? 'occurrence' : 
-                        mode === 'future' ? 'future occurrences' : 
-                        'all occurrences';
-      
-      toast.success(`Event ${actionText} deleted successfully`);
     } catch (error) {
       console.error('Failed to delete recurring event:', error);
-      toast.error('Failed to delete event');
+      // Error already handled by parent
     } finally {
       setIsDeletingEvent(false);
-    }
-  };
-  
-  const handleHolidaysToggle = async (enabled: boolean) => {
-    try {
-      await updateCalendar(calendar.id, { showHolidays: enabled });
-      toast.success(enabled ? 'Holidays enabled' : 'Holidays disabled');
-    } catch (error) {
-      console.error('Failed to update holiday settings:', error);
-      toast.error('Failed to update settings');
     }
   };
 

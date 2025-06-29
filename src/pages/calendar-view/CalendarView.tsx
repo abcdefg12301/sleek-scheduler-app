@@ -15,9 +15,18 @@ type CalendarViewType = 'day' | 'month';
 const CalendarView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { calendars } = useCalendarStore();
+  const { calendars, initializeStore, isInitialized } = useCalendarStore();
   
   const [viewMode, setViewMode] = React.useState<CalendarViewType>('month');
+  
+  // Initialize store on component mount
+  React.useEffect(() => {
+    if (!isInitialized) {
+      initializeStore().catch(error => {
+        console.error('Failed to initialize calendar store:', error);
+      });
+    }
+  }, [isInitialized, initializeStore]);
   
   // Use custom hooks for date navigation, event dialogs and event fetching
   const { 
@@ -60,11 +69,23 @@ const CalendarView = () => {
   const calendar = calendars.find(cal => cal.id === id);
   
   React.useEffect(() => {
-    if (!calendar && id) {
+    if (!calendar && id && isInitialized) {
       console.error('Calendar not found with ID:', id);
       navigate('/');
     }
-  }, [id, calendar, navigate]);
+  }, [id, calendar, navigate, isInitialized]);
+  
+  // Show loading while initializing
+  if (!isInitialized) {
+    return (
+      <div className="container py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading calendar...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!calendar || !id) {
     return null;
@@ -136,6 +157,10 @@ const CalendarView = () => {
         setSelectedEvent={setSelectedEvent}
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
+        onCreateEvent={onCreateEvent}
+        onUpdateEvent={onUpdateEvent}
+        onDeleteEvent={onDeleteEvent}
+        onDeleteRecurringEvent={handleDeleteRecurringEvent}
       />
     </div>
   );

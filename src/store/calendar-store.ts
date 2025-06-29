@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Calendar, Event, Holiday } from '../types';
@@ -17,6 +16,7 @@ interface CalendarState {
   calendars: Calendar[];
   selectedCalendarId: string | null;
   holidays: Holiday[];
+  isInitialized: boolean;
   
   // Calendar actions
   addCalendar: (name: string, description: string, color: string, showHolidays?: boolean) => Promise<Calendar>;
@@ -38,6 +38,7 @@ interface CalendarState {
 
   // --- Backend (Supabase) synchronization ---
   syncCalendarsFromSupabase: () => Promise<void>;
+  initializeStore: () => Promise<void>;
 }
 
 // Slices for modularity:
@@ -48,6 +49,20 @@ export const useCalendarStore = create<CalendarState>()(
       calendars: [],
       selectedCalendarId: null,
       holidays: HOLIDAYS,
+      isInitialized: false,
+
+      // --- Initialization ---
+      async initializeStore() {
+        if (get().isInitialized) return;
+        
+        try {
+          await get().syncCalendarsFromSupabase();
+          set({ isInitialized: true });
+        } catch (error) {
+          console.error('Failed to initialize store:', error);
+          // Don't throw here to prevent breaking the app
+        }
+      },
 
       // --- Backend (Supabase) synchronization ---
       async syncCalendarsFromSupabase() {
@@ -84,6 +99,18 @@ export const useCalendarStore = create<CalendarState>()(
 
       async updateCalendar(id, data) {
         try {
+          // Ensure calendar exists locally before updating
+          const calendar = get().calendars.find(cal => cal.id === id);
+          if (!calendar) {
+            console.error('Calendar not found locally:', id);
+            // Try to sync from Supabase first
+            await get().syncCalendarsFromSupabase();
+            const refreshedCalendar = get().calendars.find(cal => cal.id === id);
+            if (!refreshedCalendar) {
+              throw new Error(`Calendar with ID ${id} not found`);
+            }
+          }
+
           const updatedCalendar = await supabaseService.updateCalendar(id, data);
           if (updatedCalendar) {
             set((state) => ({
@@ -117,6 +144,18 @@ export const useCalendarStore = create<CalendarState>()(
       // --- Events ---
       async addEvent(calendarId, eventData) {
         try {
+          // Ensure calendar exists before adding event
+          const calendar = get().calendars.find(cal => cal.id === calendarId);
+          if (!calendar) {
+            console.error('Calendar not found for event creation:', calendarId);
+            // Try to sync calendars first
+            await get().syncCalendarsFromSupabase();
+            const refreshedCalendar = get().calendars.find(cal => cal.id === calendarId);
+            if (!refreshedCalendar) {
+              throw new Error(`Calendar with ID ${calendarId} not found`);
+            }
+          }
+
           const event = await supabaseService.createEvent({
             ...eventData,
             calendarId,
