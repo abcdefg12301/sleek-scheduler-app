@@ -34,12 +34,11 @@ export const calendarEventService = {
       
       // Add holidays if enabled for this calendar
       if (calendar.showHolidays) {
-        const holidayEvents = holidayService.getHolidaysForDate(date, holidays);
-        // Ensure holiday events have the correct calendar ID
-        const calendarHolidays = holidayEvents.map(holiday => ({
-          ...holiday,
-          calendarId: calendar.id
-        }));
+        const holidayEvents = holidayService.getHolidaysForDate(holidays, date);
+        // Convert holidays to events with the correct calendar ID
+        const calendarHolidays = holidayEvents.map(holiday => 
+          holidayService.holidayToEvent(holiday, calendar.id)
+        );
         allEvents.push(...calendarHolidays);
       }
     });
@@ -71,11 +70,10 @@ export const calendarEventService = {
       // Add holidays if enabled for this calendar
       if (calendar.showHolidays) {
         const holidayEvents = holidayService.getHolidaysForDateRange(startDate, endDate, holidays);
-        // Ensure holiday events have the correct calendar ID
-        const calendarHolidays = holidayEvents.map(holiday => ({
-          ...holiday,
-          calendarId: calendar.id
-        }));
+        // Convert holidays to events with the correct calendar ID
+        const calendarHolidays = holidayEvents.map(holiday => 
+          holidayService.holidayToEvent(holiday, calendar.id)
+        );
         allEvents.push(...calendarHolidays);
       }
     });
@@ -106,10 +104,9 @@ export const calendarEventService = {
     // Add holidays if enabled
     if (calendar.showHolidays) {
       const holidayEvents = holidayService.getHolidaysForDateRange(startDate, endDate, holidays);
-      const calendarHolidays = holidayEvents.map(holiday => ({
-        ...holiday,
-        calendarId: calendar.id
-      }));
+      const calendarHolidays = holidayEvents.map(holiday => 
+        holidayService.holidayToEvent(holiday, calendar.id)
+      );
       events.push(...calendarHolidays);
     }
     

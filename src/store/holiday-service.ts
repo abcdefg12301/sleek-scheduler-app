@@ -1,6 +1,5 @@
-
 import { Holiday, Event } from '../types';
-import { isSameDay } from 'date-fns';
+import { isSameDay, isWithinInterval } from 'date-fns';
 
 // Generate holidays for the current year
 const currentYear = new Date().getFullYear();
@@ -113,6 +112,14 @@ export const HOLIDAYS: Holiday[] = [
 export const holidayService = {
   getHolidaysForDate: (holidays: Holiday[], date: Date): Holiday[] => {
     return holidays.filter(holiday => isSameDay(holiday.date, date));
+  },
+  
+  getHolidaysForDateRange: (startDate: Date, endDate: Date, holidays: Holiday[]): Holiday[] => {
+    return holidays.filter(holiday => 
+      isWithinInterval(holiday.date, { start: startDate, end: endDate }) ||
+      isSameDay(holiday.date, startDate) ||
+      isSameDay(holiday.date, endDate)
+    );
   },
   
   holidayToEvent: (holiday: Holiday, calendarId: string): Event => {
