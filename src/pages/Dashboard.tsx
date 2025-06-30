@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { calendars, initializeStore, isInitialized } = useCalendarStore();
+  const { calendars, initializeStore, isInitialized, deleteCalendar } = useCalendarStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +32,14 @@ const Dashboard = () => {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleDeleteCalendar = async (id: string) => {
+    try {
+      await deleteCalendar(id);
+    } catch (error) {
+      console.error('Failed to delete calendar:', error);
+    }
   };
 
   if (isLoading) {
@@ -115,8 +123,7 @@ const Dashboard = () => {
               <CalendarCard
                 key={calendar.id}
                 calendar={calendar}
-                onView={() => navigate(`/calendar/${calendar.id}`)}
-                onEdit={() => navigate(`/edit-calendar/${calendar.id}`)}
+                onDelete={handleDeleteCalendar}
               />
             ))}
           </div>
