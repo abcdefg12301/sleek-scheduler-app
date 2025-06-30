@@ -9,6 +9,7 @@ interface DbCalendar {
   description: string | null;
   color: string | null;
   show_holidays: boolean;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -24,21 +25,29 @@ const toAppCalendar = (dbCalendar: DbCalendar): Calendar => {
   };
 };
 
-const toDbCalendar = (appCalendar: Calendar): Omit<DbCalendar, 'id' | 'created_at' | 'updated_at'> => {
+const toDbCalendar = (appCalendar: Calendar, userId: string): Omit<DbCalendar, 'id' | 'created_at' | 'updated_at'> => {
   return {
     name: appCalendar.name,
     description: appCalendar.description,
     color: appCalendar.color,
-    show_holidays: appCalendar.showHolidays
+    show_holidays: appCalendar.showHolidays,
+    user_id: userId
   };
 };
 
 export const calendarRepository = {
   async fetchAll(): Promise<Calendar[]> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('calendars')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
         
       if (error) throw error;
       
@@ -52,7 +61,13 @@ export const calendarRepository = {
   
   async create(calendar: Omit<Calendar, 'id' | 'events'>): Promise<Calendar | null> {
     try {
-      const dbCalendar = toDbCalendar({ ...calendar, id: '', events: [] });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to create a calendar');
+        return null;
+      }
+
+      const dbCalendar = toDbCalendar({ ...calendar, id: '', events: [] }, user.id);
       
       const { data, error } = await supabase
         .from('calendars')
@@ -72,6 +87,12 @@ export const calendarRepository = {
   
   async update(id: string, calendar: Partial<Calendar>): Promise<Calendar | null> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to update a calendar');
+        return null;
+      }
+
       const dbCalendarUpdate = {
         ...(calendar.name !== undefined && { name: calendar.name }),
         ...(calendar.description !== undefined && { description: calendar.description }),
@@ -83,6 +104,7 @@ export const calendarRepository = {
         .from('calendars')
         .update(dbCalendarUpdate)
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
       
@@ -98,10 +120,17 @@ export const calendarRepository = {
   
   async delete(id: string): Promise<boolean> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to delete a calendar');
+        return false;
+      }
+
       const { error } = await supabase
         .from('calendars')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       

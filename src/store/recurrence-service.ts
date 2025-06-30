@@ -2,8 +2,8 @@
 import { Event, RecurrenceRule } from '@/types';
 import { 
   addDays, addWeeks, addMonths, addYears, 
-  isBefore, isAfter, isWithinInterval, isSameDay, differenceInDays, isValid,
-  format, startOfDay, endOfDay, isSameMinute, startOfMinute
+  isBefore, isAfter, isWithinInterval, isSameDay, 
+  format, startOfDay, endOfDay, isValid
 } from 'date-fns';
 
 // Helper to get the next occurrence based on frequency
@@ -48,12 +48,15 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     return exceptionDates.includes(dateStr);
   };
 
-  // For cross-day events, we need special handling to avoid duplicates
-  const isCrossDayEvent = originalStart.getDate() !== originalEnd.getDate() || 
-                         originalStart.getMonth() !== originalEnd.getMonth() ||
-                         originalStart.getFullYear() !== originalEnd.getFullYear();
+  // Create a set to track generated instances and prevent duplicates
+  const generatedInstances = new Set<string>();
+  
+  // Create a unique key for each instance
+  const createInstanceKey = (start: Date, eventId: string) => {
+    return `${eventId}-${format(start, 'yyyy-MM-dd-HH-mm')}`;
+  };
 
-  console.log('Generating recurring events for:', event.title, 'Cross-day:', isCrossDayEvent);
+  console.log('Generating recurring events for:', event.title);
 
   // Include the original event if it's within range and not an exception date
   if ((isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
@@ -61,20 +64,23 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
        isSameDay(originalStart, startDate) ||
        (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate))) &&
       !isExceptionDate(originalStart)) {
-    events.push(event);
+    
+    const originalKey = createInstanceKey(originalStart, event.id);
+    if (!generatedInstances.has(originalKey)) {
+      events.push(event);
+      generatedInstances.add(originalKey);
+    }
   }
 
   // Generate recurring instances
   let currentStart = getNextOccurrence(originalStart, frequency, interval);
   let iterationCount = 0;
-  const maxIterations = 1000; // Safety limit
-  
-  // Keep track of generated instances to prevent duplicates for cross-day events
-  const generatedInstances = new Set<string>();
+  const maxIterations = 500; // Reduced for safety
   
   // Generate occurrences only within the requested date range
   while (isBefore(currentStart, endDate) && 
         (!event.recurrence.endDate || isBefore(currentStart, event.recurrence.endDate)) &&
+        (!event.recurrence.count || events.length < event.recurrence.count) &&
         iterationCount < maxIterations) {
     
     iterationCount++;
@@ -89,11 +95,7 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     const currentEnd = new Date(currentStart.getTime() + eventDurationMs);
     
     // Create a unique key for this instance
-    // For cross-day events, use only the start date and time to prevent duplicates
-    // For same-day events, use full timestamp
-    const instanceKey = isCrossDayEvent 
-      ? `${event.id}-${format(currentStart, 'yyyy-MM-dd-HH-mm')}`
-      : `${event.id}-${format(currentStart, 'yyyy-MM-dd-HH-mm-ss')}`;
+    const instanceKey = createInstanceKey(currentStart, event.id);
     
     // Skip if we've already generated this instance
     if (generatedInstances.has(instanceKey)) {

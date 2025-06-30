@@ -62,9 +62,8 @@ export const useCalendarStore = create<CalendarState>()(
     {
       name: 'calendar-storage',
       partialize: (state) => ({ 
-        calendars: state.calendars,
         selectedCalendarId: state.selectedCalendarId,
-        holidays: state.holidays
+        // Don't persist calendars and holidays as they're user-specific
       }),
     }
   )

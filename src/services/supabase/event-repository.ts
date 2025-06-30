@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 interface DbEvent {
   id: string;
   calendar_id: string;
+  user_id: string;
   title: string;
   description: string | null;
   location: string | null;
@@ -25,6 +26,7 @@ interface DbEvent {
 interface DbRecurrence {
   id: string;
   event_id: string;
+  user_id: string;
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
   end_date: string | null;
@@ -64,9 +66,10 @@ const toAppEvent = (dbEvent: DbEvent, recurrence?: DbRecurrence): Event => {
   };
 };
 
-const toDbEvent = (appEvent: Event): Omit<DbEvent, 'id' | 'created_at' | 'updated_at'> => {
+const toDbEvent = (appEvent: Event, userId: string): Omit<DbEvent, 'id' | 'created_at' | 'updated_at'> => {
   return {
     calendar_id: appEvent.calendarId,
+    user_id: userId,
     title: appEvent.title,
     description: appEvent.description || null,
     location: appEvent.location || null,
@@ -82,9 +85,10 @@ const toDbEvent = (appEvent: Event): Omit<DbEvent, 'id' | 'created_at' | 'update
   };
 };
 
-const toDbRecurrence = (eventId: string, recurrence: RecurrenceRule): Omit<DbRecurrence, 'id' | 'created_at' | 'updated_at'> => {
+const toDbRecurrence = (eventId: string, recurrence: RecurrenceRule, userId: string): Omit<DbRecurrence, 'id' | 'created_at' | 'updated_at'> => {
   return {
     event_id: eventId,
+    user_id: userId,
     frequency: recurrence.frequency,
     interval: recurrence.interval,
     end_date: recurrence.endDate ? recurrence.endDate.toISOString() : null,
@@ -95,10 +99,17 @@ const toDbRecurrence = (eventId: string, recurrence: RecurrenceRule): Omit<DbRec
 export const eventRepository = {
   async fetchForCalendar(calendarId: string): Promise<Event[]> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user');
+        return [];
+      }
+
       const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select('*')
-        .eq('calendar_id', calendarId);
+        .eq('calendar_id', calendarId)
+        .eq('user_id', user.id);
       
       if (eventError) throw eventError;
       
@@ -106,7 +117,8 @@ export const eventRepository = {
       const { data: recurrenceData, error: recurrenceError } = await supabase
         .from('recurrences')
         .select('*')
-        .in('event_id', eventIds);
+        .in('event_id', eventIds)
+        .eq('user_id', user.id);
       
       if (recurrenceError && eventIds.length > 0) throw recurrenceError;
       
@@ -128,7 +140,13 @@ export const eventRepository = {
   
   async create(event: Omit<Event, 'id'>): Promise<Event | null> {
     try {
-      const dbEvent = toDbEvent({ ...event, id: '' });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to create an event');
+        return null;
+      }
+
+      const dbEvent = toDbEvent({ ...event, id: '' }, user.id);
       
       const { data: eventData, error: eventError } = await supabase
         .from('events')
@@ -141,7 +159,7 @@ export const eventRepository = {
       let recurrenceData = null;
       
       if (event.recurrence) {
-        const dbRecurrence = toDbRecurrence(eventData.id, event.recurrence);
+        const dbRecurrence = toDbRecurrence(eventData.id, event.recurrence, user.id);
         
         const { data, error } = await supabase
           .from('recurrences')
@@ -163,6 +181,12 @@ export const eventRepository = {
   
   async update(id: string, event: Partial<Event>): Promise<Event | null> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to update an event');
+        return null;
+      }
+
       const dbEventUpdate: any = {};
       
       if (event.title !== undefined) dbEventUpdate.title = event.title;
@@ -177,6 +201,7 @@ export const eventRepository = {
         .from('events')
         .update(dbEventUpdate)
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
       
@@ -186,10 +211,11 @@ export const eventRepository = {
         await supabase
           .from('recurrences')
           .delete()
-          .eq('event_id', id);
+          .eq('event_id', id)
+          .eq('user_id', user.id);
         
         if (event.recurrence) {
-          const dbRecurrence = toDbRecurrence(id, event.recurrence);
+          const dbRecurrence = toDbRecurrence(id, event.recurrence, user.id);
           
           await supabase
             .from('recurrences')
@@ -201,6 +227,7 @@ export const eventRepository = {
         .from('recurrences')
         .select()
         .eq('event_id', id)
+        .eq('user_id', user.id)
         .maybeSingle();
       
       return toAppEvent(eventData, recurrenceData);
@@ -213,10 +240,17 @@ export const eventRepository = {
   
   async delete(id: string): Promise<boolean> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to delete an event');
+        return false;
+      }
+
       const { error } = await supabase
         .from('events')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       

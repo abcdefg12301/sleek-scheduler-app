@@ -1,3 +1,4 @@
+
 import { Event } from '../types';
 import { supabaseService } from "@/services/supabase-service";
 
@@ -12,6 +13,7 @@ export interface EventActions {
 export const createEventActions = (set: any, get: any): EventActions => ({
   async addEvent(calendarId, eventData) {
     try {
+      console.log('Creating event:', { calendarId, title: eventData.title });
       const calendar = get().calendars.find((cal: any) => cal.id === calendarId);
       if (!calendar) {
         await get().syncCalendarsFromSupabase();
@@ -33,6 +35,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
               : cal
           ),
         }));
+        console.log('Event created successfully:', event.id);
         return event;
       }
       throw new Error("Failed to add event");
@@ -44,6 +47,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
 
   async updateEvent(calendarId, eventId, data) {
     try {
+      console.log('Updating event:', { calendarId, eventId });
       const updatedEvent = await supabaseService.updateEvent(eventId, data);
       if (updatedEvent) {
         set((state: any) => ({
@@ -58,6 +62,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
               : cal
           ),
         }));
+        console.log('Event updated successfully:', eventId);
       }
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -67,6 +72,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
 
   async deleteEvent(calendarId, eventId) {
     try {
+      console.log('Deleting event:', { calendarId, eventId });
       await supabaseService.deleteEvent(eventId);
       set((state: any) => ({
         calendars: state.calendars.map((cal: any) =>
@@ -80,6 +86,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
             : cal
         ),
       }));
+      console.log('Event deleted successfully:', eventId);
     } catch (error) {
       console.error('Failed to delete event:', error);
       throw error;
@@ -195,6 +202,7 @@ export const createEventActions = (set: any, get: any): EventActions => ({
   },
   
   addExceptionDate(calendarId, eventId, exceptionDate) {
+    console.log('Adding exception date:', { calendarId, eventId, exceptionDate });
     set((state: any) => {
       const calendar = state.calendars.find((cal: any) => cal.id === calendarId);
       if (!calendar) return state;
