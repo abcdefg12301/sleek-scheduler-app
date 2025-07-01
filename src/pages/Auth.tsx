@@ -103,9 +103,8 @@ const Auth = () => {
       }
 
       if (data.user) {
-        toast.success('Account created successfully! Please check your email to verify your account.');
-        setEmail('');
-        setPassword('');
+        toast.success('Account created successfully!');
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Sign up error:', error);
@@ -117,30 +116,30 @@ const Auth = () => {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-900">
+    <div className="min-h-screen flex bg-white">
       {/* Left Side - Form */}
       <div className="flex-1 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md animate-fade-in">
           <div className="mb-8">
-            <div className="text-2xl font-bold text-blue-400 mb-2">Breezey</div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <div className="text-2xl font-bold text-blue-500 mb-2">Breezey</div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h1>
-            <p className="text-gray-400">
+            <p className="text-gray-600">
               {isSignUp ? 'Sign up to get started with Breezey' : 'Log in to your account to continue'}
             </p>
           </div>
 
           <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-6">
             <div>
-              <Label htmlFor="email" className="text-white">Email</Label>
+              <Label htmlFor="email" className="text-gray-900">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -149,15 +148,15 @@ const Auth = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 required
-                className="mt-2 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400 transition-all duration-300"
+                className="mt-2 bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300 hover:shadow-md focus:shadow-lg"
               />
             </div>
 
             <div>
               <div className="flex justify-between items-center">
-                <Label htmlFor="password" className="text-white">Password</Label>
+                <Label htmlFor="password" className="text-gray-900">Password</Label>
                 {!isSignUp && (
-                  <button type="button" className="text-blue-400 text-sm hover:text-blue-300 transition-colors">
+                  <button type="button" className="text-blue-500 text-sm hover:text-blue-600 transition-colors">
                     Forgot password?
                   </button>
                 )}
@@ -170,16 +169,16 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 required
-                className="mt-2 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-blue-400 transition-all duration-300"
+                className="mt-2 bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300 hover:shadow-md focus:shadow-lg"
               />
               {isSignUp && (
-                <p className="text-sm text-gray-400 mt-1">Password must be at least 8 characters long</p>
+                <p className="text-sm text-gray-600 mt-1">Password must be at least 8 characters long</p>
               )}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-lg py-3" 
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-lg py-3" 
               disabled={isLoading}
             >
               {isLoading ? (
@@ -194,18 +193,18 @@ const Auth = () => {
           </form>
 
           {isSignUp && (
-            <p className="text-center text-sm text-gray-400 mt-6">
+            <p className="text-center text-sm text-gray-600 mt-6">
               By signing up, you agree to our{' '}
               <button 
                 onClick={() => navigate('/terms')} 
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-blue-500 hover:text-blue-600 transition-colors"
               >
                 Terms of Service
               </button>{' '}
               and{' '}
               <button 
                 onClick={() => navigate('/privacy')} 
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-blue-500 hover:text-blue-600 transition-colors"
               >
                 Privacy Policy
               </button>
@@ -213,12 +212,12 @@ const Auth = () => {
             </p>
           )}
 
-          <p className="text-center text-gray-400 mt-6">
+          <p className="text-center text-gray-600 mt-6">
             {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+              className="text-blue-500 hover:text-blue-600 transition-colors font-medium"
             >
               {isSignUp ? 'Sign in' : 'Sign up'}
             </button>
@@ -227,14 +226,14 @@ const Auth = () => {
       </div>
 
       {/* Right Side - Hero */}
-      <div className="flex-1 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center px-8 py-12">
+      <div className="flex-1 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center px-8 py-12">
         <div className="text-center text-white animate-fade-in">
           <h2 className="text-4xl font-bold mb-6">Schedule With A Breeze</h2>
           <p className="text-xl mb-12 opacity-90 max-w-md">
             AI-powered, beautifully designed scheduling—fast, easy, smart.
           </p>
           <div className="flex justify-center">
-            <div className="bg-white bg-opacity-20 p-8 rounded-2xl backdrop-blur-sm">
+            <div className="bg-white bg-opacity-20 p-8 rounded-2xl backdrop-blur-sm hover:bg-opacity-30 transition-all duration-300 hover:scale-105">
               <Calendar className="h-16 w-16 mx-auto opacity-80" />
             </div>
           </div>
