@@ -1,3 +1,4 @@
+
 import { Event as CalendarEvent } from '@/types';
 import { 
   isWithinInterval, isBefore, isAfter, 
@@ -105,6 +106,26 @@ export const splitMultiDayEvents = (events: CalendarEvent[], date: Date): Calend
   
   console.log(`Processed ${result.length} events for ${date.toISOString()} after splitting`);
   return result;
+};
+
+/**
+ * Filter out duplicate sleep events (events with similar titles and times)
+ */
+export const filterDuplicateSleepEvents = (events: CalendarEvent[]): CalendarEvent[] => {
+  const seen = new Set<string>();
+  const filtered: CalendarEvent[] = [];
+  
+  for (const event of events) {
+    // Create a unique key based on title, start time, and end time
+    const key = `${event.title.toLowerCase()}-${event.start.toString()}-${event.end.toString()}`;
+    
+    if (!seen.has(key)) {
+      seen.add(key);
+      filtered.push(event);
+    }
+  }
+  
+  return filtered;
 };
 
 /**
