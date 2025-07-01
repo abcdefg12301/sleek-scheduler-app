@@ -97,6 +97,8 @@ export const createEventActions = (set: any, get: any): EventActions => ({
     console.log(`Deleting recurring event ${eventId} from calendar ${calendarId}, mode: ${mode}`);
     
     try {
+      // For all deletion modes, we use the repository delete method
+      // which properly handles user_id and cascading deletes
       await supabaseService.deleteEvent(eventId);
       
       set((state: any) => {
@@ -110,13 +112,16 @@ export const createEventActions = (set: any, get: any): EventActions => ({
         const masterEvent = calendar.events.find((event: any) => event.id === masterId);
         
         if (!masterEvent || !masterEvent.recurrence) {
+          // Simple event deletion
           return {
             ...state,
             calendars: state.calendars.map((cal: any) => 
               cal.id === calendarId 
                 ? {
                     ...cal,
-                    events: cal.events.filter((event: any) => event.id !== eventId && event.originalEventId !== eventId)
+                    events: cal.events.filter((event: any) => 
+                      event.id !== eventId && event.originalEventId !== eventId
+                    )
                   }
                 : cal
             )

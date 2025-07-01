@@ -3,7 +3,8 @@ import { Event, RecurrenceRule } from '@/types';
 import { 
   addDays, addWeeks, addMonths, addYears, 
   isBefore, isAfter, isWithinInterval, isSameDay, 
-  format, startOfDay, endOfDay, isValid
+  format, startOfDay, endOfDay, isValid,
+  differenceInMilliseconds, addMilliseconds
 } from 'date-fns';
 
 // Helper to get the next occurrence based on frequency
@@ -37,7 +38,7 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   
   const originalStart = new Date(event.start);
   const originalEnd = new Date(event.end);
-  const eventDurationMs = originalEnd.getTime() - originalStart.getTime();
+  const eventDurationMs = differenceInMilliseconds(originalEnd, originalStart);
   
   // Get the exception dates if they exist
   const exceptionDates = event.exceptionDates || [];
@@ -53,18 +54,18 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   
   // Create a unique key for each instance
   const createInstanceKey = (start: Date, eventId: string) => {
-    return `${eventId}-${format(start, 'yyyy-MM-dd-HH-mm')}`;
+    return `${eventId}-${format(start, 'yyyy-MM-dd-HH-mm-ss')}`;
   };
 
   console.log('Generating recurring events for:', event.title);
 
   // Include the original event if it's within range and not an exception date
-  if ((isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
-       isWithinInterval(originalEnd, { start: startDate, end: endDate }) ||
-       isSameDay(originalStart, startDate) ||
-       (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate))) &&
-      !isExceptionDate(originalStart)) {
-    
+  const originalInRange = isWithinInterval(originalStart, { start: startDate, end: endDate }) || 
+                          isWithinInterval(originalEnd, { start: startDate, end: endDate }) ||
+                          isSameDay(originalStart, startDate) ||
+                          (isBefore(originalStart, startDate) && isAfter(originalEnd, startDate));
+
+  if (originalInRange && !isExceptionDate(originalStart)) {
     const originalKey = createInstanceKey(originalStart, event.id);
     if (!generatedInstances.has(originalKey)) {
       events.push(event);
@@ -75,9 +76,9 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
   // Generate recurring instances
   let currentStart = getNextOccurrence(originalStart, frequency, interval);
   let iterationCount = 0;
-  const maxIterations = 500; // Reduced for safety
+  const maxIterations = 500; // Safety limit
   
-  // Generate occurrences only within the requested date range
+  // Generate occurrences within the requested date range
   while (isBefore(currentStart, endDate) && 
         (!event.recurrence.endDate || isBefore(currentStart, event.recurrence.endDate)) &&
         (!event.recurrence.count || events.length < event.recurrence.count) &&
@@ -91,8 +92,8 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
       continue;
     }
     
-    // Calculate the end time for this occurrence
-    const currentEnd = new Date(currentStart.getTime() + eventDurationMs);
+    // Calculate the end time for this occurrence, preserving the original duration
+    const currentEnd = addMilliseconds(currentStart, eventDurationMs);
     
     // Create a unique key for this instance
     const instanceKey = createInstanceKey(currentStart, event.id);
@@ -105,15 +106,15 @@ export const generateRecurringEvents = (event: Event, startDate: Date, endDate: 
     }
     
     // Check if the current occurrence overlaps with the requested range
-    const isInRange = isWithinInterval(currentStart, { start: startDate, end: endDate }) || 
-                     isWithinInterval(currentEnd, { start: startDate, end: endDate }) ||
-                     (isBefore(currentStart, startDate) && isAfter(currentEnd, startDate)) ||
-                     isSameDay(currentStart, startDate) || 
-                     isSameDay(currentEnd, endDate);
+    const currentInRange = isWithinInterval(currentStart, { start: startDate, end: endDate }) || 
+                          isWithinInterval(currentEnd, { start: startDate, end: endDate }) ||
+                          (isBefore(currentStart, startDate) && isAfter(currentEnd, startDate)) ||
+                          isSameDay(currentStart, startDate) || 
+                          isSameDay(currentEnd, endDate);
     
-    if (isInRange) {
+    if (currentInRange) {
       // Create a new instance of the recurring event with unique ID
-      const instanceId = `${event.id}-recurrence-${format(currentStart, 'yyyy-MM-dd-HH-mm')}`;
+      const instanceId = `${event.id}-recurrence-${format(currentStart, 'yyyy-MM-dd-HH-mm-ss')}`;
       
       const newEvent: Event = {
         ...event,

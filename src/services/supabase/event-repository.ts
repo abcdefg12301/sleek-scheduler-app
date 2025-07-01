@@ -87,9 +87,12 @@ export const eventRepository = {
       const { data: recurrenceData, error: recurrenceError } = await supabase
         .from('recurrences')
         .select('*')
-        .in('event_id', eventIds);
+        .in('event_id', eventIds)
+        .eq('user_id', user.id);
       
-      if (recurrenceError && eventIds.length > 0) throw recurrenceError;
+      if (recurrenceError && eventIds.length > 0) {
+        console.warn('Error fetching recurrences:', recurrenceError);
+      }
       
       const recurrenceMap = new Map<string, DbRecurrence>();
       if (recurrenceData) {
@@ -145,6 +148,7 @@ export const eventRepository = {
           .from('recurrences')
           .insert({
             event_id: eventData.id,
+            user_id: user.id,
             frequency: event.recurrence.frequency,
             interval: event.recurrence.interval,
             end_date: event.recurrence.endDate ? event.recurrence.endDate.toISOString() : null,
@@ -197,13 +201,15 @@ export const eventRepository = {
         await supabase
           .from('recurrences')
           .delete()
-          .eq('event_id', id);
+          .eq('event_id', id)
+          .eq('user_id', user.id);
         
         if (event.recurrence) {
           await supabase
             .from('recurrences')
             .insert({
               event_id: id,
+              user_id: user.id,
               frequency: event.recurrence.frequency,
               interval: event.recurrence.interval,
               end_date: event.recurrence.endDate ? event.recurrence.endDate.toISOString() : null,
@@ -216,6 +222,7 @@ export const eventRepository = {
         .from('recurrences')
         .select()
         .eq('event_id', id)
+        .eq('user_id', user.id)
         .maybeSingle();
       
       return toAppEvent(eventData, recurrenceData);
@@ -233,6 +240,13 @@ export const eventRepository = {
         toast.error('You must be logged in to delete an event');
         return false;
       }
+
+      // Delete recurrences first (foreign key constraint)
+      await supabase
+        .from('recurrences')
+        .delete()
+        .eq('event_id', id)
+        .eq('user_id', user.id);
 
       const { error } = await supabase
         .from('events')

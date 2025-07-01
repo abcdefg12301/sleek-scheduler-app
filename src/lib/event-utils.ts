@@ -1,4 +1,3 @@
-
 import { Event as CalendarEvent } from '@/types';
 import { 
   isWithinInterval, isBefore, isAfter, 
@@ -32,22 +31,6 @@ export const filterEventsForDate = (events: CalendarEvent[], date: Date): Calend
       isSameDay(eventEnd, date)
     );
     
-    if (overlaps && event.id.includes('debug')) {
-      console.log(`Event ${event.title} overlaps with ${date.toISOString()}`, {
-        eventStart,
-        eventEnd,
-        dayStart,
-        dayEnd,
-        conditions: {
-          startsWithinDay: isWithinInterval(eventStart, { start: dayStart, end: dayEnd }),
-          endsWithinDay: isWithinInterval(eventEnd, { start: dayStart, end: dayEnd }),
-          spansEntireDay: (isBefore(eventStart, dayStart) && isAfter(eventEnd, dayEnd)),
-          sameDayStart: isSameDay(eventStart, date),
-          sameDayEnd: isSameDay(eventEnd, date)
-        }
-      });
-    }
-    
     return overlaps;
   }).sort((a, b) => {
     // Sort by all-day first, then by start time
@@ -59,15 +42,6 @@ export const filterEventsForDate = (events: CalendarEvent[], date: Date): Calend
   console.log(`Filtered ${filteredEvents.length} events for ${date.toISOString()}`);
   return filteredEvents;
 };
-
-/**
- * Filter out duplicate sleep events
- * Uses a stringified key to detect duplicates by date and time
- */
-export function filterDuplicateSleepEvents(events: CalendarEvent[]): CalendarEvent[] {
-  // This function will be removed as we're removing sleep schedule
-  return events;
-}
 
 /**
  * Split multi-day events into segments for each day they span
@@ -88,36 +62,44 @@ export const splitMultiDayEvents = (events: CalendarEvent[], date: Date): Calend
       return;
     }
     
-    // For events that span days:
-    // If the event starts on this day
-    if (isSameDay(eventStart, date)) {
-      const segmentEnd = new Date(dayEnd);
-      result.push({
-        ...event,
-        end: segmentEnd,
-        isSegment: true,
-        segmentType: 'start'
-      });
-    } 
-    // If the event ends on this day
-    else if (isSameDay(eventEnd, date)) {
-      const segmentStart = new Date(dayStart);
-      result.push({
-        ...event,
-        start: segmentStart,
-        isSegment: true,
-        segmentType: 'end'
-      });
-    }
-    // If the day is in the middle of a multi-day event
-    else if (isWithinInterval(date, { start: eventStart, end: eventEnd })) {
-      result.push({
-        ...event,
-        start: new Date(dayStart),
-        end: new Date(dayEnd),
-        isSegment: true,
-        segmentType: 'middle'
-      });
+    // Calculate how many days the event spans
+    const daysDifference = differenceInCalendarDays(eventEnd, eventStart);
+    
+    if (daysDifference > 0) {
+      // Multi-day event - create segments
+      if (isSameDay(eventStart, date)) {
+        // This is the first day of the event
+        const segmentEnd = new Date(dayEnd);
+        result.push({
+          ...event,
+          end: segmentEnd,
+          isSegment: true,
+          segmentType: 'start'
+        });
+      } 
+      else if (isSameDay(eventEnd, date)) {
+        // This is the last day of the event
+        const segmentStart = new Date(dayStart);
+        result.push({
+          ...event,
+          start: segmentStart,
+          isSegment: true,
+          segmentType: 'end'
+        });
+      }
+      else if (isWithinInterval(date, { start: eventStart, end: eventEnd })) {
+        // This day is in the middle of a multi-day event
+        result.push({
+          ...event,
+          start: new Date(dayStart),
+          end: new Date(dayEnd),
+          isSegment: true,
+          segmentType: 'middle'
+        });
+      }
+    } else {
+      // Single day event
+      result.push(event);
     }
   });
   
