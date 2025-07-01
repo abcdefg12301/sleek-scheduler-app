@@ -18,6 +18,7 @@ export type Database = {
           name: string
           show_holidays: boolean
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           color?: string | null
@@ -27,6 +28,7 @@ export type Database = {
           name: string
           show_holidays?: boolean
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           color?: string | null
@@ -36,6 +38,7 @@ export type Database = {
           name?: string
           show_holidays?: boolean
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -57,6 +60,7 @@ export type Database = {
           start_time: string
           title: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           all_day?: boolean
@@ -75,6 +79,7 @@ export type Database = {
           start_time: string
           title: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           all_day?: boolean
@@ -93,6 +98,7 @@ export type Database = {
           start_time?: string
           title?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {

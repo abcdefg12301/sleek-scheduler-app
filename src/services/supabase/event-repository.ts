@@ -66,36 +66,6 @@ const toAppEvent = (dbEvent: DbEvent, recurrence?: DbRecurrence): Event => {
   };
 };
 
-const toDbEvent = (appEvent: Event, userId: string): Omit<DbEvent, 'id' | 'created_at' | 'updated_at'> => {
-  return {
-    calendar_id: appEvent.calendarId,
-    user_id: userId,
-    title: appEvent.title,
-    description: appEvent.description || null,
-    location: appEvent.location || null,
-    start_time: appEvent.start.toISOString(),
-    end_time: appEvent.end.toISOString(),
-    all_day: appEvent.allDay,
-    color: appEvent.color || null,
-    is_holiday: !!appEvent.isHoliday,
-    is_segment: !!appEvent.isSegment,
-    segment_type: appEvent.segmentType || null,
-    is_recurrence_instance: !!appEvent.isRecurrenceInstance,
-    original_event_id: appEvent.originalEventId || null
-  };
-};
-
-const toDbRecurrence = (eventId: string, recurrence: RecurrenceRule, userId: string): Omit<DbRecurrence, 'id' | 'created_at' | 'updated_at'> => {
-  return {
-    event_id: eventId,
-    user_id: userId,
-    frequency: recurrence.frequency,
-    interval: recurrence.interval,
-    end_date: recurrence.endDate ? recurrence.endDate.toISOString() : null,
-    count: recurrence.count || null
-  };
-};
-
 export const eventRepository = {
   async fetchForCalendar(calendarId: string): Promise<Event[]> {
     try {
@@ -117,8 +87,7 @@ export const eventRepository = {
       const { data: recurrenceData, error: recurrenceError } = await supabase
         .from('recurrences')
         .select('*')
-        .in('event_id', eventIds)
-        .eq('user_id', user.id);
+        .in('event_id', eventIds);
       
       if (recurrenceError && eventIds.length > 0) throw recurrenceError;
       
@@ -146,11 +115,24 @@ export const eventRepository = {
         return null;
       }
 
-      const dbEvent = toDbEvent({ ...event, id: '' }, user.id);
-      
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .insert(dbEvent)
+        .insert({
+          calendar_id: event.calendarId,
+          user_id: user.id,
+          title: event.title,
+          description: event.description || null,
+          location: event.location || null,
+          start_time: event.start.toISOString(),
+          end_time: event.end.toISOString(),
+          all_day: event.allDay,
+          color: event.color || null,
+          is_holiday: !!event.isHoliday,
+          is_segment: !!event.isSegment,
+          segment_type: event.segmentType || null,
+          is_recurrence_instance: !!event.isRecurrenceInstance,
+          original_event_id: event.originalEventId || null
+        })
         .select()
         .single();
       
@@ -159,11 +141,15 @@ export const eventRepository = {
       let recurrenceData = null;
       
       if (event.recurrence) {
-        const dbRecurrence = toDbRecurrence(eventData.id, event.recurrence, user.id);
-        
         const { data, error } = await supabase
           .from('recurrences')
-          .insert(dbRecurrence)
+          .insert({
+            event_id: eventData.id,
+            frequency: event.recurrence.frequency,
+            interval: event.recurrence.interval,
+            end_date: event.recurrence.endDate ? event.recurrence.endDate.toISOString() : null,
+            count: event.recurrence.count || null
+          })
           .select()
           .single();
         
@@ -211,15 +197,18 @@ export const eventRepository = {
         await supabase
           .from('recurrences')
           .delete()
-          .eq('event_id', id)
-          .eq('user_id', user.id);
+          .eq('event_id', id);
         
         if (event.recurrence) {
-          const dbRecurrence = toDbRecurrence(id, event.recurrence, user.id);
-          
           await supabase
             .from('recurrences')
-            .insert(dbRecurrence);
+            .insert({
+              event_id: id,
+              frequency: event.recurrence.frequency,
+              interval: event.recurrence.interval,
+              end_date: event.recurrence.endDate ? event.recurrence.endDate.toISOString() : null,
+              count: event.recurrence.count || null
+            });
         }
       }
       
@@ -227,7 +216,6 @@ export const eventRepository = {
         .from('recurrences')
         .select()
         .eq('event_id', id)
-        .eq('user_id', user.id)
         .maybeSingle();
       
       return toAppEvent(eventData, recurrenceData);

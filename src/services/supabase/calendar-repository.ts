@@ -25,16 +25,6 @@ const toAppCalendar = (dbCalendar: DbCalendar): Calendar => {
   };
 };
 
-const toDbCalendar = (appCalendar: Calendar, userId: string): Omit<DbCalendar, 'id' | 'created_at' | 'updated_at'> => {
-  return {
-    name: appCalendar.name,
-    description: appCalendar.description,
-    color: appCalendar.color,
-    show_holidays: appCalendar.showHolidays,
-    user_id: userId
-  };
-};
-
 export const calendarRepository = {
   async fetchAll(): Promise<Calendar[]> {
     try {
@@ -67,11 +57,15 @@ export const calendarRepository = {
         return null;
       }
 
-      const dbCalendar = toDbCalendar({ ...calendar, id: '', events: [] }, user.id);
-      
       const { data, error } = await supabase
         .from('calendars')
-        .insert(dbCalendar)
+        .insert({
+          name: calendar.name,
+          description: calendar.description,
+          color: calendar.color,
+          show_holidays: calendar.showHolidays,
+          user_id: user.id
+        })
         .select()
         .single();
       
